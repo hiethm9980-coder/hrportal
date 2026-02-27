@@ -2,7 +2,7 @@ name: Deploy Flutter Web to GitHub Pages
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
 
 permissions:
   contents: write
@@ -18,12 +18,17 @@ jobs:
         uses: subosito/flutter-action@v2
         with:
           channel: stable
+          cache: true
 
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Build web
-        run: flutter build web --release --base-href "/hr_portal/"
+      - name: Build web (PROD)
+        run: flutter build web --release --dart-define=FLAVOR=dev --base-href "/hrportal/"
+
+      # مهم جدًا لـ GoRouter على GitHub Pages:
+      - name: Add 404.html for SPA routing
+        run: cp build/web/index.html build/web/404.html
 
       - name: Deploy to gh-pages
         uses: peaceiris/actions-gh-pages@v4
