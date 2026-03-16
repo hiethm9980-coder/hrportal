@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:hr_portal/core/constants/app_colors.dart';
+import 'package:hr_portal/core/constants/app_shadows.dart';
 import 'package:hr_portal/core/localization/app_localizations.dart';
 import 'package:hr_portal/core/theme/app_spacing.dart';
 
@@ -20,10 +23,19 @@ class LoadingIndicator extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const CircularProgressIndicator(),
+          const SizedBox(
+            width: 36,
+            height: 36,
+            child: CircularProgressIndicator(
+              strokeWidth: 3,
+              color: AppColors.primaryMid,
+            ),
+          ),
           if (message != null) ...[
             AppSpacing.verticalMd,
-            Text(message!, style: Theme.of(context).textTheme.bodyMedium),
+            Text(message!,
+                style: GoogleFonts.cairo(
+                    fontSize: 13, color: AppColors.textSecondary)),
           ],
         ],
       ),
@@ -53,38 +65,76 @@ class ErrorFullScreen extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              isOffline ? Icons.wifi_off_rounded : Icons.error_outline_rounded,
-              size: 64,
-              color: Theme.of(context).colorScheme.error,
+            Container(
+              width: 72,
+              height: 72,
+              decoration: BoxDecoration(
+                color: AppColors.errorSoft,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                isOffline
+                    ? Icons.wifi_off_rounded
+                    : Icons.error_outline_rounded,
+                size: 36,
+                color: AppColors.error,
+              ),
             ),
             AppSpacing.verticalMd,
             Text(
               error.title.tr(context),
-              style: Theme.of(context).textTheme.titleLarge,
+              style: GoogleFonts.cairo(
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+                color: AppColors.textPrimary,
+              ),
               textAlign: TextAlign.center,
             ),
             AppSpacing.verticalSm,
             Text(
               error.message.tr(context),
-              style: Theme.of(context).textTheme.bodyMedium,
+              style: GoogleFonts.cairo(
+                  fontSize: 13, color: AppColors.textSecondary),
               textAlign: TextAlign.center,
             ),
             if (error.traceId != null) ...[
               AppSpacing.verticalXs,
               Text(
                 'Trace: ${error.traceId}',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
+                style: GoogleFonts.cairo(
+                    fontSize: 11, color: AppColors.textMuted),
               ),
             ],
             if (onRetry != null) ...[
               AppSpacing.verticalLg,
-              FilledButton.icon(
-                onPressed: onRetry,
-                icon: const Icon(Icons.refresh),
-                label: Text('Retry'.tr(context)),
+              GestureDetector(
+                onTap: onRetry,
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [AppColors.primaryMid, AppColors.primaryDeep],
+                    ),
+                    borderRadius: BorderRadius.circular(14),
+                    boxShadow: AppShadows.navy,
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.refresh, color: Colors.white, size: 18),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Retry'.tr(context),
+                        style: GoogleFonts.cairo(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ],
           ],
@@ -103,7 +153,8 @@ class EmptyState extends StatelessWidget {
   final String title;
   final String? subtitle;
 
-  const EmptyState({super.key, this.icon, required this.title, this.subtitle});
+  const EmptyState(
+      {super.key, this.icon, required this.title, this.subtitle});
 
   @override
   Widget build(BuildContext context) {
@@ -113,24 +164,35 @@ class EmptyState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              icon,
-              size: 64,
-              color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
+            Container(
+              width: 72,
+              height: 72,
+              decoration: BoxDecoration(
+                color: AppColors.primaryMid.withOpacity(0.08),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                icon ?? Icons.inbox_outlined,
+                size: 36,
+                color: AppColors.primaryMid,
+              ),
             ),
             AppSpacing.verticalMd,
             Text(
               title,
-              style: Theme.of(context).textTheme.titleMedium,
+              style: GoogleFonts.cairo(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: AppColors.textPrimary,
+              ),
               textAlign: TextAlign.center,
             ),
             if (subtitle != null) ...[
               AppSpacing.verticalSm,
               Text(
                 subtitle!,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
+                style: GoogleFonts.cairo(
+                    fontSize: 13, color: AppColors.textMuted),
                 textAlign: TextAlign.center,
               ),
             ],
@@ -145,20 +207,6 @@ class EmptyState extends StatelessWidget {
 // Paginated List Builder
 // ═══════════════════════════════════════════════════════════════════
 
-/// Generic widget that renders a paginated list with pull-to-refresh
-/// and load-more-on-scroll.
-///
-/// Usage:
-/// ```dart
-/// PaginatedListView<AttendanceRecord>(
-///   state: ref.watch(attendanceListProvider),
-///   onRefresh: () => ref.read(attendanceListProvider.notifier).refresh(),
-///   onLoadMore: () => ref.read(attendanceListProvider.notifier).loadMore(),
-///   itemBuilder: (context, record) => AttendanceTile(record),
-///   emptyIcon: Icons.event_available,
-///   emptyTitle: 'لا توجد سجلات حضور',
-/// )
-/// ```
 class PaginatedListView<T> extends StatefulWidget {
   final PaginatedState<T> state;
   final Future<void> Function() onRefresh;
@@ -236,6 +284,7 @@ class _PaginatedListViewState<T> extends State<PaginatedListView<T>> {
         (s.isLoadingMore ? 1 : 0);
 
     return RefreshIndicator(
+      color: AppColors.primaryMid,
       onRefresh: widget.onRefresh,
       child: ListView.builder(
         controller: _scrollController,
@@ -253,7 +302,14 @@ class _PaginatedListViewState<T> extends State<PaginatedListView<T>> {
           if (dataIndex >= s.items.length) {
             return const Padding(
               padding: AppSpacing.paddingAllMd,
-              child: Center(child: CircularProgressIndicator()),
+              child: Center(
+                child: SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(
+                      strokeWidth: 2, color: AppColors.primaryMid),
+                ),
+              ),
             );
           }
 
@@ -282,13 +338,43 @@ class SessionExpiredDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      icon: const Icon(Icons.lock_clock, size: 48),
-      title: Text('Session expired'.tr(context)),
-      content: Text('Your session has expired. Please sign in again.'.tr(context)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      icon: Container(
+        width: 56,
+        height: 56,
+        decoration: BoxDecoration(
+          color: AppColors.gold.withOpacity(0.12),
+          shape: BoxShape.circle,
+        ),
+        child: const Icon(Icons.lock_clock, size: 28, color: AppColors.gold),
+      ),
+      title: Text('Session expired'.tr(context),
+          style: GoogleFonts.cairo(fontWeight: FontWeight.w700)),
+      content: Text(
+          'Your session has expired. Please sign in again.'.tr(context),
+          style: GoogleFonts.cairo(color: AppColors.textSecondary)),
       actions: [
-        FilledButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: Text('Sign in'.tr(context)),
+        GestureDetector(
+          onTap: () => Navigator.of(context).pop(),
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [AppColors.primaryMid, AppColors.primaryDeep],
+              ),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            alignment: Alignment.center,
+            child: Text(
+              'Sign in'.tr(context),
+              style: GoogleFonts.cairo(
+                color: Colors.white,
+                fontWeight: FontWeight.w700,
+                fontSize: 14,
+              ),
+            ),
+          ),
         ),
       ],
     );
@@ -330,9 +416,7 @@ class CacheImg extends StatelessWidget {
       width: imgWidth,
       placeholder: (context, url) {
         return Container(
-          padding: EdgeInsets.all(4),
-          // height: sizeCircleLoading + 10.0,
-          // width: sizeCircleLoading + 10.0,
+          padding: const EdgeInsets.all(4),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.center,
@@ -340,7 +424,8 @@ class CacheImg extends StatelessWidget {
               SizedBox(
                 height: sizeCircleLoading,
                 width: sizeCircleLoading,
-                child: CircularProgressIndicator(strokeWidth: 2),
+                child: const CircularProgressIndicator(
+                    strokeWidth: 2, color: AppColors.primaryMid),
               ),
             ],
           ),
@@ -350,7 +435,7 @@ class CacheImg extends StatelessWidget {
         return Icon(
           Icons.error_outline,
           size: sizeCircleLoading,
-          color: Theme.of(context).colorScheme.onSurfaceVariant,
+          color: AppColors.textMuted,
         );
       },
     );

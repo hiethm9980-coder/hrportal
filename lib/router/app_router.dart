@@ -2,6 +2,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:hr_portal/core/constants/app_colors.dart';
 import 'package:hr_portal/features/notifications/presentation/screens/notifications_screen.dart';
 import 'package:hr_portal/core/localization/app_localizations.dart';
 import 'package:hr_portal/core/theme/app_spacing.dart';
@@ -161,37 +163,59 @@ class _MainShell extends StatelessWidget {
     if (isMobile) {
       return Scaffold(
         body: child,
-        bottomNavigationBar: NavigationBar(
-          selectedIndex: _currentIndex,
-          onDestinationSelected: (index) =>
-              _onDestinationSelected(context, index),
-          destinations: [
-            NavigationDestination(
-              icon: const Icon(Icons.home_outlined),
-              selectedIcon: const Icon(Icons.home),
-              label: 'Home'.tr(context),
+        bottomNavigationBar: Container(
+          decoration: BoxDecoration(
+            color: AppColors.bgCard,
+            border: const Border(
+              top: BorderSide(color: AppColors.gray100, width: 1),
             ),
-            NavigationDestination(
-              icon: const Icon(Icons.fingerprint_outlined),
-              selectedIcon: const Icon(Icons.fingerprint),
-              label: 'Attendance'.tr(context),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.06),
+                blurRadius: 20,
+                offset: const Offset(0, -4),
+              ),
+            ],
+          ),
+          child: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Row(
+                children: [
+                  _NavItem(
+                    icon: '🏠',
+                    label: 'Home'.tr(context),
+                    active: _currentIndex == 0,
+                    onTap: () => _onDestinationSelected(context, 0),
+                  ),
+                  _NavItem(
+                    icon: '⏱',
+                    label: 'Attendance'.tr(context),
+                    active: _currentIndex == 1,
+                    onTap: () => _onDestinationSelected(context, 1),
+                  ),
+                  _NavItem(
+                    icon: '🌴',
+                    label: 'Leaves'.tr(context),
+                    active: _currentIndex == 2,
+                    onTap: () => _onDestinationSelected(context, 2),
+                  ),
+                  _NavItem(
+                    icon: '💰',
+                    label: 'Payroll'.tr(context),
+                    active: _currentIndex == 3,
+                    onTap: () => _onDestinationSelected(context, 3),
+                  ),
+                  _NavItem(
+                    icon: '📝',
+                    label: 'Requests'.tr(context),
+                    active: _currentIndex == 4,
+                    onTap: () => _onDestinationSelected(context, 4),
+                  ),
+                ],
+              ),
             ),
-            NavigationDestination(
-              icon: const Icon(Icons.beach_access_outlined),
-              selectedIcon: const Icon(Icons.beach_access),
-              label: 'Leaves'.tr(context),
-            ),
-            NavigationDestination(
-              icon: const Icon(Icons.receipt_long_outlined),
-              selectedIcon: const Icon(Icons.receipt_long),
-              label: 'Payroll'.tr(context),
-            ),
-            NavigationDestination(
-              icon: const Icon(Icons.description_outlined),
-              selectedIcon: const Icon(Icons.description),
-              label: 'Requests'.tr(context),
-            ),
-          ],
+          ),
         ),
       );
     }
@@ -238,6 +262,58 @@ class _MainShell extends StatelessWidget {
           const VerticalDivider(thickness: 1, width: 1),
           Expanded(child: child),
         ],
+      ),
+    );
+  }
+}
+
+class _NavItem extends StatelessWidget {
+  final String icon, label;
+  final bool active;
+  final VoidCallback onTap;
+
+  const _NavItem({
+    required this.icon,
+    required this.label,
+    required this.active,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AnimatedScale(
+              scale: active ? 1.2 : 1.0,
+              duration: const Duration(milliseconds: 200),
+              child: Text(icon, style: const TextStyle(fontSize: 22)),
+            ),
+            const SizedBox(height: 3),
+            Text(
+              label,
+              style: GoogleFonts.cairo(
+                fontSize: 10,
+                fontWeight: active ? FontWeight.w800 : FontWeight.w500,
+                color: active ? AppColors.primaryMid : AppColors.gray400,
+              ),
+            ),
+            if (active)
+              Container(
+                margin: const EdgeInsets.only(top: 3),
+                width: 20,
+                height: 3,
+                decoration: BoxDecoration(
+                  color: AppColors.primaryMid,
+                  borderRadius: BorderRadius.circular(99),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }

@@ -57,6 +57,11 @@ class AppSpacing {
   static const double radiusMd = 12;
   static const double radiusLg = 16;
   static const double radiusXl = 24;
+  static const double radiusFull = 99;
+
+  // ── Card/Screen padding ──
+  static const double cardPad = 16;
+  static const double screenPad = 16;
 
   static final BorderRadius borderRadiusSm =
       BorderRadius.circular(radiusSm);

@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:hr_portal/core/constants/app_colors.dart';
+import 'package:hr_portal/core/constants/app_shadows.dart';
 import 'package:hr_portal/core/localization/app_localizations.dart';
-import 'package:hr_portal/core/theme/app_spacing.dart';
 import 'package:hr_portal/core/utils/app_funs.dart';
 import 'package:hr_portal/shared/widgets/shared_widgets.dart';
+import 'package:hr_portal/shared/widgets/common_widgets.dart';
 import '../providers/notifications_providers.dart';
 
 class NotificationsScreen extends ConsumerStatefulWidget {
@@ -25,7 +28,6 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
     _searchCtrl = TextEditingController();
     _scrollCtrl = ScrollController()..addListener(_onScroll);
 
-    // ✅ كل مرة تُفتح فيها الشاشة (Widget جديد) سيتم جلب أحدث بيانات من DB
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(notificationsProvider.notifier).refresh();
     });
@@ -54,16 +56,25 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text('Delete all notifications'.tr(context)),
-        content: Text("Are you sure? This action can't be undone.".tr(context)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text('Delete all notifications'.tr(context),
+            style: GoogleFonts.cairo(fontWeight: FontWeight.w700)),
+        content: Text("Are you sure? This action can't be undone.".tr(context),
+            style: GoogleFonts.cairo()),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: Text('Cancel'.tr(context)),
+            child: Text('Cancel'.tr(context),
+                style: GoogleFonts.cairo(color: AppColors.textMuted)),
           ),
           FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.error,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
+            ),
             onPressed: () => Navigator.pop(ctx, true),
-            child: Text('Delete'.tr(context)),
+            child: Text('Delete'.tr(context), style: GoogleFonts.cairo()),
           ),
         ],
       ),
@@ -89,8 +100,11 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
         }
       },
       child: Scaffold(
-        appBar: state.isSearchMode
-            ? _SearchAppBar(
+        backgroundColor: AppColors.bg,
+        body: Column(
+          children: [
+            if (state.isSearchMode)
+              _SearchHeader(
                 controller: _searchCtrl,
                 onBack: () {
                   _searchCtrl.clear();
@@ -103,50 +117,58 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                 },
                 onChanged: notifier.onSearchChanged,
               )
-            : _NormalAppBar(
+            else
+              _NormalHeader(
                 unreadCount: state.unreadCount,
                 onSearch: () {
                   _searchCtrl.text = state.searchText;
-                  _searchCtrl.selection = TextSelection.collapsed(offset: _searchCtrl.text.length);
+                  _searchCtrl.selection =
+                      TextSelection.collapsed(offset: _searchCtrl.text.length);
                   notifier.openSearch();
                 },
                 onRefresh: notifier.refresh,
                 onClearAll: () => _confirmClearAll(context),
               ),
-        body: _buildBody(context, state, notifier),
+            Expanded(child: _buildBody(context, state, notifier)),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildBody(BuildContext context, NotificationsState state, NotificationsNotifier notifier) {
+  Widget _buildBody(BuildContext context, NotificationsState state,
+      NotificationsNotifier notifier) {
     Future<void> onPullRefresh() async {
       await notifier.refresh();
     }
 
     // Initial loading
     if (state.isLoading && state.visible.isEmpty) {
-      return const Center(child: CircularProgressIndicator());
+      return const Center(
+        child: CircularProgressIndicator(color: AppColors.primaryMid),
+      );
     }
 
-    // Empty (still scrollable so RefreshIndicator works)
+    // Empty
     if (state.visible.isEmpty) {
       final isSearch = state.searchText.trim().isNotEmpty;
       return RefreshIndicator(
+        color: AppColors.primaryMid,
         onRefresh: onPullRefresh,
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
           children: [
             SizedBox(
-              height: MediaQuery.of(context).size.height * 0.75,
-              child: _EmptyNotificationsView(
+              height: MediaQuery.of(context).size.height * 0.65,
+              child: EmptyStateWidget(
+                icon: '🔔',
                 title: isSearch
                     ? 'No results'.tr(context)
                     : 'No notifications'.tr(context),
                 subtitle: isSearch
                     ? 'Try different keywords'.tr(context)
-                    : 'Notifications will appear here when they arrive.'.tr(
-                        context,
-                      ),
+                    : 'Notifications will appear here when they arrive.'
+                        .tr(context),
               ),
             ),
           ],
@@ -158,18 +180,25 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
     final lang = Localizations.localeOf(context).languageCode.toLowerCase();
 
     return RefreshIndicator(
+      color: AppColors.primaryMid,
       onRefresh: onPullRefresh,
-      child: ListView.separated(
+      child: ListView.builder(
         controller: _scrollCtrl,
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.only(top: 0, bottom: 8),
+        padding: const EdgeInsets.only(top: 8, bottom: 8),
         itemCount: itemCount,
-        separatorBuilder: (_, __) => Divider(thickness: 0.5, color: Theme.of(context).dividerColor, height: 0.5),
         itemBuilder: (context, index) {
           if (state.isLoadingMore && index == state.visible.length) {
             return const Padding(
               padding: EdgeInsets.symmetric(vertical: 14),
-              child: Center(child: SizedBox(height: 22, width: 22, child: CircularProgressIndicator(strokeWidth: 2))),
+              child: Center(
+                child: SizedBox(
+                  height: 22,
+                  width: 22,
+                  child: CircularProgressIndicator(
+                      strokeWidth: 2, color: AppColors.primaryMid),
+                ),
+              ),
             );
           }
 
@@ -202,74 +231,89 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
 
           return Slidable(
             key: ValueKey(n.id),
-
-            // سحب من اليمين لليسار
             endActionPane: ActionPane(
               motion: const BehindMotion(),
               extentRatio: 0.25,
-
-              // ✅ سحب للنهاية = محاولة حذف + تأكيد قبل الإخفاء
               dismissible: DismissiblePane(
                 motion: const BehindMotion(),
-                closeOnCancel: true, // ✅ لو ضغط "إلغاء" يرجع العنصر مكانه بدون اختفاء/خطأ
+                closeOnCancel: true,
                 confirmDismiss: () async {
-                  final ok =
-                      await showDialog<bool>(
+                  final ok = await showDialog<bool>(
                         context: context,
                         builder: (dCtx) => AlertDialog(
-                          title: Text('Delete notification'.tr(context)),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(20)),
+                          title: Text('Delete notification'.tr(context),
+                              style:
+                                  GoogleFonts.cairo(fontWeight: FontWeight.w700)),
                           content: Text(
-                            'Do you want to delete this notification?'.tr(
-                              context,
-                            ),
+                            'Do you want to delete this notification?'
+                                .tr(context),
+                            style: GoogleFonts.cairo(),
                           ),
                           actions: [
                             TextButton(
                               onPressed: () => Navigator.pop(dCtx, false),
-                              child: Text('Cancel'.tr(context)),
+                              child: Text('Cancel'.tr(context),
+                                  style: GoogleFonts.cairo(
+                                      color: AppColors.textMuted)),
                             ),
                             FilledButton(
+                              style: FilledButton.styleFrom(
+                                backgroundColor: AppColors.error,
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12)),
+                              ),
                               onPressed: () => Navigator.pop(dCtx, true),
-                              child: Text('Delete'.tr(context)),
+                              child: Text('Delete'.tr(context),
+                                  style: GoogleFonts.cairo()),
                             ),
                           ],
                         ),
                       ) ??
                       false;
 
-                  return ok; // ✅ true يكمل الحذف، false يلغي السحب ويرجع
+                  return ok;
                 },
                 onDismissed: () {
-                  // ✅ هنا الحذف فقط (بدون Dialog)
                   notifier.deleteById(n.id);
                 },
               ),
-
-              // ✅ زر حذف ثابت (الأيقونة لا تتحرك أثناء السحب)
               children: [
                 CustomSlidableAction(
-                  backgroundColor: Theme.of(context).colorScheme.errorContainer,
-                  foregroundColor: Theme.of(context).colorScheme.onErrorContainer,
+                  backgroundColor: AppColors.errorSoft,
+                  foregroundColor: AppColors.error,
                   autoClose: false,
                   onPressed: (ctx) async {
-                    final ok =
-                        await showDialog<bool>(
+                    final ok = await showDialog<bool>(
                           context: context,
                           builder: (dCtx) => AlertDialog(
-                            title: Text('Delete notification'.tr(context)),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(20)),
+                            title: Text('Delete notification'.tr(context),
+                                style: GoogleFonts.cairo(
+                                    fontWeight: FontWeight.w700)),
                             content: Text(
-                              'Do you want to delete this notification?'.tr(
-                                context,
-                              ),
+                              'Do you want to delete this notification?'
+                                  .tr(context),
+                              style: GoogleFonts.cairo(),
                             ),
                             actions: [
                               TextButton(
                                 onPressed: () => Navigator.pop(dCtx, false),
-                                child: Text('Cancel'.tr(context)),
+                                child: Text('Cancel'.tr(context),
+                                    style: GoogleFonts.cairo(
+                                        color: AppColors.textMuted)),
                               ),
                               FilledButton(
+                                style: FilledButton.styleFrom(
+                                  backgroundColor: AppColors.error,
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12)),
+                                ),
                                 onPressed: () => Navigator.pop(dCtx, true),
-                                child: Text('Delete'.tr(context)),
+                                child: Text('Delete'.tr(context),
+                                    style: GoogleFonts.cairo()),
                               ),
                             ],
                           ),
@@ -277,7 +321,6 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                         false;
 
                     if (!ok) {
-                      // ✅ رجّع السلايد لو مفتوح
                       if (ctx.mounted) Slidable.of(ctx)?.close();
                       return;
                     }
@@ -285,18 +328,17 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                     if (ctx.mounted) Slidable.of(ctx)?.close();
                     notifier.deleteById(n.id);
                   },
-
                   child: Align(
-                    alignment: AlignmentDirectional.centerEnd, // ✅ تثبيت يمين
+                    alignment: AlignmentDirectional.centerEnd,
                     child: Padding(
                       padding: const EdgeInsetsDirectional.only(end: 24),
-                      child: Icon(Icons.delete_outline, size: 24, color: Theme.of(context).colorScheme.onErrorContainer),
+                      child: Icon(Icons.delete_outline,
+                          size: 24, color: AppColors.error),
                     ),
                   ),
                 ),
               ],
             ),
-
             child: _NotificationTile(
               titleText: titleText,
               bodyText: bodyText,
@@ -314,9 +356,17 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
   }
 }
 
-/// AppBar العادي (عنوان + تحديث + بحث + حذف الكل)
-class _NormalAppBar extends StatelessWidget implements PreferredSizeWidget {
-  const _NormalAppBar({required this.onRefresh, required this.onSearch, required this.onClearAll, required this.unreadCount});
+// ═══════════════════════════════════════════════════════════════════
+// Normal Header (gradient)
+// ═══════════════════════════════════════════════════════════════════
+
+class _NormalHeader extends StatelessWidget {
+  const _NormalHeader({
+    required this.onRefresh,
+    required this.onSearch,
+    required this.onClearAll,
+    required this.unreadCount,
+  });
 
   final VoidCallback onRefresh;
   final VoidCallback onSearch;
@@ -324,77 +374,72 @@ class _NormalAppBar extends StatelessWidget implements PreferredSizeWidget {
   final int unreadCount;
 
   @override
-  Size get preferredSize => const Size.fromHeight(kToolbarHeight);
-
-  @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-
-    return AppBar(
-      elevation: 0,
-      centerTitle: false,
-      title: Row(
-        children: [
-          Text('Notifications'.tr(context)),
-          AppSpacing.horizontalSm,
-          if (unreadCount > 0)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-              decoration: BoxDecoration(color: cs.primary, borderRadius: BorderRadius.circular(999)),
-              child: Text(
-                unreadCount.toString(),
-                style: TextStyle(color: cs.onPrimary, fontWeight: FontWeight.w700, fontSize: 12),
-              ),
-            ),
-        ],
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [AppColors.primaryMid, AppColors.primaryDeep],
+        ),
       ),
-      actions: [
-        IconButton(
-          tooltip: 'Search'.tr(context),
-          onPressed: onSearch,
-          icon: const Icon(Icons.search_rounded),
-        ),
-        _RefreshChip(onTap: onRefresh),
-        IconButton(
-          tooltip: 'Delete all'.tr(context),
-          onPressed: onClearAll,
-          icon: const Icon(Icons.delete_sweep_outlined),
-        ),
-        AppSpacing.horizontalSm,
-      ],
-    );
-  }
-}
-
-/// زر تحديث بشكل كبسولة
-class _RefreshChip extends StatelessWidget {
-  const _RefreshChip({required this.onTap});
-
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final radius = BorderRadius.circular(24);
-    final cs = Theme.of(context).colorScheme;
-
-    return Padding(
-      padding: const EdgeInsetsDirectional.only(start: 8, end: 4),
-      child: Material(
-        borderRadius: radius,
-        color: cs.surfaceContainerHighest,
-        child: InkWell(
-          borderRadius: radius,
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text('Refresh'.tr(context)),
-                const SizedBox(width: 8),
-                const Icon(Icons.refresh_rounded, size: 18),
-              ],
-            ),
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding:
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          child: Row(
+            children: [
+              // Title + badge
+              Expanded(
+                child: Row(
+                  children: [
+                    Text(
+                      'Notifications'.tr(context),
+                      style: GoogleFonts.cairo(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
+                      ),
+                    ),
+                    if (unreadCount > 0) ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: AppColors.gold,
+                          borderRadius: BorderRadius.circular(99),
+                        ),
+                        child: Text(
+                          unreadCount.toString(),
+                          style: GoogleFonts.cairo(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 11,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              // Actions
+              _HeaderIconButton(
+                icon: Icons.search_rounded,
+                onTap: onSearch,
+              ),
+              const SizedBox(width: 6),
+              _HeaderIconButton(
+                icon: Icons.refresh_rounded,
+                onTap: onRefresh,
+              ),
+              const SizedBox(width: 6),
+              _HeaderIconButton(
+                icon: Icons.delete_sweep_outlined,
+                onTap: onClearAll,
+              ),
+            ],
           ),
         ),
       ),
@@ -402,9 +447,39 @@ class _RefreshChip extends StatelessWidget {
   }
 }
 
-/// AppBar البحث (Back داخل الشريط + TextField + X Clear)
-class _SearchAppBar extends StatelessWidget implements PreferredSizeWidget {
-  const _SearchAppBar({required this.controller, required this.onBack, required this.onClear, required this.onChanged});
+class _HeaderIconButton extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onTap;
+  const _HeaderIconButton({required this.icon, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 36,
+        height: 36,
+        decoration: BoxDecoration(
+          color: Colors.white24,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Icon(icon, color: Colors.white, size: 20),
+      ),
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// Search Header
+// ═══════════════════════════════════════════════════════════════════
+
+class _SearchHeader extends StatelessWidget {
+  const _SearchHeader({
+    required this.controller,
+    required this.onBack,
+    required this.onClear,
+    required this.onChanged,
+  });
 
   final TextEditingController controller;
   final VoidCallback onBack;
@@ -412,34 +487,49 @@ class _SearchAppBar extends StatelessWidget implements PreferredSizeWidget {
   final ValueChanged<String> onChanged;
 
   @override
-  Size get preferredSize => const Size.fromHeight(kToolbarHeight + 8);
-
-  @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      bottom: false,
-      child: Padding(
-        padding: const EdgeInsetsDirectional.fromSTEB(16, 8, 16, 8),
-        child: TextField(
-          controller: controller,
-          autofocus: true,
-          onChanged: onChanged,
-          textInputAction: TextInputAction.search,
-          decoration: InputDecoration(
-            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-            prefixIcon: IconButton(
-              tooltip: 'Back'.tr(context),
-              onPressed: onBack,
-              icon: const BackButtonIcon(),
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [AppColors.primaryMid, AppColors.primaryDeep],
+        ),
+      ),
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(14),
             ),
-            suffixIcon: IconButton(
-              tooltip: 'Clear'.tr(context),
-              onPressed: onClear,
-              icon: const Icon(Icons.close_rounded),
+            child: TextField(
+              controller: controller,
+              autofocus: true,
+              onChanged: onChanged,
+              textInputAction: TextInputAction.search,
+              style: GoogleFonts.cairo(fontSize: 14),
+              decoration: InputDecoration(
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                prefixIcon: IconButton(
+                  onPressed: onBack,
+                  icon: const Icon(Icons.arrow_back_rounded,
+                      color: AppColors.primaryMid),
+                ),
+                suffixIcon: IconButton(
+                  onPressed: onClear,
+                  icon: const Icon(Icons.close_rounded,
+                      color: AppColors.textMuted),
+                ),
+                hintText: 'Search'.tr(context),
+                hintStyle: GoogleFonts.cairo(color: AppColors.textMuted),
+                border: InputBorder.none,
+                isDense: true,
+              ),
             ),
-            hintText: 'Search'.tr(context),
-            border: InputBorder.none,
-            isDense: true,
           ),
         ),
       ),
@@ -447,7 +537,10 @@ class _SearchAppBar extends StatelessWidget implements PreferredSizeWidget {
   }
 }
 
-/// عنصر إشعار واحد
+// ═══════════════════════════════════════════════════════════════════
+// Notification Tile
+// ═══════════════════════════════════════════════════════════════════
+
 class _NotificationTile extends StatelessWidget {
   const _NotificationTile({
     required this.titleText,
@@ -471,70 +564,102 @@ class _NotificationTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-
-    final titleStyle = Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: isRead ? FontWeight.w600 : FontWeight.w800);
-
-    final bodyStyle = Theme.of(context).textTheme.bodyMedium;
-    final dateStyle = Theme.of(context).textTheme.bodySmall;
-
-    return Material(
-      color: isRead ? cs.secondary.withValues(alpha: 0.1) : cs.surfaceContainerHighest,
-      child: InkWell(
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.all(8),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              if (img != null && img!.trim().isNotEmpty)
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: CacheImg(url: img ?? '', imgWidth: 80, boxFit: BoxFit.fill, sizeCircleLoading: 30),
-                )
-              else
-                _CircleTypeIcon(isRead: isRead),
-              AppSpacing.horizontalMd,
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(titleText, style: titleStyle, maxLines: 1, overflow: TextOverflow.ellipsis),
-                        ),
-                        if (!isRead) ...[
-                          const SizedBox(width: 8),
-                          Container(
-                            width: 8,
-                            height: 8,
-                            decoration: BoxDecoration(color: cs.primary, shape: BoxShape.circle),
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: isRead ? AppColors.bgCard : AppColors.primaryMid.withOpacity(0.06),
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: isRead ? AppShadows.sm : AppShadows.card,
+          border: isRead
+              ? null
+              : Border.all(
+                  color: AppColors.primaryMid.withOpacity(0.15), width: 1),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (img != null && img!.trim().isNotEmpty)
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: CacheImg(
+                    url: img ?? '',
+                    imgWidth: 56,
+                    boxFit: BoxFit.cover,
+                    sizeCircleLoading: 24),
+              )
+            else
+              _CircleTypeIcon(isRead: isRead),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          titleText,
+                          style: GoogleFonts.cairo(
+                            fontSize: 13,
+                            fontWeight:
+                                isRead ? FontWeight.w600 : FontWeight.w800,
+                            color: AppColors.textPrimary,
                           ),
-                        ],
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      if (!isRead) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          width: 8,
+                          height: 8,
+                          decoration: const BoxDecoration(
+                            color: AppColors.gold,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
                       ],
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    bodyText,
+                    style: GoogleFonts.cairo(
+                        fontSize: 12, color: AppColors.textSecondary),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    dateText,
+                    style: GoogleFonts.cairo(
+                        fontSize: 11, color: AppColors.textMuted),
+                  ),
+                ],
+              ),
+            ),
+            if (showActionIcon)
+              Padding(
+                padding: const EdgeInsetsDirectional.only(top: 8),
+                child: GestureDetector(
+                  onTap: onActionTap,
+                  child: Container(
+                    width: 28,
+                    height: 28,
+                    decoration: BoxDecoration(
+                      color: AppColors.primaryMid.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
                     ),
-                    AppSpacing.verticalSm,
-                    Text(bodyText, style: bodyStyle, maxLines: 3, overflow: TextOverflow.ellipsis),
-                    AppSpacing.verticalSm,
-                    Text(dateText, style: dateStyle),
-                  ],
+                    child: const Icon(Icons.chevron_right_rounded,
+                        size: 18, color: AppColors.primaryMid),
+                  ),
                 ),
               ),
-              AppSpacing.horizontalMd,
-              if (showActionIcon)
-                Padding(
-                  padding: const EdgeInsetsDirectional.only(top: 44),
-                  child: IconButton(
-                    onPressed: onActionTap,
-                    icon: const Icon(Icons.chevron_right_rounded),
-                    tooltip: 'Open'.tr(context),
-                  ),
-                )
-              else
-                const SizedBox.shrink(),
-            ],
-          ),
+          ],
         ),
       ),
     );
@@ -547,51 +672,23 @@ class _CircleTypeIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return RotationTransition(
-      turns: const AlwaysStoppedAnimation(0.1),
-      child: Container(
-        width: 42,
-        height: 42,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          border: Border.all(color: Theme.of(context).dividerColor),
-        ),
-        alignment: Alignment.center,
-        child: Icon(
-          Icons.notifications_none_rounded,
-          color: isRead ? Theme.of(context).iconTheme.color : Theme.of(context).colorScheme.primary,
-        ),
+    return Container(
+      width: 44,
+      height: 44,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: isRead
+            ? null
+            : const LinearGradient(
+                colors: [AppColors.primaryLight, AppColors.primaryMid],
+              ),
+        color: isRead ? AppColors.gray100 : null,
       ),
-    );
-  }
-}
-
-/// شاشة “لا يوجد إشعارات”
-class _EmptyNotificationsView extends StatelessWidget {
-  const _EmptyNotificationsView({required this.title, required this.subtitle});
-
-  final String title;
-  final String subtitle;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: AppSpacing.paddingHorizontalLg,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.notifications_none_rounded, size: 56, color: Theme.of(context).iconTheme.color),
-            AppSpacing.verticalMd,
-            Text(
-              title,
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
-              textAlign: TextAlign.center,
-            ),
-            AppSpacing.verticalSm,
-            Text(subtitle, style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.center),
-          ],
-        ),
+      alignment: Alignment.center,
+      child: Icon(
+        Icons.notifications_none_rounded,
+        size: 22,
+        color: isRead ? AppColors.textMuted : Colors.white,
       ),
     );
   }

@@ -233,12 +233,12 @@ class GlobalErrorHandler {
     if (!context.mounted) return;
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: Text(title.tr(context)),
         content: Text(message.tr(context)),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(context).pop(),
+            onPressed: () => Navigator.of(dialogContext).pop(),
             child: Text('OK'.tr(context)),
           ),
         ],

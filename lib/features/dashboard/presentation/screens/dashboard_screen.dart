@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:hr_portal/core/constants/app_colors.dart';
+import 'package:hr_portal/core/constants/app_shadows.dart';
 import 'package:hr_portal/core/providers/core_providers.dart';
 import 'package:hr_portal/core/localization/app_localizations.dart';
 import 'package:hr_portal/core/localization/locale_provider.dart';
 import 'package:hr_portal/core/theme/app_spacing.dart';
 import 'package:hr_portal/core/theme/theme_mode_provider.dart';
 import 'package:hr_portal/features/profile/data/models/employee_profile_model.dart';
-import 'package:hr_portal/shared/widgets/app_components.dart';
+import 'package:hr_portal/shared/widgets/common_widgets.dart';
 
 import '../../../../shared/widgets/shared_widgets.dart';
 import '../../../../shared/controllers/global_error_handler.dart';
@@ -25,107 +28,223 @@ class DashboardScreen extends ConsumerWidget {
     final localeMode = ref.watch(localeModeProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Home'.tr(context)),
-        actions: [
-
-          PopupMenuButton<ThemeMode>(
-            tooltip: 'Theme'.tr(context),
-            position: PopupMenuPosition.under,
-            icon: const Icon(Icons.brightness_6_outlined),
-            initialValue: themeMode,
-            onSelected: (m) =>
-                ref.read(themeModeProvider.notifier).setThemeMode(m),
-            itemBuilder: (ctx) => [
-              PopupMenuItem(
-                value: ThemeMode.system,
-                child: Text('System'.tr(context)),
-              ),
-              PopupMenuItem(
-                value: ThemeMode.light,
-                child: Text('Light'.tr(context)),
-              ),
-              PopupMenuItem(
-                value: ThemeMode.dark,
-                child: Text('Dark'.tr(context)),
-              ),
-            ],
-          ),
-          PopupMenuButton<AppLocaleMode>(
-            tooltip: 'Language'.tr(context),
-            position: PopupMenuPosition.under,
-            icon: const Icon(Icons.language),
-            initialValue: localeMode,
-            onSelected: (m) =>
-                ref.read(localeModeProvider.notifier).setMode(m),
-            itemBuilder: (ctx) => [
-              PopupMenuItem(
-                value: AppLocaleMode.system,
-                child: Text('System'.tr(context)),
-              ),
-              PopupMenuItem(
-                value: AppLocaleMode.en,
-                child: Text('English'.tr(context)),
-              ),
-              PopupMenuItem(
-                value: AppLocaleMode.ar,
-                child: Text('Arabic'.tr(context)),
-              ),
-            ],
-          ),
-          
-          IconButton(
-            icon: const Icon(Icons.notifications_outlined),
-            tooltip: 'Notifications'.tr(context),
-            onPressed: () => context.push('/notifications'),
-          ),
-          IconButton(
-            icon: const Icon(Icons.logout),
-            tooltip: 'Logout'.tr(context),
-            onPressed: () => _showLogoutDialog(context, ref),
-          ),
-        ],
-      ),
+      backgroundColor: AppColors.bg,
       body: RefreshIndicator(
         onRefresh: () async {
           ref.invalidate(profileProvider);
           ref.invalidate(dashboardAttendanceProvider);
         },
-        child: ListView(
-          padding: AppSpacing.paddingAllMd,
+        child: Column(
           children: [
-            // ── Profile Card ──
-            profileAsync.when(
-              data: (profile) => _ProfileCard(
-                profile: profile,
+            // ── Hero Header ──
+            Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [AppColors.primaryMid, AppColors.primaryDeep],
+                ),
               ),
-              loading: () =>
-                  const SizedBox(height: 100, child: LoadingIndicator()),
-              error: (e, _) => _ErrorCard(
-                error: GlobalErrorHandler.handle(e),
-                onRetry: () => ref.invalidate(profileProvider),
+              padding: EdgeInsets.only(
+                top: MediaQuery.of(context).padding.top + 12,
+                bottom: 16,
+                left: 18,
+                right: 18,
+              ),
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      // ── Action Buttons (Left) ──
+                      Row(
+                        children: [
+                          _HeaderIconButton(
+                            icon: '🔔',
+                            onTap: () => context.push('/notifications'),
+                          ),
+                          const SizedBox(width: 8),
+                          _HeaderIconButton(
+                            icon: '⚙️',
+                            onTap: () => _showSettingsSheet(
+                                context, ref, themeMode, localeMode),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(width: 12),
+                      // ── Profile Info (Right) ──
+                      Expanded(
+                        child: profileAsync.when(
+                          data: (profile) => _HeroProfileInfo(profile: profile),
+                          loading: () => Text(
+                            'Loading...'.tr(context),
+                            style: GoogleFonts.cairo(
+                                fontSize: 13, color: Colors.white60),
+                            textAlign: TextAlign.end,
+                          ),
+                          error: (_, __) => Text(
+                            'Welcome'.tr(context),
+                            style: GoogleFonts.cairo(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w800,
+                              color: Colors.white,
+                            ),
+                            textAlign: TextAlign.end,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  // ── Attendance Card ──
+                  ref.watch(dashboardAttendanceProvider).when(
+                        data: (summary) =>
+                            _AttendanceHeroCard(summary: summary),
+                        loading: () => Container(
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: Colors.white10,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: Colors.white24),
+                          ),
+                          child: const Center(
+                            child: SizedBox(
+                              width: 24,
+                              height: 24,
+                              child: CircularProgressIndicator(
+                                  color: Colors.white54, strokeWidth: 2),
+                            ),
+                          ),
+                        ),
+                        error: (e, _) => Container(
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: Colors.white10,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: Colors.white24),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(Icons.error_outline,
+                                  color: Colors.white54, size: 18),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Error loading attendance'.tr(context),
+                                style: GoogleFonts.cairo(
+                                    fontSize: 12, color: Colors.white54),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                ],
               ),
             ),
-            AppSpacing.verticalMd,
 
-            // ── Quick Actions ──
-            SectionHeader(title: 'Quick actions'.tr(context)),
-            _QuickActionsGrid(),
-            AppSpacing.verticalLg,
+            // ── Scrollable Body ──
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
+                children: [
+                  // ── Quick Actions ──
+                  AppSectionHeader(title: 'Quick actions'.tr(context)),
+                  _QuickActionsGrid(),
+                  const SizedBox(height: 20),
 
-            // ── Attendance Summary ──
-            SectionHeader(title: 'Attendance summary — current month'.tr(context)),
-            ref
-                .watch(dashboardAttendanceProvider)
-                .when(
-                  data: (summary) => _AttendanceSummaryCard(summary: summary),
-                  loading: () =>
-                      const SizedBox(height: 80, child: LoadingIndicator()),
-                  error: (e, _) => _ErrorCard(
-                    error: GlobalErrorHandler.handle(e),
-                    onRetry: () => ref.invalidate(dashboardAttendanceProvider),
-                  ),
-                ),
+                  // ── Attendance Summary ──
+                  AppSectionHeader(
+                      title:
+                          'Attendance summary — current month'.tr(context)),
+                  ref.watch(dashboardAttendanceProvider).when(
+                        data: (summary) =>
+                            _AttendanceSummaryCard(summary: summary),
+                        loading: () => const SizedBox(
+                            height: 80, child: LoadingIndicator()),
+                        error: (e, _) => _ErrorCard(
+                          error: GlobalErrorHandler.handle(e),
+                          onRetry: () =>
+                              ref.invalidate(dashboardAttendanceProvider),
+                        ),
+                      ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showSettingsSheet(BuildContext context, WidgetRef ref,
+      ThemeMode themeMode, AppLocaleMode localeMode) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.all(22),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.brightness_6_outlined),
+              title: Text('Theme'.tr(context)),
+              trailing: DropdownButton<ThemeMode>(
+                value: themeMode,
+                underline: const SizedBox(),
+                onChanged: (m) {
+                  if (m != null) {
+                    ref.read(themeModeProvider.notifier).setThemeMode(m);
+                  }
+                },
+                items: [
+                  DropdownMenuItem(
+                      value: ThemeMode.system,
+                      child: Text('System'.tr(context))),
+                  DropdownMenuItem(
+                      value: ThemeMode.light,
+                      child: Text('Light'.tr(context))),
+                  DropdownMenuItem(
+                      value: ThemeMode.dark,
+                      child: Text('Dark'.tr(context))),
+                ],
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.language),
+              title: Text('Language'.tr(context)),
+              trailing: DropdownButton<AppLocaleMode>(
+                value: localeMode,
+                underline: const SizedBox(),
+                onChanged: (m) {
+                  if (m != null) {
+                    ref.read(localeModeProvider.notifier).setMode(m);
+                  }
+                },
+                items: [
+                  DropdownMenuItem(
+                      value: AppLocaleMode.system,
+                      child: Text('System'.tr(context))),
+                  DropdownMenuItem(
+                      value: AppLocaleMode.en,
+                      child: Text('English'.tr(context))),
+                  DropdownMenuItem(
+                      value: AppLocaleMode.ar,
+                      child: Text('Arabic'.tr(context))),
+                ],
+              ),
+            ),
+            const Divider(),
+            ListTile(
+              leading: const Icon(Icons.logout, color: AppColors.error),
+              title: Text('Logout'.tr(context),
+                  style: const TextStyle(color: AppColors.error)),
+              onTap: () {
+                Navigator.pop(ctx);
+                _showLogoutDialog(context, ref);
+              },
+            ),
           ],
         ),
       ),
@@ -136,19 +255,18 @@ class DashboardScreen extends ConsumerWidget {
     showDialog(
       context: context,
       builder: (BuildContext dCtx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Text('Logout'.tr(context)),
         content: Text('Do you want to log out from this device?'.tr(context)),
         actions: [
           TextButton(
-            onPressed: () {
-              Navigator.of(dCtx).pop();
-            },
+            onPressed: () => Navigator.of(dCtx).pop(),
             child: Text('Cancel'.tr(context)),
           ),
           TextButton(
             style: TextButton.styleFrom(
-              foregroundColor: Theme.of(context).colorScheme.onError,
-              backgroundColor: Theme.of(context).colorScheme.error,
+              foregroundColor: Colors.white,
+              backgroundColor: AppColors.error,
             ),
             onPressed: () async {
               Navigator.of(dCtx).pop();
@@ -158,16 +276,11 @@ class DashboardScreen extends ConsumerWidget {
                 ref.read(authProvider.notifier).onLogout();
               } catch (e) {
                 if (dCtx.mounted) {
-                  GlobalErrorHandler.show(
-                    dCtx,
-                    GlobalErrorHandler.handle(e),
-                  );
+                  GlobalErrorHandler.show(dCtx, GlobalErrorHandler.handle(e));
                 }
               }
             },
-            child: Text(
-              'Sign out'.tr(context),
-            ),
+            child: Text('Sign out'.tr(context)),
           ),
         ],
       ),
@@ -177,147 +290,183 @@ class DashboardScreen extends ConsumerWidget {
 
 // ── Private Widgets ──────────────────────────────────────────────────
 
-class _ProfileCard extends StatelessWidget {
-  final EmployeeProfile profile;
+class _HeaderIconButton extends StatelessWidget {
+  final String icon;
+  final VoidCallback onTap;
+  const _HeaderIconButton({required this.icon, required this.onTap});
 
-  const _ProfileCard({
-    required this.profile,
-  });
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 38,
+        height: 38,
+        decoration: BoxDecoration(
+          color: Colors.white12,
+          borderRadius: BorderRadius.circular(11),
+        ),
+        child: Center(child: Text(icon, style: const TextStyle(fontSize: 18))),
+      ),
+    );
+  }
+}
+
+class _HeroProfileInfo extends StatelessWidget {
+  final EmployeeProfile profile;
+  const _HeroProfileInfo({required this.profile});
 
   String _getGreeting(BuildContext context) {
     final now = DateTime.now();
-    if (now.hour < 12) {
-      return 'Good morning'.tr(context);
-    } else if (now.hour < 18) {
-      return 'Good afternoon'.tr(context);
-    } else {
-      return 'Good evening'.tr(context);
-    }
+    if (now.hour < 12) return 'Good morning'.tr(context);
+    if (now.hour < 18) return 'Good afternoon'.tr(context);
+    return 'Good evening'.tr(context);
   }
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
-    return Card(
-      child: Padding(
-        padding: AppSpacing.paddingAllMd,
-        child: Row(
-          children: [
-            if (profile.photoUrl != null)
-              ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: CacheImg(url: profile.photoUrl!, imgWidth: 58),
-              )
-            else
-              CircleAvatar(
-                radius: 28,
-                child: Text(profile.initials, style: const TextStyle(fontSize: 18)),
-              ),
-            AppSpacing.horizontalMd,
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    "${_getGreeting(context)} 👋",
-                    style: textTheme.titleSmall?.copyWith(color: colorScheme.primary),
-                  ),
-                  Text(
-                    profile.name,
-                    style: textTheme.titleMedium,
-                    overflow: TextOverflow.ellipsis,
-                    maxLines: 1,
-                  ),
-                  if (profile.jobTitle != null)
-                    Text(
-                      profile.jobTitle!,
-                      style: textTheme.bodyMedium,
-                      overflow: TextOverflow.ellipsis,
-                      maxLines: 1,
-                    ),
-                ],
-              ),
-            ),
-          ],
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        Text(
+          '${_getGreeting(context)}،',
+          style: GoogleFonts.cairo(fontSize: 13, color: Colors.white60),
         ),
+        Text(
+          profile.name,
+          style: GoogleFonts.cairo(
+            fontSize: 20,
+            fontWeight: FontWeight.w800,
+            color: Colors.white,
+          ),
+          overflow: TextOverflow.ellipsis,
+          maxLines: 1,
+        ),
+        if (profile.jobTitle != null)
+          Text(
+            profile.jobTitle!,
+            style: GoogleFonts.cairo(fontSize: 11, color: AppColors.goldLight),
+            overflow: TextOverflow.ellipsis,
+            maxLines: 1,
+          ),
+      ],
+    );
+  }
+}
+
+class _AttendanceHeroCard extends StatelessWidget {
+  final dynamic summary;
+  const _AttendanceHeroCard({required this.summary});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white10,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white24),
       ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
+          _HeroStat(
+              label: 'Present'.tr(context), value: '${summary.presentDays}'),
+          _HeroStat(
+              label: 'Absent'.tr(context), value: '${summary.absentDays}'),
+          _HeroStat(label: 'Late'.tr(context), value: '${summary.lateDays}'),
+          _HeroStat(
+              label: 'Leave'.tr(context), value: '${summary.leaveDays}'),
+        ],
+      ),
+    );
+  }
+}
+
+class _HeroStat extends StatelessWidget {
+  final String label;
+  final String value;
+  const _HeroStat({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(label,
+            style: GoogleFonts.cairo(fontSize: 10, color: Colors.white54)),
+        const SizedBox(height: 4),
+        Text(value,
+            style: GoogleFonts.cairo(
+              fontSize: 20,
+              fontWeight: FontWeight.w900,
+              color: Colors.white,
+            )),
+      ],
     );
   }
 }
 
 class _QuickActionsGrid extends StatelessWidget {
+  static const _actions = [
+    {'label': 'Attendance', 'icon': '⏱', 'route': '/attendance', 'color': AppColors.primaryMid},
+    {'label': 'Leaves', 'icon': '🌴', 'route': '/leaves', 'color': AppColors.teal},
+    {'label': 'Payroll', 'icon': '💰', 'route': '/payroll', 'color': AppColors.gold},
+    {'label': 'Requests', 'icon': '📝', 'route': '/requests', 'color': AppColors.success},
+  ];
+
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final crossAxisCount = constraints.maxWidth >= AppBreakpoints.mobile ? 4 : 2;
-        return GridView.count(
-      crossAxisCount: crossAxisCount,
+    return GridView.count(
+      crossAxisCount: 4,
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      mainAxisSpacing: AppSpacing.sm,
-      crossAxisSpacing: AppSpacing.sm,
-      childAspectRatio: 2.5,
-      children: [
-        _ActionTile(
-          icon: Icons.fingerprint,
-          label: 'Attendance',
-          onTap: () => context.go('/attendance'),
-        ),
-        _ActionTile(
-          icon: Icons.beach_access,
-          label: 'Leaves',
-          onTap: () => context.go('/leaves'),
-        ),
-        _ActionTile(
-          icon: Icons.receipt_long,
-          label: 'Payroll',
-          onTap: () => context.go('/payroll'),
-        ),
-        _ActionTile(
-          icon: Icons.description,
-          label: 'Requests',
-          onTap: () => context.go('/requests'),
-        ),
-      ],
-        );
-      },
-    );
-  }
-}
-
-class _ActionTile extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-
-  const _ActionTile({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-          child: Row(
-            children: [
-              Icon(icon, color: Theme.of(context).colorScheme.primary),
-              AppSpacing.horizontalMd,
-              Flexible(
-                child: Text(label.tr(context),
-                    style: Theme.of(context).textTheme.bodyLarge),
-              ),
-            ],
-          ),
-        ),
-      ),
+      crossAxisSpacing: 10,
+      mainAxisSpacing: 10,
+      childAspectRatio: 0.8,
+      children: _actions
+          .map((a) => GestureDetector(
+                onTap: () => context.go(a['route'] as String),
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(vertical: 12, horizontal: 6),
+                  decoration: BoxDecoration(
+                    color: AppColors.bgCard,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: AppColors.gray100),
+                    boxShadow: AppShadows.sm,
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: (a['color'] as Color).withOpacity(0.12),
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: Center(
+                          child: Text(a['icon'] as String,
+                              style: const TextStyle(fontSize: 20)),
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        (a['label'] as String).tr(context),
+                        style: GoogleFonts.cairo(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.textSecondary,
+                        ),
+                        textAlign: TextAlign.center,
+                        maxLines: 2,
+                      ),
+                    ],
+                  ),
+                ),
+              ))
+          .toList(),
     );
   }
 }
@@ -328,30 +477,27 @@ class _AttendanceSummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: AppSpacing.paddingAllMd,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: [
-            _SummaryStat(
+    return AppCard(
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
+          _SummaryStat(
               label: 'Present'.tr(context),
               value: '${summary.presentDays}',
-            ),
-            _SummaryStat(
+              color: AppColors.success),
+          _SummaryStat(
               label: 'Absent'.tr(context),
               value: '${summary.absentDays}',
-            ),
-            _SummaryStat(
+              color: AppColors.error),
+          _SummaryStat(
               label: 'Late'.tr(context),
               value: '${summary.lateDays}',
-            ),
-            _SummaryStat(
+              color: AppColors.warning),
+          _SummaryStat(
               label: 'Leave'.tr(context),
               value: '${summary.leaveDays}',
-            ),
-          ],
-        ),
+              color: AppColors.info),
+        ],
       ),
     );
   }
@@ -360,20 +506,26 @@ class _AttendanceSummaryCard extends StatelessWidget {
 class _SummaryStat extends StatelessWidget {
   final String label;
   final String value;
-  const _SummaryStat({required this.label, required this.value});
+  final Color color;
+  const _SummaryStat(
+      {required this.label, required this.value, required this.color});
 
   @override
   Widget build(BuildContext context) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(
-          value,
-          style: Theme.of(
-            context,
-          ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
-        ),
-        Text(label, style: Theme.of(context).textTheme.bodySmall),
+        Text(value,
+            style: GoogleFonts.cairo(
+              fontSize: 22,
+              fontWeight: FontWeight.w900,
+              color: color,
+              height: 1.1,
+            )),
+        const SizedBox(height: 4),
+        Text(label,
+            style:
+                GoogleFonts.cairo(fontSize: 11, color: AppColors.textMuted)),
       ],
     );
   }
@@ -386,21 +538,21 @@ class _ErrorCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      color: Theme.of(context).colorScheme.errorContainer,
-      child: Padding(
-        padding: AppSpacing.paddingAllMd,
-        child: Row(
-          children: [
-            const Icon(Icons.error_outline),
-            AppSpacing.horizontalSm,
-            Expanded(child: Text(error.message.tr(context))),
-            TextButton(
-              onPressed: onRetry,
-              child: Text('Retry'.tr(context)),
-            ),
-          ],
-        ),
+    return AppCard(
+      child: Row(
+        children: [
+          const Icon(Icons.error_outline, color: AppColors.error),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(error.message.tr(context),
+                style: GoogleFonts.cairo(
+                    fontSize: 13, color: AppColors.textSecondary)),
+          ),
+          TextButton(
+            onPressed: onRetry,
+            child: Text('Retry'.tr(context)),
+          ),
+        ],
       ),
     );
   }

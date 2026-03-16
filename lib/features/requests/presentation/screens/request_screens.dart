@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:hr_portal/core/constants/app_colors.dart';
+import 'package:hr_portal/core/constants/app_shadows.dart';
 import 'package:hr_portal/core/localization/app_localizations.dart';
-import 'package:hr_portal/core/theme/app_spacing.dart';
-import 'package:hr_portal/shared/widgets/app_components.dart';
+import 'package:hr_portal/shared/widgets/common_widgets.dart';
 
 import '../../../../shared/widgets/shared_widgets.dart';
 import '../../../../shared/controllers/global_error_handler.dart';
@@ -20,22 +22,39 @@ class RequestsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
-      appBar: AppBar(title: Text('Requests'.tr(context))),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => context.go('/requests/create'),
-        icon: const Icon(Icons.add),
-        label: Text('New request'.tr(context)),
-      ),
-      body: PaginatedListView<EmployeeRequest>(
-        state: ref.watch(requestsListProvider),
-        onRefresh: () =>
-            ref.read(requestsListProvider.notifier).refresh(),
-        onLoadMore: () =>
-            ref.read(requestsListProvider.notifier).loadMore(),
-        emptyIcon: Icons.description,
-        emptyTitle: 'No requests'.tr(context),
-        emptySubtitle: 'Tap + to create a new request'.tr(context),
-        itemBuilder: (context, request) => _RequestTile(request: request),
+      backgroundColor: AppColors.bg,
+      body: Column(
+        children: [
+          CustomAppBar(
+            title: 'Requests'.tr(context),
+            trailing: GestureDetector(
+              onTap: () => context.go('/requests/create'),
+              child: Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: Colors.white24,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.add, color: Colors.white, size: 20),
+              ),
+            ),
+          ),
+          Expanded(
+            child: PaginatedListView<EmployeeRequest>(
+              state: ref.watch(requestsListProvider),
+              onRefresh: () =>
+                  ref.read(requestsListProvider.notifier).refresh(),
+              onLoadMore: () =>
+                  ref.read(requestsListProvider.notifier).loadMore(),
+              emptyIcon: Icons.description,
+              emptyTitle: 'No requests'.tr(context),
+              emptySubtitle: 'Tap + to create a new request'.tr(context),
+              itemBuilder: (context, request) =>
+                  _RequestTile(request: request),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -45,65 +64,114 @@ class _RequestTile extends StatelessWidget {
   final EmployeeRequest request;
   const _RequestTile({required this.request});
 
+  String _statusType(String status) {
+    switch (status) {
+      case 'approved':
+      case 'completed':
+        return 'approved';
+      case 'rejected':
+        return 'rejected';
+      case 'pending':
+      case 'processing':
+        return 'pending';
+      case 'cancelled':
+        return 'navy';
+      default:
+        return 'info';
+    }
+  }
+
+  String _statusLabel(String status) {
+    switch (status) {
+      case 'approved':
+        return 'Approved';
+      case 'rejected':
+        return 'Rejected';
+      case 'pending':
+        return 'Pending';
+      case 'processing':
+        return 'Processing';
+      case 'completed':
+        return 'Completed';
+      case 'cancelled':
+        return 'Cancelled';
+      default:
+        return status;
+    }
+  }
+
+  String _typeLabel(String? type) {
+    switch (type) {
+      case 'salary_certificate':
+        return 'Salary certificate';
+      case 'experience_letter':
+        return 'Experience letter';
+      case 'vacation_settlement':
+        return 'Vacation settlement';
+      case 'loan_request':
+        return 'Loan request';
+      case 'expense_claim':
+        return 'Expense claim';
+      case 'training_request':
+        return 'Training request';
+      case 'other':
+        return 'Other';
+      default:
+        return type ?? 'Request';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final statusColor = switch (request.status) {
-      'approved' || 'completed' => Colors.green,
-      'rejected' => Colors.red,
-      'pending' || 'processing' => Colors.orange,
-      'cancelled' => Colors.grey,
-      _ => Colors.grey,
-    };
-
-    final statusLabel = switch (request.status) {
-      'approved' => 'Approved',
-      'rejected' => 'Rejected',
-      'pending' => 'Pending',
-      'processing' => 'Processing',
-      'completed' => 'Completed',
-      'cancelled' => 'Cancelled',
-      _ => request.status,
-    };
-
-    final typeLabel = switch (request.requestType) {
-      'salary_certificate' => 'Salary certificate',
-      'experience_letter' => 'Experience letter',
-      'vacation_settlement' => 'Vacation settlement',
-      'loan_request' => 'Loan request',
-      'expense_claim' => 'Expense claim',
-      'training_request' => 'Training request',
-      'other' => 'Other',
-      _ => request.requestType ?? 'Request',
-    };
-
-    return Card(
+    return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: statusColor.withOpacity(0.1),
-          child: Icon(Icons.description, color: statusColor),
-        ),
-        title: Text(
-          request.subject ?? typeLabel.tr(context),
-          overflow: TextOverflow.ellipsis,
-          maxLines: 1,
-        ),
-        subtitle: Text(
-          '${typeLabel.tr(context)}  •  ${request.createdAt.substring(0, 10)}',
-          overflow: TextOverflow.ellipsis,
-          maxLines: 1,
-        ),
-        trailing: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 120),
-          child: Chip(
-            label: Text(
-              statusLabel.tr(context),
-              style: TextStyle(color: statusColor, fontSize: 12),
-            ),
-            side: BorderSide(color: statusColor),
-            backgroundColor: statusColor.withOpacity(0.1),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.bgCard,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: AppShadows.card,
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Row(
+            children: [
+              StatusBadge(
+                text: _statusLabel(request.status).tr(context),
+                type: _statusType(request.status),
+                dot: true,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                request.createdAt.substring(0, 10),
+                style: GoogleFonts.cairo(
+                    fontSize: 11, color: AppColors.textMuted),
+              ),
+            ],
           ),
-        ),
+          Flexible(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  request.subject ??
+                      _typeLabel(request.requestType).tr(context),
+                  style: GoogleFonts.cairo(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                ),
+                Text(
+                  _typeLabel(request.requestType).tr(context),
+                  style: GoogleFonts.cairo(
+                      fontSize: 11, color: AppColors.textMuted),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -117,13 +185,13 @@ class CreateRequestScreen extends ConsumerWidget {
   const CreateRequestScreen({super.key});
 
   static const _types = [
-    ('salary_certificate', 'Salary certificate'),
-    ('experience_letter', 'Experience letter'),
-    ('vacation_settlement', 'Vacation settlement'),
-    ('loan_request', 'Loan request'),
-    ('expense_claim', 'Expense claim'),
-    ('training_request', 'Training request'),
-    ('other', 'Other'),
+    ('salary_certificate', 'Salary certificate', '📄'),
+    ('experience_letter', 'Experience letter', '📝'),
+    ('vacation_settlement', 'Vacation settlement', '🌴'),
+    ('loan_request', 'Loan request', '💰'),
+    ('expense_claim', 'Expense claim', '🧾'),
+    ('training_request', 'Training request', '📚'),
+    ('other', 'Other', '📋'),
   ];
 
   @override
@@ -136,6 +204,9 @@ class CreateRequestScreen extends ConsumerWidget {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Request submitted successfully'.tr(context)),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12)),
           ),
         );
         context.pop();
@@ -148,68 +219,99 @@ class CreateRequestScreen extends ConsumerWidget {
     });
 
     return Scaffold(
-      appBar: AppBar(title: Text('New request'.tr(context))),
-      body: SingleChildScrollView(
-        padding: AppSpacing.paddingAllMd,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // ── Type ──
-            DropdownButtonFormField<String>(
-              value: form.requestType.isEmpty ? null : form.requestType,
-              decoration: InputDecoration(
-                labelText: 'Request type *'.tr(context),
-                errorText: form.fieldError('request_type'),
-              ),
-              items: _types
-                  .map((t) => DropdownMenuItem(
-                        value: t.$1,
-                        child: Text(t.$2.tr(context)),
-                      ))
-                  .toList(),
-              onChanged: form.isLoading
-                  ? null
-                  : (v) {
-                      if (v != null) notifier.setRequestType(v);
-                    },
-            ),
-            AppSpacing.verticalMd,
+      backgroundColor: AppColors.bg,
+      body: Column(
+        children: [
+          CustomAppBar(
+            title: 'New request'.tr(context),
+            onBack: () => context.pop(),
+          ),
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // ── Type ──
+                  Text('Request type *'.tr(context),
+                      style: GoogleFonts.cairo(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textSecondary)),
+                  const SizedBox(height: 6),
+                  DropdownButtonFormField<String>(
+                    value: form.requestType.isEmpty
+                        ? null
+                        : form.requestType,
+                    decoration: InputDecoration(
+                        errorText: form.fieldError('request_type')),
+                    items: _types
+                        .map((t) => DropdownMenuItem(
+                              value: t.$1,
+                              child: Row(
+                                children: [
+                                  Text(t.$3,
+                                      style: const TextStyle(fontSize: 16)),
+                                  const SizedBox(width: 8),
+                                  Text(t.$2.tr(context),
+                                      style: GoogleFonts.cairo(fontSize: 13)),
+                                ],
+                              ),
+                            ))
+                        .toList(),
+                    onChanged: form.isLoading
+                        ? null
+                        : (v) {
+                            if (v != null) notifier.setRequestType(v);
+                          },
+                  ),
+                  const SizedBox(height: 14),
 
-            // ── Subject ──
-            TextField(
-              onChanged: notifier.setSubject,
-              enabled: !form.isLoading,
-              decoration: InputDecoration(
-                labelText: 'Subject *'.tr(context),
-                errorText: form.fieldError('subject'),
-              ),
-            ),
-            AppSpacing.verticalMd,
+                  // ── Subject ──
+                  Text('Subject *'.tr(context),
+                      style: GoogleFonts.cairo(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textSecondary)),
+                  const SizedBox(height: 6),
+                  TextField(
+                    onChanged: notifier.setSubject,
+                    enabled: !form.isLoading,
+                    style: GoogleFonts.cairo(fontSize: 13),
+                    decoration: InputDecoration(
+                        errorText: form.fieldError('subject')),
+                  ),
+                  const SizedBox(height: 14),
 
-            // ── Description ──
-            TextField(
-              onChanged: notifier.setDescription,
-              enabled: !form.isLoading,
-              maxLines: 4,
-              decoration: InputDecoration(
-                labelText: 'Details (optional)'.tr(context),
-                errorText: form.fieldError('description'),
+                  // ── Description ──
+                  Text('Details (optional)'.tr(context),
+                      style: GoogleFonts.cairo(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textSecondary)),
+                  const SizedBox(height: 6),
+                  TextField(
+                    onChanged: notifier.setDescription,
+                    enabled: !form.isLoading,
+                    maxLines: 4,
+                    style: GoogleFonts.cairo(fontSize: 13),
+                    decoration: InputDecoration(
+                        errorText: form.fieldError('description')),
+                  ),
+                ],
               ),
             ),
-            AppSpacing.verticalLg,
+          ),
 
-            // ── Submit ──
-            SizedBox(
-              height: 48,
-              child: AppLoadingButton(
-                isLoading: form.isLoading,
-                enabled: form.canSubmit,
-                onPressed: notifier.submit,
-                label: 'Submit'.tr(context),
-              ),
+          // ── Submit ──
+          StickyBottomBar(
+            child: PrimaryButton(
+              text: 'Submit'.tr(context),
+              loading: form.isLoading,
+              onTap: form.canSubmit ? notifier.submit : null,
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
