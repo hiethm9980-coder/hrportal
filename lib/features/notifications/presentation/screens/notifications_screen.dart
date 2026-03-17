@@ -65,7 +65,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
             child: Text('Cancel'.tr(context),
-                style: GoogleFonts.cairo(color: AppColors.textMuted)),
+                style: GoogleFonts.cairo(color: context.appColors.textMuted)),
           ),
           FilledButton(
             style: FilledButton.styleFrom(
@@ -100,7 +100,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
         }
       },
       child: Scaffold(
-        backgroundColor: AppColors.bg,
+        backgroundColor: context.appColors.bg,
         body: Column(
           children: [
             if (state.isSearchMode)
@@ -256,7 +256,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                               onPressed: () => Navigator.pop(dCtx, false),
                               child: Text('Cancel'.tr(context),
                                   style: GoogleFonts.cairo(
-                                      color: AppColors.textMuted)),
+                                      color: context.appColors.textMuted)),
                             ),
                             FilledButton(
                               style: FilledButton.styleFrom(
@@ -303,7 +303,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                                 onPressed: () => Navigator.pop(dCtx, false),
                                 child: Text('Cancel'.tr(context),
                                     style: GoogleFonts.cairo(
-                                        color: AppColors.textMuted)),
+                                        color: context.appColors.textMuted)),
                               ),
                               FilledButton(
                                 style: FilledButton.styleFrom(
@@ -390,6 +390,12 @@ class _NormalHeader extends StatelessWidget {
               const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           child: Row(
             children: [
+              // Back button
+              _HeaderIconButton(
+                icon: Icons.arrow_back_ios,
+                onTap: () => context.pop(),
+              ),
+              const SizedBox(width: 8),
               // Title + badge
               Expanded(
                 child: Row(
@@ -521,11 +527,11 @@ class _SearchHeader extends StatelessWidget {
                 ),
                 suffixIcon: IconButton(
                   onPressed: onClear,
-                  icon: const Icon(Icons.close_rounded,
-                      color: AppColors.textMuted),
+                  icon: Icon(Icons.close_rounded,
+                      color: context.appColors.textMuted),
                 ),
                 hintText: 'Search'.tr(context),
-                hintStyle: GoogleFonts.cairo(color: AppColors.textMuted),
+                hintStyle: GoogleFonts.cairo(color: context.appColors.textMuted),
                 border: InputBorder.none,
                 isDense: true,
               ),
@@ -570,7 +576,7 @@ class _NotificationTile extends StatelessWidget {
         margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: isRead ? AppColors.bgCard : AppColors.primaryMid.withOpacity(0.06),
+          color: isRead ? context.appColors.bgCard : AppColors.primaryMid.withOpacity(0.06),
           borderRadius: BorderRadius.circular(16),
           boxShadow: isRead ? AppShadows.sm : AppShadows.card,
           border: isRead
@@ -606,7 +612,7 @@ class _NotificationTile extends StatelessWidget {
                             fontSize: 13,
                             fontWeight:
                                 isRead ? FontWeight.w600 : FontWeight.w800,
-                            color: AppColors.textPrimary,
+                            color: context.appColors.textPrimary,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -629,7 +635,7 @@ class _NotificationTile extends StatelessWidget {
                   Text(
                     bodyText,
                     style: GoogleFonts.cairo(
-                        fontSize: 12, color: AppColors.textSecondary),
+                        fontSize: 12, color: context.appColors.textSecondary),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -637,7 +643,7 @@ class _NotificationTile extends StatelessWidget {
                   Text(
                     dateText,
                     style: GoogleFonts.cairo(
-                        fontSize: 11, color: AppColors.textMuted),
+                        fontSize: 11, color: context.appColors.textMuted),
                   ),
                 ],
               ),
@@ -682,13 +688,13 @@ class _CircleTypeIcon extends StatelessWidget {
             : const LinearGradient(
                 colors: [AppColors.primaryLight, AppColors.primaryMid],
               ),
-        color: isRead ? AppColors.gray100 : null,
+        color: isRead ? context.appColors.gray100 : null,
       ),
       alignment: Alignment.center,
       child: Icon(
         Icons.notifications_none_rounded,
         size: 22,
-        color: isRead ? AppColors.textMuted : Colors.white,
+        color: isRead ? context.appColors.textMuted : Colors.white,
       ),
     );
   }

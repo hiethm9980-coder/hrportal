@@ -35,7 +35,7 @@ class LoadingIndicator extends StatelessWidget {
             AppSpacing.verticalMd,
             Text(message!,
                 style: GoogleFonts.cairo(
-                    fontSize: 13, color: AppColors.textSecondary)),
+                    fontSize: 13, color: context.appColors.textSecondary)),
           ],
         ],
       ),
@@ -86,7 +86,7 @@ class ErrorFullScreen extends StatelessWidget {
               style: GoogleFonts.cairo(
                 fontSize: 18,
                 fontWeight: FontWeight.w800,
-                color: AppColors.textPrimary,
+                color: context.appColors.textPrimary,
               ),
               textAlign: TextAlign.center,
             ),
@@ -94,7 +94,7 @@ class ErrorFullScreen extends StatelessWidget {
             Text(
               error.message.tr(context),
               style: GoogleFonts.cairo(
-                  fontSize: 13, color: AppColors.textSecondary),
+                  fontSize: 13, color: context.appColors.textSecondary),
               textAlign: TextAlign.center,
             ),
             if (error.traceId != null) ...[
@@ -102,7 +102,7 @@ class ErrorFullScreen extends StatelessWidget {
               Text(
                 'Trace: ${error.traceId}',
                 style: GoogleFonts.cairo(
-                    fontSize: 11, color: AppColors.textMuted),
+                    fontSize: 11, color: context.appColors.textMuted),
               ),
             ],
             if (onRetry != null) ...[
@@ -183,7 +183,7 @@ class EmptyState extends StatelessWidget {
               style: GoogleFonts.cairo(
                 fontSize: 16,
                 fontWeight: FontWeight.w700,
-                color: AppColors.textPrimary,
+                color: context.appColors.textPrimary,
               ),
               textAlign: TextAlign.center,
             ),
@@ -192,7 +192,7 @@ class EmptyState extends StatelessWidget {
               Text(
                 subtitle!,
                 style: GoogleFonts.cairo(
-                    fontSize: 13, color: AppColors.textMuted),
+                    fontSize: 13, color: context.appColors.textMuted),
                 textAlign: TextAlign.center,
               ),
             ],
@@ -352,7 +352,7 @@ class SessionExpiredDialog extends StatelessWidget {
           style: GoogleFonts.cairo(fontWeight: FontWeight.w700)),
       content: Text(
           'Your session has expired. Please sign in again.'.tr(context),
-          style: GoogleFonts.cairo(color: AppColors.textSecondary)),
+          style: GoogleFonts.cairo(color: context.appColors.textSecondary)),
       actions: [
         GestureDetector(
           onTap: () => Navigator.of(context).pop(),
@@ -435,7 +435,7 @@ class CacheImg extends StatelessWidget {
         return Icon(
           Icons.error_outline,
           size: sizeCircleLoading,
-          color: AppColors.textMuted,
+          color: context.appColors.textMuted,
         );
       },
     );

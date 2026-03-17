@@ -165,9 +165,9 @@ class _MainShell extends StatelessWidget {
         body: child,
         bottomNavigationBar: Container(
           decoration: BoxDecoration(
-            color: AppColors.bgCard,
-            border: const Border(
-              top: BorderSide(color: AppColors.gray100, width: 1),
+            color: context.appColors.bgCard,
+            border: Border(
+              top: BorderSide(color: context.appColors.gray100, width: 1),
             ),
             boxShadow: [
               BoxShadow(
@@ -299,7 +299,7 @@ class _NavItem extends StatelessWidget {
               style: GoogleFonts.cairo(
                 fontSize: 10,
                 fontWeight: active ? FontWeight.w800 : FontWeight.w500,
-                color: active ? AppColors.primaryMid : AppColors.gray400,
+                color: active ? AppColors.primaryMid : context.appColors.gray400,
               ),
             ),
             if (active)

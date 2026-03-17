@@ -53,7 +53,7 @@ class LoginScreen extends ConsumerWidget {
     }
 
     return Scaffold(
-      backgroundColor: AppColors.bg,
+      backgroundColor: context.appColors.bg,
       body: SingleChildScrollView(
         child: Column(
           children: [
@@ -164,7 +164,7 @@ class LoginScreen extends ConsumerWidget {
                       style: GoogleFonts.cairo(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
-                        color: AppColors.textSecondary,
+                        color: context.appColors.textSecondary,
                       ),
                     ),
                     const SizedBox(height: 6),
@@ -187,7 +187,7 @@ class LoginScreen extends ConsumerWidget {
                       style: GoogleFonts.cairo(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
-                        color: AppColors.textSecondary,
+                        color: context.appColors.textSecondary,
                       ),
                     ),
                     const SizedBox(height: 6),
@@ -209,7 +209,7 @@ class LoginScreen extends ConsumerWidget {
                             form.obscurePassword
                                 ? Icons.visibility_off
                                 : Icons.visibility,
-                            color: AppColors.gray400,
+                            color: context.appColors.gray400,
                             size: 20,
                           ),
                         ),
@@ -287,9 +287,9 @@ class _SettingChip extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: AppColors.bgCard,
+          color: context.appColors.bgCard,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppColors.gray200),
+          border: Border.all(color: context.appColors.gray200),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -301,12 +301,12 @@ class _SettingChip extends StatelessWidget {
               style: GoogleFonts.cairo(
                 fontSize: 11,
                 fontWeight: FontWeight.w600,
-                color: AppColors.textSecondary,
+                color: context.appColors.textSecondary,
               ),
             ),
             const SizedBox(width: 4),
-            const Icon(Icons.arrow_drop_down,
-                size: 16, color: AppColors.gray400),
+            Icon(Icons.arrow_drop_down,
+                size: 16, color: context.appColors.gray400),
           ],
         ),
       ),

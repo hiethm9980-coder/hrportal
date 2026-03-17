@@ -38,7 +38,7 @@ class CreateLeaveScreen extends ConsumerWidget {
     });
 
     return Scaffold(
-      backgroundColor: AppColors.bg,
+      backgroundColor: context.appColors.bg,
       body: Column(
         children: [
           CustomAppBar(
@@ -62,7 +62,7 @@ class CreateLeaveScreen extends ConsumerWidget {
                             Text('Leave type'.tr(context),
                                 style: GoogleFonts.cairo(fontSize: 12,
                                     fontWeight: FontWeight.w600,
-                                    color: AppColors.textSecondary)),
+                                    color: context.appColors.textSecondary)),
                             const SizedBox(height: 6),
                             DropdownButtonFormField<int>(
                               value: form.leaveTypeId,
@@ -107,7 +107,7 @@ class CreateLeaveScreen extends ConsumerWidget {
                             Text('Duration'.tr(context),
                                 style: GoogleFonts.cairo(fontSize: 12,
                                     fontWeight: FontWeight.w600,
-                                    color: AppColors.textSecondary)),
+                                    color: context.appColors.textSecondary)),
                             const SizedBox(height: 6),
                             DropdownButtonFormField<String>(
                               value: form.dayPart,
@@ -123,7 +123,7 @@ class CreateLeaveScreen extends ConsumerWidget {
                             Text('Reason (optional)'.tr(context),
                                 style: GoogleFonts.cairo(fontSize: 12,
                                     fontWeight: FontWeight.w600,
-                                    color: AppColors.textSecondary)),
+                                    color: context.appColors.textSecondary)),
                             const SizedBox(height: 6),
                             TextFormField(
                               initialValue: form.reason,
@@ -163,7 +163,7 @@ class _DateField extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(label, style: GoogleFonts.cairo(fontSize: 12,
-            fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+            fontWeight: FontWeight.w600, color: context.appColors.textSecondary)),
         const SizedBox(height: 6),
         InkWell(
           onTap: () async {

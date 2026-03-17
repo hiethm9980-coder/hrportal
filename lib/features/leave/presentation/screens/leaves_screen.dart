@@ -19,13 +19,14 @@ class LeavesScreen extends ConsumerWidget {
     final state = ref.watch(leavesListProvider);
 
     return Scaffold(
-      backgroundColor: AppColors.bg,
+      backgroundColor: context.appColors.bg,
       body: Column(
         children: [
           // ── Gradient Header ──
           CustomAppBar(
             title: 'Leaves'.tr(context),
-            trailing: GestureDetector(
+            onRefresh: () => ref.read(leavesListProvider.notifier).refresh(),
+            leading: GestureDetector(
               onTap: () => context.go('/leaves/create'),
               child: Container(
                 width: 36,
@@ -66,15 +67,14 @@ class LeavesScreen extends ConsumerWidget {
                                 height: 110,
                                 child: ListView(
                                   scrollDirection: Axis.horizontal,
-                                  reverse: true,
                                   children: state.balances.map((b) {
                                     final avail = b.available;
                                     return Container(
                                       width: 130,
-                                      margin: const EdgeInsets.only(right: 10),
+                                      margin: const EdgeInsetsDirectional.only(end: 10),
                                       padding: const EdgeInsets.all(14),
                                       decoration: BoxDecoration(
-                                        color: AppColors.bgCard,
+                                        color: context.appColors.bgCard,
                                         borderRadius:
                                             BorderRadius.circular(16),
                                         boxShadow: AppShadows.card,
@@ -85,14 +85,14 @@ class LeavesScreen extends ConsumerWidget {
                                       ),
                                       child: Column(
                                         crossAxisAlignment:
-                                            CrossAxisAlignment.end,
+                                            CrossAxisAlignment.start,
                                         children: [
                                           Text(
                                             b.leaveType?.name ?? '',
                                             style: GoogleFonts.cairo(
                                               fontSize: 11,
                                               fontWeight: FontWeight.w700,
-                                              color: AppColors.textSecondary,
+                                              color: context.appColors.textSecondary,
                                             ),
                                             maxLines: 1,
                                             overflow: TextOverflow.ellipsis,
@@ -110,7 +110,7 @@ class LeavesScreen extends ConsumerWidget {
                                             '${'Used'.tr(context)}: ${b.used.toStringAsFixed(1)}',
                                             style: GoogleFonts.cairo(
                                               fontSize: 10,
-                                              color: AppColors.textMuted,
+                                              color: context.appColors.textMuted,
                                             ),
                                           ),
                                         ],
@@ -133,7 +133,7 @@ class LeavesScreen extends ConsumerWidget {
                                   margin: const EdgeInsets.only(bottom: 10),
                                   padding: const EdgeInsets.all(14),
                                   decoration: BoxDecoration(
-                                    color: AppColors.bgCard,
+                                    color: context.appColors.bgCard,
                                     borderRadius: BorderRadius.circular(16),
                                     boxShadow: AppShadows.card,
                                   ),
@@ -141,26 +141,9 @@ class LeavesScreen extends ConsumerWidget {
                                     mainAxisAlignment:
                                         MainAxisAlignment.spaceBetween,
                                     children: [
-                                      Row(
-                                        children: [
-                                          StatusBadge(
-                                            text: r.status,
-                                            type: _statusType(r.status),
-                                            dot: true,
-                                          ),
-                                          const SizedBox(width: 8),
-                                          Text(
-                                            '${r.totalDays.toStringAsFixed(1)} ${'day'.tr(context)}',
-                                            style: GoogleFonts.cairo(
-                                              fontSize: 11,
-                                              color: AppColors.textMuted,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
                                       Column(
                                         crossAxisAlignment:
-                                            CrossAxisAlignment.end,
+                                            CrossAxisAlignment.start,
                                         children: [
                                           Text(
                                             r.leaveType?.name ?? '',
@@ -173,8 +156,25 @@ class LeavesScreen extends ConsumerWidget {
                                             '${r.startDate} → ${r.endDate}',
                                             style: GoogleFonts.cairo(
                                               fontSize: 11,
-                                              color: AppColors.textMuted,
+                                              color: context.appColors.textMuted,
                                             ),
+                                          ),
+                                        ],
+                                      ),
+                                      Row(
+                                        children: [
+                                          Text(
+                                            '${r.totalDays.toStringAsFixed(1)} ${'day'.tr(context)}',
+                                            style: GoogleFonts.cairo(
+                                              fontSize: 11,
+                                              color: context.appColors.textMuted,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          StatusBadge(
+                                            text: r.status,
+                                            type: _statusType(r.status),
+                                            dot: true,
                                           ),
                                         ],
                                       ),

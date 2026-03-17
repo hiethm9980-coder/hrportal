@@ -22,10 +22,13 @@ class PayrollScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
-      backgroundColor: AppColors.bg,
+      backgroundColor: context.appColors.bg,
       body: Column(
         children: [
-          CustomAppBar(title: 'Payroll'.tr(context)),
+          CustomAppBar(
+            title: 'Payroll'.tr(context),
+            onRefresh: () => ref.read(payslipListProvider.notifier).refresh(),
+          ),
           Expanded(
             child: PaginatedListView<Payslip>(
               state: ref.watch(payslipListProvider),
@@ -67,7 +70,7 @@ class _PayslipTile extends StatelessWidget {
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: AppColors.bgCard,
+          color: context.appColors.bgCard,
           borderRadius: BorderRadius.circular(16),
           boxShadow: AppShadows.card,
         ),
@@ -93,7 +96,7 @@ class _PayslipTile extends StatelessWidget {
                       Text(
                         payslip.currency!,
                         style: GoogleFonts.cairo(
-                            fontSize: 11, color: AppColors.textMuted),
+                            fontSize: 11, color: context.appColors.textMuted),
                       ),
                   ],
                 ),
@@ -112,7 +115,7 @@ class _PayslipTile extends StatelessWidget {
                 Text(
                   '${'Gross'.tr(context)}: ${payslip.totalGross.toStringAsFixed(2)}',
                   style: GoogleFonts.cairo(
-                      fontSize: 11, color: AppColors.textMuted),
+                      fontSize: 11, color: context.appColors.textMuted),
                 ),
               ],
             ),
@@ -136,7 +139,7 @@ class PayslipDetailScreen extends ConsumerWidget {
     final detailAsync = ref.watch(payslipDetailProvider(month));
 
     return Scaffold(
-      backgroundColor: AppColors.bg,
+      backgroundColor: context.appColors.bg,
       body: Column(
         children: [
           CustomAppBar(
@@ -226,7 +229,7 @@ class PayslipDetailScreen extends ConsumerWidget {
                           margin: const EdgeInsets.only(bottom: 8),
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: AppColors.bgCard,
+                            color: context.appColors.bgCard,
                             borderRadius: BorderRadius.circular(14),
                             boxShadow: AppShadows.sm,
                             border: Border(

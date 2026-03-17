@@ -4,9 +4,9 @@
 
   "description": "HR Portal Web Application",
 
-  "start_url": "/",
+  "start_url": "/hrportal/",
 
-  "scope": "/",
+  "scope": "/hrportal/",
 
   "display": "standalone",
 

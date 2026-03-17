@@ -22,12 +22,13 @@ class RequestsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
-      backgroundColor: AppColors.bg,
+      backgroundColor: context.appColors.bg,
       body: Column(
         children: [
           CustomAppBar(
             title: 'Requests'.tr(context),
-            trailing: GestureDetector(
+            onRefresh: () => ref.read(requestsListProvider.notifier).refresh(),
+            leading: GestureDetector(
               onTap: () => context.go('/requests/create'),
               child: Container(
                 width: 36,
@@ -127,7 +128,7 @@ class _RequestTile extends StatelessWidget {
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppColors.bgCard,
+        color: context.appColors.bgCard,
         borderRadius: BorderRadius.circular(16),
         boxShadow: AppShadows.card,
       ),
@@ -145,7 +146,7 @@ class _RequestTile extends StatelessWidget {
               Text(
                 request.createdAt.substring(0, 10),
                 style: GoogleFonts.cairo(
-                    fontSize: 11, color: AppColors.textMuted),
+                    fontSize: 11, color: context.appColors.textMuted),
               ),
             ],
           ),
@@ -166,7 +167,7 @@ class _RequestTile extends StatelessWidget {
                 Text(
                   _typeLabel(request.requestType).tr(context),
                   style: GoogleFonts.cairo(
-                      fontSize: 11, color: AppColors.textMuted),
+                      fontSize: 11, color: context.appColors.textMuted),
                 ),
               ],
             ),
@@ -219,7 +220,7 @@ class CreateRequestScreen extends ConsumerWidget {
     });
 
     return Scaffold(
-      backgroundColor: AppColors.bg,
+      backgroundColor: context.appColors.bg,
       body: Column(
         children: [
           CustomAppBar(
@@ -237,7 +238,7 @@ class CreateRequestScreen extends ConsumerWidget {
                       style: GoogleFonts.cairo(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
-                          color: AppColors.textSecondary)),
+                          color: context.appColors.textSecondary)),
                   const SizedBox(height: 6),
                   DropdownButtonFormField<String>(
                     value: form.requestType.isEmpty
@@ -272,7 +273,7 @@ class CreateRequestScreen extends ConsumerWidget {
                       style: GoogleFonts.cairo(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
-                          color: AppColors.textSecondary)),
+                          color: context.appColors.textSecondary)),
                   const SizedBox(height: 6),
                   TextField(
                     onChanged: notifier.setSubject,
@@ -288,7 +289,7 @@ class CreateRequestScreen extends ConsumerWidget {
                       style: GoogleFonts.cairo(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
-                          color: AppColors.textSecondary)),
+                          color: context.appColors.textSecondary)),
                   const SizedBox(height: 6),
                   TextField(
                     onChanged: notifier.setDescription,

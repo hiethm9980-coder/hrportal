@@ -220,7 +220,7 @@ class StatusBadge extends StatelessWidget {
       case 'info':                        return (AppColors.infoSoft, AppColors.infoDark);
       case 'navy':      case 'completed': return (AppColors.primarySoft, AppColors.primaryMid);
       case 'gold':                        return (AppColors.goldSoft, AppColors.goldDark);
-      default:                            return (AppColors.gray100, AppColors.gray600);
+      default:                            return (const Color(0xFFF3F4F6), const Color(0xFF4B5563));
     }
   }
 
@@ -275,7 +275,7 @@ class AppCard extends StatelessWidget {
         margin: EdgeInsets.only(bottom: marginBottom ?? 0),
         padding: customPadding ?? EdgeInsets.all(padding ?? AppSpacing.cardPad),
         decoration: BoxDecoration(
-          color: AppColors.bgCard,
+          color: context.appColors.bgCard,
           borderRadius: BorderRadius.circular(18),
           boxShadow: AppShadows.card,
         ),
@@ -303,19 +303,19 @@ class AppSectionHeader extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
+          Text(title, style: GoogleFonts.cairo(
+            fontSize: 16, fontWeight: FontWeight.w800,
+            color: context.appColors.textPrimary,
+          )),
           if (onAction != null)
             GestureDetector(
               onTap: onAction,
-              child: Text(actionLabel ?? 'عرض الكل', style: GoogleFonts.cairo(
+              child: Text(actionLabel ?? 'View all', style: GoogleFonts.cairo(
                 fontSize: 13, fontWeight: FontWeight.w700,
                 color: AppColors.primaryMid,
               )),
             )
           else const SizedBox(),
-          Text(title, style: GoogleFonts.cairo(
-            fontSize: 16, fontWeight: FontWeight.w800,
-            color: AppColors.textPrimary,
-          )),
         ],
       ),
     );
@@ -340,8 +340,8 @@ class InfoRow extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 10),
       decoration: BoxDecoration(
-        border: showBorder ? const Border(
-          bottom: BorderSide(color: AppColors.gray100),
+        border: showBorder ? Border(
+          bottom: BorderSide(color: context.appColors.gray100),
         ) : null,
       ),
       child: Row(
@@ -349,7 +349,7 @@ class InfoRow extends StatelessWidget {
         children: [
           Flexible(
             child: Text(value, style: GoogleFonts.cairo(
-              fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary,
+              fontSize: 13, fontWeight: FontWeight.w600, color: context.appColors.textSecondary,
             ), textAlign: TextAlign.left, textDirection: TextDirection.ltr),
           ),
           Row(
@@ -360,7 +360,7 @@ class InfoRow extends StatelessWidget {
                 const SizedBox(width: 6),
               ],
               Text(label, style: GoogleFonts.cairo(
-                fontSize: 13, color: AppColors.textMuted,
+                fontSize: 13, color: context.appColors.textMuted,
               )),
             ],
           ),
@@ -376,15 +376,69 @@ class CustomAppBar extends StatelessWidget {
   final String title;
   final String? subtitle;
   final VoidCallback? onBack;
+  final VoidCallback? onRefresh;
+  final Widget? leading;
   final Widget? trailing;
 
   const CustomAppBar({
     super.key, required this.title, this.subtitle,
-    this.onBack, this.trailing,
+    this.onBack, this.onRefresh, this.leading, this.trailing,
   });
 
   @override
   Widget build(BuildContext context) {
+    // ── Start side (right in RTL, left in LTR) ──
+    Widget startWidget;
+    if (leading != null) {
+      startWidget = leading!;
+    } else if (onBack != null) {
+      startWidget = GestureDetector(
+        onTap: onBack,
+        child: Container(
+          width: 36, height: 36,
+          decoration: BoxDecoration(
+            color: Colors.white24,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: const Icon(
+            Icons.arrow_back_ios,
+            color: Colors.white, size: 18,
+          ),
+        ),
+      );
+    } else {
+      startWidget = const SizedBox(width: 36);
+    }
+
+    // ── End side (left in RTL, right in LTR) ──
+    final endWidgets = <Widget>[];
+    if (onRefresh != null) {
+      endWidgets.add(
+        GestureDetector(
+          onTap: onRefresh,
+          child: Container(
+            width: 36, height: 36,
+            decoration: BoxDecoration(
+              color: Colors.white24,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Icon(Icons.refresh_rounded, color: Colors.white, size: 20),
+          ),
+        ),
+      );
+    }
+    if (trailing != null) {
+      if (endWidgets.isNotEmpty) endWidgets.add(const SizedBox(width: 6));
+      endWidgets.add(trailing!);
+    }
+
+    Widget endWidget;
+    if (endWidgets.isNotEmpty) {
+      endWidget = Row(mainAxisSize: MainAxisSize.min, children: endWidgets);
+    } else {
+      endWidget = const SizedBox(width: 36);
+    }
+
     return Container(
       decoration: const BoxDecoration(
         gradient: LinearGradient(
@@ -399,7 +453,7 @@ class CustomAppBar extends StatelessWidget {
       ),
       child: Row(
         children: [
-          trailing ?? const SizedBox(width: 36),
+          startWidget,
           Expanded(
             child: Column(
               children: [
@@ -413,19 +467,7 @@ class CustomAppBar extends StatelessWidget {
               ],
             ),
           ),
-          if (onBack != null)
-            GestureDetector(
-              onTap: onBack,
-              child: Container(
-                width: 36, height: 36,
-                decoration: BoxDecoration(
-                  color: Colors.white24,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(Icons.arrow_forward_ios, color: Colors.white, size: 18),
-              ),
-            )
-          else const SizedBox(width: 36),
+          endWidget,
         ],
       ),
     );
@@ -443,7 +485,7 @@ class StickyBottomBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.bgCard,
+        color: context.appColors.bgCard,
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.07),
@@ -533,7 +575,7 @@ class TimelineWidget extends StatelessWidget {
                     shape: BoxShape.circle,
                     color: s.isDone ? AppColors.primaryMid
                         : s.isActive ? AppColors.gold
-                        : AppColors.gray200,
+                        : context.appColors.gray200,
                     boxShadow: s.isActive ? AppShadows.gold : AppShadows.sm,
                   ),
                   child: Center(
@@ -542,13 +584,13 @@ class TimelineWidget extends StatelessWidget {
                       : Text(s.isActive ? '◉' : '${i+1}',
                           style: GoogleFonts.cairo(
                             fontSize: 11, fontWeight: FontWeight.w700,
-                            color: s.isDone || s.isActive ? Colors.white : AppColors.gray400,
+                            color: s.isDone || s.isActive ? Colors.white : context.appColors.gray400,
                           )),
                   ),
                 ),
                 if (!isLast)
                   Container(width: 2, height: 28,
-                    color: s.isDone ? AppColors.primarySoft : AppColors.gray200),
+                    color: s.isDone ? AppColors.primarySoft : context.appColors.gray200),
               ],
             ),
             const SizedBox(width: 12),
@@ -561,12 +603,12 @@ class TimelineWidget extends StatelessWidget {
                     Text(s.label, style: GoogleFonts.cairo(
                       fontSize: 13, fontWeight: FontWeight.w700,
                       color: s.isActive ? AppColors.primaryMid
-                          : s.isDone ? AppColors.textSecondary
-                          : AppColors.gray400,
+                          : s.isDone ? context.appColors.textSecondary
+                          : context.appColors.gray400,
                     )),
                     if (s.subtitle != null)
                       Text(s.subtitle!, style: GoogleFonts.cairo(
-                        fontSize: 11, color: AppColors.textMuted,
+                        fontSize: 11, color: context.appColors.textMuted,
                       )),
                   ],
                 ),
@@ -604,12 +646,12 @@ class EmptyStateWidget extends StatelessWidget {
             Text(icon, style: const TextStyle(fontSize: 48)),
             const SizedBox(height: 16),
             Text(title, style: GoogleFonts.cairo(
-              fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textSecondary,
+              fontSize: 16, fontWeight: FontWeight.w700, color: context.appColors.textSecondary,
             ), textAlign: TextAlign.center),
             if (subtitle != null) ...[
               const SizedBox(height: 8),
               Text(subtitle!, style: GoogleFonts.cairo(
-                fontSize: 13, color: AppColors.textMuted, height: 1.7,
+                fontSize: 13, color: context.appColors.textMuted, height: 1.7,
               ), textAlign: TextAlign.center),
             ],
             if (actionLabel != null && onAction != null) ...[
@@ -640,7 +682,7 @@ class AppToggle extends StatelessWidget {
         width: 46, height: 27,
         padding: const EdgeInsets.all(3),
         decoration: BoxDecoration(
-          color: value ? AppColors.primaryMid : AppColors.gray300,
+          color: value ? AppColors.primaryMid : context.appColors.gray300,
           borderRadius: BorderRadius.circular(14),
         ),
         child: AnimatedAlign(
@@ -674,7 +716,7 @@ class FilterTabs extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: AppColors.bgCard,
+      color: context.appColors.bgCard,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
@@ -695,7 +737,7 @@ class FilterTabs extends StatelessWidget {
                 child: Text(e.value, style: GoogleFonts.cairo(
                   fontSize: 12,
                   fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
-                  color: isActive ? Colors.white : AppColors.gray500,
+                  color: isActive ? Colors.white : context.appColors.textMuted,
                 )),
               ),
             );
@@ -729,11 +771,11 @@ class AttachmentUploadBox extends StatelessWidget {
             const Text('📎', style: TextStyle(fontSize: 28)),
             const SizedBox(height: 8),
             Text('انقر لإرفاق ملف', style: GoogleFonts.cairo(
-              fontSize: 13, color: AppColors.textMuted,
+              fontSize: 13, color: context.appColors.textMuted,
             )),
             const SizedBox(height: 4),
             Text('PDF، JPG، PNG — حد أقصى 5MB', style: GoogleFonts.cairo(
-              fontSize: 11, color: AppColors.gray400,
+              fontSize: 11, color: context.appColors.gray400,
             )),
           ],
         ),
@@ -753,7 +795,7 @@ class SkeletonCard extends StatelessWidget {
       height: 90, margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.bgCard,
+        color: context.appColors.bgCard,
         borderRadius: BorderRadius.circular(18),
         boxShadow: AppShadows.card,
       ),
@@ -761,13 +803,13 @@ class SkeletonCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           Container(height: 12, width: 160, decoration: BoxDecoration(
-            color: AppColors.gray100, borderRadius: BorderRadius.circular(6))),
+            color: context.appColors.gray100, borderRadius: BorderRadius.circular(6))),
           const SizedBox(height: 8),
           Container(height: 10, width: 100, decoration: BoxDecoration(
-            color: AppColors.gray100, borderRadius: BorderRadius.circular(6))),
+            color: context.appColors.gray100, borderRadius: BorderRadius.circular(6))),
           const Spacer(),
           Container(height: 8, width: 60, decoration: BoxDecoration(
-            color: AppColors.gray100, borderRadius: BorderRadius.circular(4))),
+            color: context.appColors.gray100, borderRadius: BorderRadius.circular(4))),
         ],
       ),
     );

@@ -44,13 +44,14 @@ class AttendanceScreen extends ConsumerWidget {
     final summary = historyController.summary;
 
     return Scaffold(
-      backgroundColor: AppColors.bg,
+      backgroundColor: context.appColors.bg,
       body: Column(
         children: [
           // ── Gradient Header ──
           CustomAppBar(
             title: 'Attendance'.tr(context),
             subtitle: 'Attendance summary — current month'.tr(context),
+            onRefresh: () => ref.read(attendanceHistoryProvider.notifier).refresh(),
           ),
 
           // ── Check In / Out Buttons ──
@@ -167,7 +168,7 @@ class _Stat extends StatelessWidget {
             )),
         const SizedBox(height: 4),
         Text(label,
-            style: GoogleFonts.cairo(fontSize: 11, color: AppColors.textMuted)),
+            style: GoogleFonts.cairo(fontSize: 11, color: context.appColors.textMuted)),
       ],
     );
   }
@@ -185,7 +186,7 @@ class _RecordTile extends StatelessWidget {
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppColors.bgCard,
+        color: context.appColors.bgCard,
         borderRadius: BorderRadius.circular(16),
         boxShadow: AppShadows.card,
       ),
@@ -199,14 +200,14 @@ class _RecordTile extends StatelessWidget {
                 const SizedBox(width: 8),
                 Text(
                   '${'In'.tr(context)}: ${record.checkInTime}',
-                  style: GoogleFonts.cairo(fontSize: 11, color: AppColors.textMuted),
+                  style: GoogleFonts.cairo(fontSize: 11, color: context.appColors.textMuted),
                 ),
               ],
               if (record.checkOutTime != null) ...[
                 const SizedBox(width: 8),
                 Text(
                   '${'Out'.tr(context)}: ${record.checkOutTime}',
-                  style: GoogleFonts.cairo(fontSize: 11, color: AppColors.textMuted),
+                  style: GoogleFonts.cairo(fontSize: 11, color: context.appColors.textMuted),
                 ),
               ],
             ],
@@ -216,7 +217,7 @@ class _RecordTile extends StatelessWidget {
             style: GoogleFonts.cairo(
               fontSize: 13,
               fontWeight: FontWeight.w700,
-              color: AppColors.textPrimary,
+              color: context.appColors.textPrimary,
             ),
           ),
         ],

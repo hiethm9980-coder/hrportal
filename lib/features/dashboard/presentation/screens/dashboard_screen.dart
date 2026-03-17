@@ -28,7 +28,7 @@ class DashboardScreen extends ConsumerWidget {
     final localeMode = ref.watch(localeModeProvider);
 
     return Scaffold(
-      backgroundColor: AppColors.bg,
+      backgroundColor: context.appColors.bg,
       body: RefreshIndicator(
         onRefresh: () async {
           ref.invalidate(profileProvider);
@@ -431,9 +431,9 @@ class _QuickActionsGrid extends StatelessWidget {
                   padding:
                       const EdgeInsets.symmetric(vertical: 12, horizontal: 6),
                   decoration: BoxDecoration(
-                    color: AppColors.bgCard,
+                    color: context.appColors.bgCard,
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: AppColors.gray100),
+                    border: Border.all(color: context.appColors.gray100),
                     boxShadow: AppShadows.sm,
                   ),
                   child: Column(
@@ -457,7 +457,7 @@ class _QuickActionsGrid extends StatelessWidget {
                         style: GoogleFonts.cairo(
                           fontSize: 10,
                           fontWeight: FontWeight.w700,
-                          color: AppColors.textSecondary,
+                          color: context.appColors.textSecondary,
                         ),
                         textAlign: TextAlign.center,
                         maxLines: 2,
@@ -525,7 +525,7 @@ class _SummaryStat extends StatelessWidget {
         const SizedBox(height: 4),
         Text(label,
             style:
-                GoogleFonts.cairo(fontSize: 11, color: AppColors.textMuted)),
+                GoogleFonts.cairo(fontSize: 11, color: context.appColors.textMuted)),
       ],
     );
   }
@@ -546,7 +546,7 @@ class _ErrorCard extends StatelessWidget {
           Expanded(
             child: Text(error.message.tr(context),
                 style: GoogleFonts.cairo(
-                    fontSize: 13, color: AppColors.textSecondary)),
+                    fontSize: 13, color: context.appColors.textSecondary)),
           ),
           TextButton(
             onPressed: onRetry,
