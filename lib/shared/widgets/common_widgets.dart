@@ -299,7 +299,7 @@ class AppSectionHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.only(bottom: 0),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -347,11 +347,6 @@ class InfoRow extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Flexible(
-            child: Text(value, style: GoogleFonts.cairo(
-              fontSize: 13, fontWeight: FontWeight.w600, color: context.appColors.textSecondary,
-            ), textAlign: TextAlign.left, textDirection: TextDirection.ltr),
-          ),
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -363,6 +358,11 @@ class InfoRow extends StatelessWidget {
                 fontSize: 13, color: context.appColors.textMuted,
               )),
             ],
+          ),
+          Flexible(
+            child: Text(value, style: GoogleFonts.cairo(
+              fontSize: 13, fontWeight: FontWeight.w600, color: context.appColors.textSecondary,
+            ), textAlign: TextAlign.end),
           ),
         ],
       ),
@@ -687,7 +687,7 @@ class AppToggle extends StatelessWidget {
         ),
         child: AnimatedAlign(
           duration: const Duration(milliseconds: 200),
-          alignment: value ? Alignment.centerLeft : Alignment.centerRight,
+          alignment: value ? AlignmentDirectional.centerStart : AlignmentDirectional.centerEnd,
           child: Container(
             width: 21, height: 21,
             decoration: BoxDecoration(
@@ -728,7 +728,7 @@ class FilterTabs extends StatelessWidget {
               onTap: () => onSelect(e.key),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
-                margin: const EdgeInsets.only(left: 6),
+                margin: const EdgeInsetsDirectional.only(start: 6),
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
                 decoration: BoxDecoration(
                   color: isActive ? AppColors.primaryMid : Colors.transparent,

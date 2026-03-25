@@ -9,6 +9,8 @@ import 'features/leave/data/repositories/leave_repository.dart';
 import 'features/payroll/data/repositories/payroll_repository.dart';
 import 'features/profile/data/repositories/profile_repository.dart';
 import 'features/requests/data/repositories/request_repository.dart';
+import 'features/manager_requests/data/repositories/manager_request_repository.dart';
+import 'features/manager_requests/data/repositories/manager_leave_repository.dart';
 
 final sl = GetIt.instance;
 
@@ -73,5 +75,15 @@ Future<void> initDependencies() async {
   // ── Feature: Requests ──────────────────────────────────────────────
   sl.registerLazySingleton<RequestRepository>(
     () => RequestRepository(client: sl<ApiClient>()),
+  );
+
+  // ── Feature: Manager Requests (Approvals) ────────────────────────
+  sl.registerLazySingleton<ManagerRequestRepository>(
+    () => ManagerRequestRepository(client: sl<ApiClient>()),
+  );
+
+  // ── Feature: Manager Leaves (Approvals) ─────────────────────────
+  sl.registerLazySingleton<ManagerLeaveRepository>(
+    () => ManagerLeaveRepository(client: sl<ApiClient>()),
   );
 }

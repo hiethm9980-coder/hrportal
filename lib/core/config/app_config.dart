@@ -97,7 +97,7 @@ class AppConfig {
         return const AppConfig(
           flavor: AppFlavor.dev,
           // ── DEVELOPMENT ────────────────────────────────
-          baseUrl: 'https://account.alzajeltravel.com/api/v1', // Android emulator localhost
+          baseUrl: 'http://172.16.0.66:8000/api/v1', // Android emulator localhost
           envName: 'Development',
           enableDebugLogs: true,
           showEnvBanner: true,

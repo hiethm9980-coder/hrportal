@@ -53,7 +53,7 @@ class AppFuns {
     if (d == null) return '';
     // Jiffy يعتمد على intl للـ locale
     return replaceArabicNumbers(
-      Jiffy.parseFromDateTime(d).format(pattern: withDay ? 'EEEE، d-MMMM-yyyy' : 'd-MMMM-yyyy'),
+      Jiffy.parseFromDateTime(d).format(pattern: withDay ? 'EEEE، d MMMM yyyy' : 'd-MMMM-yyyy'),
     );
   }
 
@@ -68,7 +68,7 @@ class AppFuns {
     if (d == null) return '';
     if (withDay && withPeriods) {
       return replaceArabicNumbers(
-        Jiffy.parseFromDateTime(d).format(pattern: 'EEEE، d-MMMM-yyyy | h:mm a' ),
+        Jiffy.parseFromDateTime(d).format(pattern: 'EEEE، d MMMM yyyy | h:mm a' ),
       );
     } else if (withDay && !withPeriods) {
       return replaceArabicNumbers(
@@ -82,10 +82,32 @@ class AppFuns {
       return replaceArabicNumbers(
         Jiffy.parseFromDateTime(d).format(pattern: 'H:mm' ),
       );
-    } else {
+    } else { 
       return replaceArabicNumbers(
-        Jiffy.parseFromDateTime(d).format(pattern: 'EEEE، d-MMMM-yyyy | h:mm a' ),
+        Jiffy.parseFromDateTime(d).format(pattern: 'EEEE، d MMMM yyyy | h:mm a' ),
       );
+    }
+  }
+
+  /// Formats a UTC date string from API to local datetime.
+  /// [withSeconds] includes seconds in the output.
+  /// [isAr] uses Arabic period markers (ص/م) instead of AM/PM.
+  static String formatApiDateTime(String dateStr, {bool withSeconds = false, bool isAr = false}) {
+    try {
+      final utc = DateTime.parse(dateStr).toUtc();
+      final local = utc.toLocal();
+      final h = local.hour > 12 ? local.hour - 12 : (local.hour == 0 ? 12 : local.hour);
+      final period = local.hour >= 12 ? (isAr ? 'م' : 'PM') : (isAr ? 'ص' : 'AM');
+      final dd = local.day.toString().padLeft(2, '0');
+      final mm = local.month.toString().padLeft(2, '0');
+      final min = local.minute.toString().padLeft(2, '0');
+      if (withSeconds) {
+        final sec = local.second.toString().padLeft(2, '0');
+        return replaceArabicNumbers('$dd-$mm-${local.year} | $h:$min:$sec $period');
+      }
+      return replaceArabicNumbers('$dd-$mm-${local.year} | $h:$min $period');
+    } catch (_) {
+      return replaceArabicNumbers(dateStr);
     }
   }
 }

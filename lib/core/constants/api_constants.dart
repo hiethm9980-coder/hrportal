@@ -55,4 +55,14 @@ class ApiConstants {
 
   // ── Employee Requests ───────────────────────────────────────────────
   static const String requests = '/requests';
+
+  // ── Manager Requests (Approvals) ──────────────────────────────────
+  static const String managerRequests = '/manager/requests';
+  static String managerRequestDetail(int id) => '/manager/requests/$id';
+  static String managerRequestDecide(int id) => '/manager/requests/$id/decide';
+
+  // ── Manager Leaves (Approvals) ──────────────────────────────────
+  static const String managerLeaves = '/manager/leaves';
+  static String managerLeaveDetail(int id) => '/manager/leaves/$id';
+  static String managerLeaveDecide(int id) => '/manager/leaves/$id/decide';
 }

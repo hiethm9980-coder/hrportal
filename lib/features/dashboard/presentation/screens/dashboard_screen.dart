@@ -22,7 +22,6 @@ class DashboardScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final auth = ref.watch(authProvider);
     final profileAsync = ref.watch(profileProvider);
     final themeMode = ref.watch(themeModeProvider);
     final localeMode = ref.watch(localeModeProvider);
@@ -55,23 +54,7 @@ class DashboardScreen extends ConsumerWidget {
                 children: [
                   Row(
                     children: [
-                      // ── Action Buttons (Left) ──
-                      Row(
-                        children: [
-                          _HeaderIconButton(
-                            icon: '🔔',
-                            onTap: () => context.push('/notifications'),
-                          ),
-                          const SizedBox(width: 8),
-                          _HeaderIconButton(
-                            icon: '⚙️',
-                            onTap: () => _showSettingsSheet(
-                                context, ref, themeMode, localeMode),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(width: 12),
-                      // ── Profile Info (Right) ──
+                      // ── Profile Info (start side) ──
                       Expanded(
                         child: profileAsync.when(
                           data: (profile) => _HeroProfileInfo(profile: profile),
@@ -79,7 +62,7 @@ class DashboardScreen extends ConsumerWidget {
                             'Loading...'.tr(context),
                             style: GoogleFonts.cairo(
                                 fontSize: 13, color: Colors.white60),
-                            textAlign: TextAlign.end,
+                            textAlign: TextAlign.start,
                           ),
                           error: (_, __) => Text(
                             'Welcome'.tr(context),
@@ -88,9 +71,25 @@ class DashboardScreen extends ConsumerWidget {
                               fontWeight: FontWeight.w800,
                               color: Colors.white,
                             ),
-                            textAlign: TextAlign.end,
+                            textAlign: TextAlign.start,
                           ),
                         ),
+                      ),
+                      const SizedBox(width: 12),
+                      // ── Action Buttons (end side) ──
+                      Row(
+                        children: [
+                          _HeaderIconButton(
+                            icon: '⚙️',
+                            onTap: () => _showSettingsSheet(
+                                context, ref, themeMode, localeMode),
+                          ),
+                          const SizedBox(width: 8),
+                          _HeaderIconButton(
+                            icon: '🔔',
+                            onTap: () => context.push('/notifications'),
+                          ),
+                        ],
                       ),
                     ],
                   ),
@@ -144,17 +143,19 @@ class DashboardScreen extends ConsumerWidget {
             // ── Scrollable Body ──
             Expanded(
               child: ListView(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
+                padding: const EdgeInsets.fromLTRB(16, 10, 16, 80),
                 children: [
                   // ── Quick Actions ──
                   AppSectionHeader(title: 'Quick actions'.tr(context)),
+                  const SizedBox(height: 12),
                   _QuickActionsGrid(),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 24),
 
                   // ── Attendance Summary ──
                   AppSectionHeader(
                       title:
                           'Attendance summary — current month'.tr(context)),
+                  const SizedBox(height: 12),
                   ref.watch(dashboardAttendanceProvider).when(
                         data: (summary) =>
                             _AttendanceSummaryCard(summary: summary),
@@ -326,7 +327,7 @@ class _HeroProfileInfo extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.end,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           '${_getGreeting(context)}،',
@@ -407,67 +408,96 @@ class _HeroStat extends StatelessWidget {
   }
 }
 
-class _QuickActionsGrid extends StatelessWidget {
-  static const _actions = [
+class _QuickActionsGrid extends ConsumerWidget {
+  static const _baseActions = [
     {'label': 'Attendance', 'icon': '⏱', 'route': '/attendance', 'color': AppColors.primaryMid},
     {'label': 'Leaves', 'icon': '🌴', 'route': '/leaves', 'color': AppColors.teal},
     {'label': 'Payroll', 'icon': '💰', 'route': '/payroll', 'color': AppColors.gold},
     {'label': 'Requests', 'icon': '📝', 'route': '/requests', 'color': AppColors.success},
   ];
 
+  static const _approvalAction = {
+    'label': 'Approvals',
+    'icon': '✅',
+    'route': '/approvals',
+    'color': AppColors.info,
+  };
+
   @override
-  Widget build(BuildContext context) {
-    return GridView.count(
-      crossAxisCount: 4,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      crossAxisSpacing: 10,
-      mainAxisSpacing: 10,
-      childAspectRatio: 0.8,
-      children: _actions
-          .map((a) => GestureDetector(
-                onTap: () => context.go(a['route'] as String),
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(vertical: 12, horizontal: 6),
-                  decoration: BoxDecoration(
-                    color: context.appColors.bgCard,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: context.appColors.gray100),
-                    boxShadow: AppShadows.sm,
-                  ),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Container(
-                        width: 44,
-                        height: 44,
+  Widget build(BuildContext context, WidgetRef ref) {
+    final auth = ref.watch(authProvider);
+    final actions = [
+      ..._baseActions,
+      if (auth.isManager) 
+        _approvalAction,
+    ];
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final totalWidth = constraints.maxWidth;
+        const spacing = 10.0;
+        // Calculate item width: fit 4 per row minimum, more if space allows
+        final itemsPerRow = (totalWidth + spacing) ~/ (80 + spacing);
+        final columns = itemsPerRow.clamp(3, 6);
+        final itemWidth =
+            (totalWidth - (columns - 1) * spacing) / columns;
+
+        return Wrap(
+          spacing: spacing,
+          runSpacing: spacing,
+          children: actions
+              .map((a) => GestureDetector(
+                    onTap: () => context.go(a['route'] as String),
+                    child: SizedBox(
+                      width: itemWidth,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            vertical: 12, horizontal: 6),
                         decoration: BoxDecoration(
-                          color: (a['color'] as Color).withOpacity(0.12),
-                          borderRadius: BorderRadius.circular(14),
+                          color: context.appColors.bgCard,
+                          borderRadius: BorderRadius.circular(16),
+                          border:
+                              Border.all(color: context.appColors.gray100),
+                          boxShadow: AppShadows.sm,
                         ),
-                        child: Center(
-                          child: Text(a['icon'] as String,
-                              style: const TextStyle(fontSize: 20)),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: 44,
+                              height: 44,
+                              decoration: BoxDecoration(
+                                color:
+                                    (a['color'] as Color).withOpacity(0.12),
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                              child: Center(
+                                child: Text(a['icon'] as String,
+                                    style: const TextStyle(fontSize: 20)),
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              (a['label'] as String).tr(context),
+                              style: GoogleFonts.cairo(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                                color: context.appColors.textSecondary,
+                              ),
+                              textAlign: TextAlign.center,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
                         ),
                       ),
-                      const SizedBox(height: 6),
-                      Text(
-                        (a['label'] as String).tr(context),
-                        style: GoogleFonts.cairo(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w700,
-                          color: context.appColors.textSecondary,
-                        ),
-                        textAlign: TextAlign.center,
-                        maxLines: 2,
-                      ),
-                    ],
-                  ),
-                ),
-              ))
-          .toList(),
+                    ),
+                  ))
+              .toList(),
+        );
+      },
     );
+
   }
 }
 

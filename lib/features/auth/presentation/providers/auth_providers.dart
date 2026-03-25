@@ -7,6 +7,13 @@ import '../../../../core/errors/exceptions.dart';
 import '../../../../core/providers/core_providers.dart';
 import '../../data/models/auth_models.dart';
 import '../../../profile/data/models/employee_profile_model.dart';
+import '../../../dashboard/presentation/providers/dashboard_providers.dart';
+import '../../../attendance/presentation/providers/attendance_providers.dart';
+import '../../../leave/presentation/providers/leave_providers.dart';
+import '../../../payroll/presentation/providers/payroll_providers.dart';
+import '../../../requests/presentation/providers/request_providers.dart';
+import '../../../manager_requests/presentation/providers/manager_request_providers.dart';
+import '../../../notifications/presentation/providers/notifications_providers.dart';
 import '../../../../shared/controllers/global_error_handler.dart';
 
 // ═══════════════════════════════════════════════════════════════════
@@ -27,6 +34,9 @@ class AuthState {
   bool get isAuthenticated => status == AuthStatus.authenticated;
   bool get isUnauthenticated => status == AuthStatus.unauthenticated;
   bool get isUnknown => status == AuthStatus.unknown;
+
+  /// Whether the user has manager/approval permissions.
+  bool get isManager => employee?.canManageRequests ?? false;
 
   AuthState copyWith({AuthStatus? status, EmployeeProfile? employee}) {
     return AuthState(
@@ -74,10 +84,23 @@ class AuthNotifier extends StateNotifier<AuthState> {
       return;
     }
 
+    // Read stored manager flag (saved at login time).
+    final storedIsManager = await session.storage.getIsManager();
+
     // Token exists — validate it with the server.
     try {
       final auth = _ref.read(authRepositoryProvider);
-      final employee = await auth.getCurrentUser();
+      var employee = await auth.getCurrentUser();
+
+      // Always apply stored isManager flag if API /me doesn't return it.
+      if (!employee.isManager && storedIsManager) {
+        employee = employee.copyWith(isManager: true);
+      }
+      // If API returned it, update storage for next time.
+      if (employee.isManager && !storedIsManager) {
+        await session.storage.saveIsManager(true);
+      }
+
       state = AuthState(status: AuthStatus.authenticated, employee: employee);
     } on TokenExpiredException {
       await session.onLogout();
@@ -87,7 +110,19 @@ class AuthNotifier extends StateNotifier<AuthState> {
       state = const AuthState(status: AuthStatus.unauthenticated);
     } on ApiException {
       // Network error — assume authenticated (offline mode).
-      state = const AuthState(status: AuthStatus.authenticated);
+      state = AuthState(
+        status: AuthStatus.authenticated,
+        employee: storedIsManager
+            ? const EmployeeProfile(
+                id: 0,
+                code: '',
+                name: '',
+                initials: '',
+                employmentStatus: '',
+                isManager: true,
+              )
+            : null,
+      );
     }
   }
 
@@ -97,7 +132,18 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 
   /// Mark as logged out — GoRouter will redirect.
+  ///
+  /// Invalidates all user-specific providers so that a subsequent login
+  /// starts with a clean slate (no stale data from the previous user).
   void onLogout() {
+    _ref.invalidate(profileProvider);
+    _ref.invalidate(dashboardAttendanceProvider);
+    _ref.invalidate(attendanceHistoryProvider);
+    _ref.invalidate(leavesListProvider);
+    _ref.invalidate(payslipListProvider);
+    _ref.invalidate(requestsListProvider);
+    _ref.invalidate(managerRequestsListProvider);
+    _ref.invalidate(notificationsProvider);
     state = const AuthState(status: AuthStatus.unauthenticated);
   }
 }
@@ -177,7 +223,16 @@ class LoginFormController extends StateNotifier<LoginFormState> {
       PWAInstall().promptInstall_();
     }
 
-    if (!state.canSubmit) return;
+    if (state.isLoading) return;
+
+    // ── Client-side validation ──
+    final errors = <String, List<String>>{};
+    if (state.username.isEmpty) errors['username'] = ['This field is required'];
+    if (state.password.isEmpty) errors['password'] = ['This field is required'];
+    if (errors.isNotEmpty) {
+      state = state.copyWith(fieldErrors: errors);
+      return;
+    }
 
     state = state.copyWith(isLoading: true, clearErrors: true);
 

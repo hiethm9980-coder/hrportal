@@ -18,6 +18,7 @@ import 'core/config/crash_reporter.dart';
 import 'core/constants/api_constants.dart';
 import 'core/localization/locale_provider.dart';
 import 'core/theme/theme_mode_provider.dart';
+import 'core/storage/secure_token_storage.dart';
 import 'injection.dart';
 import 'app.dart';
 
@@ -79,6 +80,24 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   );
 }
 
+/// Detects if the API base URL changed since last run.
+/// If changed, clears all session data so the user is forced to re-login.
+Future<void> _clearIfBaseUrlChanged(String currentUrl) async {
+  final storage = sl<SecureTokenStorage>();
+  final lastUrl = await storage.getLastBaseUrl();
+
+  if (lastUrl != null && lastUrl != currentUrl) {
+    AppLogger.i(
+      'Base URL changed: $lastUrl → $currentUrl. Clearing session.',
+      tag: 'Boot',
+    );
+    await storage.clearAll();
+  }
+
+  // Always save the current URL for next comparison.
+  await storage.saveBaseUrl(currentUrl);
+}
+
 /// Global app config — accessible anywhere after init.
 late final AppConfig appConfig;
 
@@ -110,6 +129,9 @@ void main() async {
 
   // ── 5. Initialize data-layer DI (GetIt) — NOT MODIFIED ──
   await initDependencies();
+
+  // ── 5b. Detect base URL change → clear stale session ──
+  await _clearIfBaseUrlChanged(appConfig.baseUrl);
 
   AppLogger.i('All dependencies initialized', tag: 'Boot');
 

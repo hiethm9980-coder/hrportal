@@ -138,7 +138,17 @@ class CreateLeaveFormController extends StateNotifier<CreateLeaveFormState> {
       state = state.copyWith(reason: r, clearErrors: true);
 
   Future<void> submit() async {
-    if (!state.canSubmit) return;
+    if (state.isLoading) return;
+
+    // ── Client-side validation ──
+    final errors = <String, List<String>>{};
+    if (state.leaveTypeId == null) errors['leave_type_id'] = ['This field is required'];
+    if (state.startDate.isEmpty) errors['start_date'] = ['This field is required'];
+    if (state.endDate.isEmpty) errors['end_date'] = ['This field is required'];
+    if (errors.isNotEmpty) {
+      state = state.copyWith(fieldErrors: errors);
+      return;
+    }
 
     state = state.copyWith(isLoading: true, clearErrors: true);
 

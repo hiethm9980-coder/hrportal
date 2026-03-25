@@ -18,6 +18,8 @@ import '../../features/attendance/data/repositories/attendance_repository.dart';
 import '../../features/leave/data/repositories/leave_repository.dart';
 import '../../features/payroll/data/repositories/payroll_repository.dart';
 import '../../features/requests/data/repositories/request_repository.dart';
+import '../../features/manager_requests/data/repositories/manager_request_repository.dart';
+import '../../features/manager_requests/data/repositories/manager_leave_repository.dart';
 
 // ── Core Services ────────────────────────────────────────────────────
 final sessionManagerProvider = Provider<SessionManager>(
@@ -51,4 +53,14 @@ final payrollRepositoryProvider = Provider<PayrollRepository>(
 
 final requestRepositoryProvider = Provider<RequestRepository>(
   (_) => sl<RequestRepository>(),
+);
+
+final managerRequestRepositoryProvider =
+    Provider<ManagerRequestRepository>(
+  (_) => sl<ManagerRequestRepository>(),
+);
+
+final managerLeaveRepositoryProvider =
+    Provider<ManagerLeaveRepository>(
+  (_) => sl<ManagerLeaveRepository>(),
 );

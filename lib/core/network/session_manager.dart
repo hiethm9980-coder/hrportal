@@ -26,6 +26,9 @@ typedef SessionExpiredCallback = void Function(String message);
 class SessionManager {
   final SecureTokenStorage _storage;
 
+  /// Expose storage for saving extra session data (e.g., isManager).
+  SecureTokenStorage get storage => _storage;
+
   /// Set this callback from the UI layer to handle navigation on expiry.
   SessionExpiredCallback? onSessionExpired;
 

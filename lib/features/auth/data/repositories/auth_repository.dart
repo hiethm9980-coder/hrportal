@@ -55,6 +55,9 @@ class AuthRepository {
       companyId: loginData.employee.company?.id ?? 0,
     );
 
+    // Persist manager flag for session restore
+    await _sessionManager.storage.saveIsManager(loginData.employee.isManager);
+
     return loginData;
   }
 

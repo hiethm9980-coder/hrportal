@@ -35,6 +35,12 @@ class EmployeeProfile extends Equatable {
   final ProfileManager? manager;
   final ProfileContract? contract;
 
+  // ── Permissions (optional — returned by login/me) ──
+  final List<String> permissions;
+
+  // ── Manager flag (from API: is_manager = 0|1) ──
+  final bool isManager;
+
   const EmployeeProfile({
     required this.id,
     required this.code,
@@ -59,7 +65,44 @@ class EmployeeProfile extends Equatable {
     this.company,
     this.manager,
     this.contract,
+    this.permissions = const [],
+    this.isManager = false,
   });
+
+  /// Whether this employee can manage (approve/reject) requests.
+  bool get canManageRequests =>
+      isManager || permissions.contains('hr_employee_requests.update');
+
+  /// Create a copy with overridden fields.
+  EmployeeProfile copyWith({bool? isManager}) {
+    return EmployeeProfile(
+      id: id,
+      code: code,
+      name: name,
+      initials: initials,
+      employmentStatus: employmentStatus,
+      nameEn: nameEn,
+      email: email,
+      phone: phone,
+      mobile: mobile,
+      address: address,
+      photoUrl: photoUrl,
+      jobTitle: jobTitle,
+      hireDate: hireDate,
+      gender: gender,
+      nationality: nationality,
+      dateOfBirth: dateOfBirth,
+      idNumber: idNumber,
+      emergencyContactName: emergencyContactName,
+      emergencyContactPhone: emergencyContactPhone,
+      department: department,
+      company: company,
+      manager: manager,
+      contract: contract,
+      permissions: permissions,
+      isManager: isManager ?? this.isManager,
+    );
+  }
 
   factory EmployeeProfile.fromJson(Map<String, dynamic> json) {
     return EmployeeProfile(
@@ -96,6 +139,10 @@ class EmployeeProfile extends Equatable {
           ? ProfileContract.fromJson(
               json['contract'] as Map<String, dynamic>)
           : null,
+      permissions: json['permissions'] != null
+          ? (json['permissions'] as List).cast<String>()
+          : const [],
+      isManager: json['is_manager'] == 1 || json['is_manager'] == true,
     );
   }
 
@@ -123,6 +170,8 @@ class EmployeeProfile extends Equatable {
         'company': company?.toJson(),
         'manager': manager?.toJson(),
         'contract': contract?.toJson(),
+        'permissions': permissions,
+        'is_manager': isManager,
       };
 
   @override

@@ -8,6 +8,12 @@ class StorageKeys {
   static const String employeeId = 'employee_id';
   static const String companyId = 'company_id';
 
+  /// Whether the user is a manager (from login API: is_manager).
+  static const String isManager = 'is_manager';
+
+  /// Last used API base URL — used to detect URL changes.
+  static const String lastBaseUrl = 'last_base_url';
+
   /// Persisted user language preference.
   ///
   /// Values are expected to be one of: 'system', 'en', 'ar'.

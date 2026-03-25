@@ -17,6 +17,7 @@ import '../features/leave/presentation/screens/leaves_screen.dart';
 import '../features/leave/presentation/screens/create_leave_screen.dart';
 import '../features/payroll/presentation/screens/payroll_screens.dart';
 import '../features/requests/presentation/screens/request_screens.dart';
+import '../features/manager_requests/presentation/screens/manager_requests_screen.dart';
 
 /// Global navigator key for SessionManager callback.
 final rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -106,6 +107,11 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
 
           GoRoute(
+            path: '/approvals',
+            builder: (_, __) => const ManagerRequestsScreen(),
+          ),
+
+          GoRoute(
             path: '/notifications',
             builder: (_, __) => const NotificationsScreen(),
           ),
@@ -119,22 +125,23 @@ final routerProvider = Provider<GoRouter>((ref) {
 // Main Shell (Bottom Navigation)
 // ═══════════════════════════════════════════════════════════════════
 
-class _MainShell extends StatelessWidget {
+class _MainShell extends ConsumerWidget {
   final GoRouterState state;
   final Widget child;
 
   const _MainShell({required this.state, required this.child});
 
-  int get _currentIndex {
+  int _currentIndex(bool isManager) {
     final location = state.matchedLocation;
     if (location.startsWith('/attendance')) return 1;
     if (location.startsWith('/leaves')) return 2;
     if (location.startsWith('/payroll')) return 3;
     if (location.startsWith('/requests')) return 4;
+    if (isManager && location.startsWith('/approvals')) return 5;
     return 0;
   }
 
-  void _onDestinationSelected(BuildContext context, int index) {
+  void _onDestinationSelected(BuildContext context, int index, bool isManager) {
     switch (index) {
       case 0:
         context.go('/');
@@ -151,11 +158,17 @@ class _MainShell extends StatelessWidget {
       case 4:
         context.go('/requests');
         break;
+      case 5:
+        if (isManager) context.go('/approvals');
+        break;
     }
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final auth = ref.watch(authProvider);
+    final isManager = auth.isManager;
+    final currentIdx = _currentIndex(isManager);
     final width = MediaQuery.sizeOf(context).width;
     final isMobile = width < AppBreakpoints.mobile;
     final isExtended = width >= AppBreakpoints.tablet;
@@ -185,33 +198,41 @@ class _MainShell extends StatelessWidget {
                   _NavItem(
                     icon: '🏠',
                     label: 'Home'.tr(context),
-                    active: _currentIndex == 0,
-                    onTap: () => _onDestinationSelected(context, 0),
+                    active: currentIdx == 0,
+                    onTap: () => _onDestinationSelected(context, 0, isManager),
                   ),
                   _NavItem(
                     icon: '⏱',
                     label: 'Attendance'.tr(context),
-                    active: _currentIndex == 1,
-                    onTap: () => _onDestinationSelected(context, 1),
+                    active: currentIdx == 1,
+                    onTap: () => _onDestinationSelected(context, 1, isManager),
                   ),
                   _NavItem(
                     icon: '🌴',
                     label: 'Leaves'.tr(context),
-                    active: _currentIndex == 2,
-                    onTap: () => _onDestinationSelected(context, 2),
+                    active: currentIdx == 2,
+                    onTap: () => _onDestinationSelected(context, 2, isManager),
                   ),
                   _NavItem(
                     icon: '💰',
                     label: 'Payroll'.tr(context),
-                    active: _currentIndex == 3,
-                    onTap: () => _onDestinationSelected(context, 3),
+                    active: currentIdx == 3,
+                    onTap: () => _onDestinationSelected(context, 3, isManager),
                   ),
                   _NavItem(
                     icon: '📝',
                     label: 'Requests'.tr(context),
-                    active: _currentIndex == 4,
-                    onTap: () => _onDestinationSelected(context, 4),
+                    active: currentIdx == 4,
+                    onTap: () => _onDestinationSelected(context, 4, isManager),
                   ),
+                  if (isManager)
+                    _NavItem(
+                      icon: '✅',
+                      label: 'Approvals'.tr(context),
+                      active: currentIdx == 5,
+                      onTap: () =>
+                          _onDestinationSelected(context, 5, isManager),
+                    ),
                 ],
               ),
             ),
@@ -220,44 +241,53 @@ class _MainShell extends StatelessWidget {
       );
     }
 
+    // Build destinations list for NavigationRail
+    final destinations = <NavigationRailDestination>[
+      NavigationRailDestination(
+        icon: const Icon(Icons.home_outlined),
+        selectedIcon: const Icon(Icons.home),
+        label: Text('Home'.tr(context)),
+      ),
+      NavigationRailDestination(
+        icon: const Icon(Icons.fingerprint_outlined),
+        selectedIcon: const Icon(Icons.fingerprint),
+        label: Text('Attendance'.tr(context)),
+      ),
+      NavigationRailDestination(
+        icon: const Icon(Icons.beach_access_outlined),
+        selectedIcon: const Icon(Icons.beach_access),
+        label: Text('Leaves'.tr(context)),
+      ),
+      NavigationRailDestination(
+        icon: const Icon(Icons.receipt_long_outlined),
+        selectedIcon: const Icon(Icons.receipt_long),
+        label: Text('Payroll'.tr(context)),
+      ),
+      NavigationRailDestination(
+        icon: const Icon(Icons.description_outlined),
+        selectedIcon: const Icon(Icons.description),
+        label: Text('Requests'.tr(context)),
+      ),
+      if (isManager)
+        NavigationRailDestination(
+          icon: const Icon(Icons.assignment_turned_in_outlined),
+          selectedIcon: const Icon(Icons.assignment_turned_in),
+          label: Text('Approvals'.tr(context)),
+        ),
+    ];
+
     return Scaffold(
       body: Row(
         children: [
           NavigationRail(
-            selectedIndex: _currentIndex,
+            selectedIndex: currentIdx,
             onDestinationSelected: (index) =>
-                _onDestinationSelected(context, index),
+                _onDestinationSelected(context, index, isManager),
             extended: isExtended,
             labelType: isExtended
                 ? NavigationRailLabelType.none
                 : NavigationRailLabelType.all,
-            destinations: [
-              NavigationRailDestination(
-                icon: const Icon(Icons.home_outlined),
-                selectedIcon: const Icon(Icons.home),
-                label: Text('Home'.tr(context)),
-              ),
-              NavigationRailDestination(
-                icon: const Icon(Icons.fingerprint_outlined),
-                selectedIcon: const Icon(Icons.fingerprint),
-                label: Text('Attendance'.tr(context)),
-              ),
-              NavigationRailDestination(
-                icon: const Icon(Icons.beach_access_outlined),
-                selectedIcon: const Icon(Icons.beach_access),
-                label: Text('Leaves'.tr(context)),
-              ),
-              NavigationRailDestination(
-                icon: const Icon(Icons.receipt_long_outlined),
-                selectedIcon: const Icon(Icons.receipt_long),
-                label: Text('Payroll'.tr(context)),
-              ),
-              NavigationRailDestination(
-                icon: const Icon(Icons.description_outlined),
-                selectedIcon: const Icon(Icons.description),
-                label: Text('Requests'.tr(context)),
-              ),
-            ],
+            destinations: destinations,
           ),
           const VerticalDivider(thickness: 1, width: 1),
           Expanded(child: child),

@@ -58,6 +58,30 @@ class SecureTokenStorage {
     return int.tryParse(value);
   }
 
+  // ── Manager Flag ─────────────────────────────────────────────────
+
+  Future<void> saveIsManager(bool isManager) async {
+    await _storage.write(
+      key: StorageKeys.isManager,
+      value: isManager ? '1' : '0',
+    );
+  }
+
+  Future<bool> getIsManager() async {
+    final value = await _storage.read(key: StorageKeys.isManager);
+    return value == '1';
+  }
+
+  // ── Base URL Tracking ────────────────────────────────────────────
+
+  Future<void> saveBaseUrl(String url) async {
+    await _storage.write(key: StorageKeys.lastBaseUrl, value: url);
+  }
+
+  Future<String?> getLastBaseUrl() async {
+    return _storage.read(key: StorageKeys.lastBaseUrl);
+  }
+
   // ── Clear ─────────────────────────────────────────────────────────
 
   Future<void> clearAll() async {
@@ -66,5 +90,6 @@ class SecureTokenStorage {
     await _storage.delete(key: StorageKeys.token);
     await _storage.delete(key: StorageKeys.employeeId);
     await _storage.delete(key: StorageKeys.companyId);
+    await _storage.delete(key: StorageKeys.isManager);
   }
 }

@@ -56,9 +56,11 @@ class LoginScreen extends ConsumerWidget {
       backgroundColor: context.appColors.bg,
       body: SingleChildScrollView(
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // ── Gradient Header ──
+            // ── Gradient Header (full width) ──
             Container(
+              width: double.infinity,
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
@@ -96,14 +98,15 @@ class LoginScreen extends ConsumerWidget {
               ),
             ),
 
-            // ── Form Body ──
-            Padding(
-              padding: const EdgeInsets.all(22),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 400),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
+            // ── Form Body (centered, max 400px) ──
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.all(22),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 400),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
                     // ── Language / Theme Selectors ──
                     Wrap(
                       alignment: WrapAlignment.center,
@@ -176,7 +179,7 @@ class LoginScreen extends ConsumerWidget {
                       style: GoogleFonts.cairo(fontSize: 13),
                       decoration: InputDecoration(
                         hintText: 'Email or username'.tr(context),
-                        errorText: form.fieldError('username'),
+                        errorText: form.fieldError('username')?.tr(context),
                       ),
                     ),
                     const SizedBox(height: 14),
@@ -202,7 +205,7 @@ class LoginScreen extends ConsumerWidget {
                       },
                       decoration: InputDecoration(
                         hintText: 'Password'.tr(context),
-                        errorText: form.fieldError('password'),
+                        errorText: form.fieldError('password')?.tr(context),
                         suffixIcon: IconButton(
                           onPressed: notifier.togglePasswordVisibility,
                           icon: Icon(
@@ -221,14 +224,7 @@ class LoginScreen extends ConsumerWidget {
                     PrimaryButton(
                       text: 'Login'.tr(context),
                       loading: form.isLoading,
-                      onTap: form.canSubmit
-                          ? () {
-                              if (PWAInstall().installPromptEnabled) {
-                                PWAInstall().promptInstall_();
-                              }
-                              notifier.submit();
-                            }
-                          : null,
+                      onTap: form.isLoading ? null : () => notifier.submit(),
                     ),
 
                     // ── General Error ──
@@ -252,7 +248,8 @@ class LoginScreen extends ConsumerWidget {
                           ),
                         ),
                       ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
