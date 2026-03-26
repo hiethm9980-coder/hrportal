@@ -111,7 +111,11 @@ void main() async {
   await AwesomeNotificationService.init();
   final fcmService = NotificationFCMService();
   print('main: before initFCM');
-  await fcmService.initFCM();
+  try {
+    await fcmService.initFCM().timeout(const Duration(seconds: 15));
+  } catch (e) {
+    print('main: initFCM timed out or failed: $e');
+  }
   print('main: after initFCM');
 
   // ── 1. Resolve environment from --dart-define=FLAVOR ──

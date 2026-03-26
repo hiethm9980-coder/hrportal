@@ -29,11 +29,17 @@ class ManagerRequestsScreen extends ConsumerStatefulWidget {
 class _ManagerRequestsScreenState extends ConsumerState<ManagerRequestsScreen>
     with SingleTickerProviderStateMixin {
   late final TabController _tabController;
+  int _currentTab = 0;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    _tabController.addListener(() {
+      if (_tabController.index != _currentTab) {
+        setState(() => _currentTab = _tabController.index);
+      }
+    });
   }
 
   @override
@@ -60,7 +66,7 @@ class _ManagerRequestsScreenState extends ConsumerState<ManagerRequestsScreen>
 
           // ── TabBar ──
           Container(
-            color: AppColors.primaryMid.withValues(alpha: 0.06),
+            color: context.appColors.bgCard,
             child: TabBar(
               controller: _tabController,
               labelStyle: GoogleFonts.cairo(
@@ -71,13 +77,23 @@ class _ManagerRequestsScreenState extends ConsumerState<ManagerRequestsScreen>
                 fontSize: 13,
                 fontWeight: FontWeight.w500,
               ),
-              labelColor: AppColors.primaryMid,
+              labelColor: AppColors.primary,
               unselectedLabelColor: context.appColors.textMuted,
-              indicatorColor: AppColors.primaryMid,
-              indicatorWeight: 3,
+              indicator: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(0),
+                border: Border(
+                  bottom: BorderSide(
+                    color: AppColors.primary,
+                    width: 3,
+                  ),
+                ),
+              ),
               indicatorSize: TabBarIndicatorSize.tab,
+              indicatorPadding: const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
               dividerHeight: 0.5,
               dividerColor: context.appColors.gray200,
+              splashBorderRadius: BorderRadius.circular(0),
               tabs: [
                 Tab(text: 'Leaves'.tr(context)),
                 Tab(text: 'Requests'.tr(context)),
@@ -122,10 +138,11 @@ class _ManagerLeavesTab extends ConsumerWidget {
     return Column(
       children: [
         // ── Status Filter Tabs ──
+        const SizedBox(height: 8),
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
           child: SizedBox(
-            height: 36,
+            height: 34,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               itemCount: _statusFilters.length,
@@ -165,7 +182,7 @@ class _ManagerLeavesTab extends ConsumerWidget {
             ),
           ),
         ),
-
+        const SizedBox(height: 8),
         // ── List ──
         Expanded(
           child: PaginatedListView<ManagerLeave>(
@@ -723,10 +740,11 @@ class _ManagerRequestsTab extends ConsumerWidget {
     return Column(
       children: [
         // ── Status Filter Tabs ──
+        const SizedBox(height: 8),
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
           child: SizedBox(
-            height: 36,
+            height: 34,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               itemCount: _statusFilters.length,
@@ -767,7 +785,7 @@ class _ManagerRequestsTab extends ConsumerWidget {
             ),
           ),
         ),
-
+        const SizedBox(height: 8),
         // ── List ──
         Expanded(
           child: PaginatedListView<ManagerRequest>(

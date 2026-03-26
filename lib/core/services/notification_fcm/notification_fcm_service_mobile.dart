@@ -36,12 +36,14 @@ class NotificationFCMService {
             sound: false,
           );
 
-      // 2) Token
-      final token = await FirebaseMessaging.instance.getToken();
+      // 2) Token (with timeout to prevent hanging)
+      final token = await FirebaseMessaging.instance
+          .getToken()
+          .timeout(const Duration(seconds: 10), onTimeout: () => null);
       log('fcmToken: $token');
 
-      // 3) Subscribe to topic (اختياري)
-      await TopicService.subscribe(_defaultTopic);
+      // 3) Subscribe to topic — fire-and-forget (لا ننتظره لتجنب التعليق)
+      TopicService.subscribe(_defaultTopic);
 
       // 4) Token refresh
       FirebaseMessaging.instance.onTokenRefresh.listen((t) async {

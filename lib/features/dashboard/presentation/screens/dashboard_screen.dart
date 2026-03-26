@@ -4,11 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:hr_portal/core/constants/app_colors.dart';
 import 'package:hr_portal/core/constants/app_shadows.dart';
-import 'package:hr_portal/core/providers/core_providers.dart';
 import 'package:hr_portal/core/localization/app_localizations.dart';
-import 'package:hr_portal/core/localization/locale_provider.dart';
-import 'package:hr_portal/core/theme/app_spacing.dart';
-import 'package:hr_portal/core/theme/theme_mode_provider.dart';
 import 'package:hr_portal/features/profile/data/models/employee_profile_model.dart';
 import 'package:hr_portal/shared/widgets/common_widgets.dart';
 
@@ -23,8 +19,6 @@ class DashboardScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final profileAsync = ref.watch(profileProvider);
-    final themeMode = ref.watch(themeModeProvider);
-    final localeMode = ref.watch(localeModeProvider);
 
     return Scaffold(
       backgroundColor: context.appColors.bg,
@@ -54,24 +48,28 @@ class DashboardScreen extends ConsumerWidget {
                 children: [
                   Row(
                     children: [
-                      // ── Profile Info (start side) ──
+                      // ── Profile Info (start side) — tap to open profile ──
                       Expanded(
-                        child: profileAsync.when(
-                          data: (profile) => _HeroProfileInfo(profile: profile),
-                          loading: () => Text(
-                            'Loading...'.tr(context),
-                            style: GoogleFonts.cairo(
-                                fontSize: 13, color: Colors.white60),
-                            textAlign: TextAlign.start,
-                          ),
-                          error: (_, __) => Text(
-                            'Welcome'.tr(context),
-                            style: GoogleFonts.cairo(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w800,
-                              color: Colors.white,
+                        child: GestureDetector(
+                          onTap: () => context.push('/profile'),
+                          behavior: HitTestBehavior.opaque,
+                          child: profileAsync.when(
+                            data: (profile) => _HeroProfileInfo(profile: profile),
+                            loading: () => Text(
+                              'Loading...'.tr(context),
+                              style: GoogleFonts.cairo(
+                                  fontSize: 13, color: Colors.white60),
+                              textAlign: TextAlign.start,
                             ),
-                            textAlign: TextAlign.start,
+                            error: (_, __) => Text(
+                              'Welcome'.tr(context),
+                              style: GoogleFonts.cairo(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w800,
+                                color: Colors.white,
+                              ),
+                              textAlign: TextAlign.start,
+                            ),
                           ),
                         ),
                       ),
@@ -81,8 +79,7 @@ class DashboardScreen extends ConsumerWidget {
                         children: [
                           _HeaderIconButton(
                             icon: '⚙️',
-                            onTap: () => _showSettingsSheet(
-                                context, ref, themeMode, localeMode),
+                            onTap: () => context.push('/settings'),
                           ),
                           const SizedBox(width: 8),
                           _HeaderIconButton(
@@ -94,49 +91,52 @@ class DashboardScreen extends ConsumerWidget {
                     ],
                   ),
                   const SizedBox(height: 16),
-                  // ── Attendance Card ──
-                  ref.watch(dashboardAttendanceProvider).when(
-                        data: (summary) =>
-                            _AttendanceHeroCard(summary: summary),
-                        loading: () => Container(
-                          padding: const EdgeInsets.all(14),
-                          decoration: BoxDecoration(
-                            color: Colors.white10,
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: Colors.white24),
-                          ),
-                          child: const Center(
-                            child: SizedBox(
-                              width: 24,
-                              height: 24,
-                              child: CircularProgressIndicator(
-                                  color: Colors.white54, strokeWidth: 2),
-                            ),
-                          ),
-                        ),
-                        error: (e, _) => Container(
-                          padding: const EdgeInsets.all(14),
-                          decoration: BoxDecoration(
-                            color: Colors.white10,
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: Colors.white24),
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Icon(Icons.error_outline,
-                                  color: Colors.white54, size: 18),
-                              const SizedBox(width: 8),
-                              Text(
-                                'Error loading attendance'.tr(context),
-                                style: GoogleFonts.cairo(
-                                    fontSize: 12, color: Colors.white54),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                ],
+
+
+                  // // ── Attendance Card ──
+                  // ref.watch(dashboardAttendanceProvider).when(
+                  //       data: (summary) =>
+                  //           _AttendanceHeroCard(summary: summary),
+                  //       loading: () => Container(
+                  //         padding: const EdgeInsets.all(14),
+                  //         decoration: BoxDecoration(
+                  //           color: Colors.white10,
+                  //           borderRadius: BorderRadius.circular(16),
+                  //           border: Border.all(color: Colors.white24),
+                  //         ),
+                  //         child: const Center(
+                  //           child: SizedBox(
+                  //             width: 24,
+                  //             height: 24,
+                  //             child: CircularProgressIndicator(
+                  //                 color: Colors.white54, strokeWidth: 2),
+                  //           ),
+                  //         ),
+                  //       ),
+                  //       error: (e, _) => Container(
+                  //         padding: const EdgeInsets.all(14),
+                  //         decoration: BoxDecoration(
+                  //           color: Colors.white10,
+                  //           borderRadius: BorderRadius.circular(16),
+                  //           border: Border.all(color: Colors.white24),
+                  //         ),
+                  //         child: Row(
+                  //           mainAxisAlignment: MainAxisAlignment.center,
+                  //           children: [
+                  //             const Icon(Icons.error_outline,
+                  //                 color: Colors.white54, size: 18),
+                  //             const SizedBox(width: 8),
+                  //             Text(
+                  //               'Error loading attendance'.tr(context),
+                  //               style: GoogleFonts.cairo(
+                  //                   fontSize: 12, color: Colors.white54),
+                  //             ),
+                  //           ],
+                  //         ),
+                  //       ),
+                  //     ),
+               
+               ],
               ),
             ),
 
@@ -176,117 +176,6 @@ class DashboardScreen extends ConsumerWidget {
     );
   }
 
-  void _showSettingsSheet(BuildContext context, WidgetRef ref,
-      ThemeMode themeMode, AppLocaleMode localeMode) {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (ctx) => Padding(
-        padding: const EdgeInsets.all(22),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.brightness_6_outlined),
-              title: Text('Theme'.tr(context)),
-              trailing: DropdownButton<ThemeMode>(
-                value: themeMode,
-                underline: const SizedBox(),
-                onChanged: (m) {
-                  if (m != null) {
-                    ref.read(themeModeProvider.notifier).setThemeMode(m);
-                  }
-                },
-                items: [
-                  DropdownMenuItem(
-                      value: ThemeMode.system,
-                      child: Text('System'.tr(context))),
-                  DropdownMenuItem(
-                      value: ThemeMode.light,
-                      child: Text('Light'.tr(context))),
-                  DropdownMenuItem(
-                      value: ThemeMode.dark,
-                      child: Text('Dark'.tr(context))),
-                ],
-              ),
-            ),
-            ListTile(
-              leading: const Icon(Icons.language),
-              title: Text('Language'.tr(context)),
-              trailing: DropdownButton<AppLocaleMode>(
-                value: localeMode,
-                underline: const SizedBox(),
-                onChanged: (m) {
-                  if (m != null) {
-                    ref.read(localeModeProvider.notifier).setMode(m);
-                  }
-                },
-                items: [
-                  DropdownMenuItem(
-                      value: AppLocaleMode.system,
-                      child: Text('System'.tr(context))),
-                  DropdownMenuItem(
-                      value: AppLocaleMode.en,
-                      child: Text('English'.tr(context))),
-                  DropdownMenuItem(
-                      value: AppLocaleMode.ar,
-                      child: Text('Arabic'.tr(context))),
-                ],
-              ),
-            ),
-            const Divider(),
-            ListTile(
-              leading: const Icon(Icons.logout, color: AppColors.error),
-              title: Text('Logout'.tr(context),
-                  style: const TextStyle(color: AppColors.error)),
-              onTap: () {
-                Navigator.pop(ctx);
-                _showLogoutDialog(context, ref);
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _showLogoutDialog(BuildContext context, WidgetRef ref) {
-    showDialog(
-      context: context,
-      builder: (BuildContext dCtx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text('Logout'.tr(context)),
-        content: Text('Do you want to log out from this device?'.tr(context)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dCtx).pop(),
-            child: Text('Cancel'.tr(context)),
-          ),
-          TextButton(
-            style: TextButton.styleFrom(
-              foregroundColor: Colors.white,
-              backgroundColor: AppColors.error,
-            ),
-            onPressed: () async {
-              Navigator.of(dCtx).pop();
-              try {
-                final auth = ref.read(authRepositoryProvider);
-                await auth.logout();
-                ref.read(authProvider.notifier).onLogout();
-              } catch (e) {
-                if (dCtx.mounted) {
-                  GlobalErrorHandler.show(dCtx, GlobalErrorHandler.handle(e));
-                }
-              }
-            },
-            child: Text('Sign out'.tr(context)),
-          ),
-        ],
-      ),
-    );
-  }
 }
 
 // ── Private Widgets ──────────────────────────────────────────────────
@@ -329,9 +218,16 @@ class _HeroProfileInfo extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          '${_getGreeting(context)}،',
-          style: GoogleFonts.cairo(fontSize: 13, color: Colors.white60),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '${_getGreeting(context)}',
+              style: GoogleFonts.cairo(fontSize: 14, color: Colors.white),
+            ),
+            const SizedBox(width: 8),
+            const Text('👋', style: TextStyle(fontSize: 16)),
+          ],
         ),
         Text(
           profile.name,

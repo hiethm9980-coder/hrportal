@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:hr_portal/core/constants/app_colors.dart';
 import 'package:hr_portal/features/notifications/presentation/screens/notifications_screen.dart';
+import 'package:hr_portal/features/settings/presentation/screens/settings_screen.dart';
 import 'package:hr_portal/core/localization/app_localizations.dart';
 import 'package:hr_portal/core/theme/app_spacing.dart';
 
@@ -18,6 +19,7 @@ import '../features/leave/presentation/screens/create_leave_screen.dart';
 import '../features/payroll/presentation/screens/payroll_screens.dart';
 import '../features/requests/presentation/screens/request_screens.dart';
 import '../features/manager_requests/presentation/screens/manager_requests_screen.dart';
+import '../features/profile/presentation/screens/profile_screen.dart';
 
 /// Global navigator key for SessionManager callback.
 final rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -114,6 +116,14 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/notifications',
             builder: (_, __) => const NotificationsScreen(),
+          ),
+          GoRoute(
+            path: '/settings',
+            builder: (_, __) => const SettingsScreen(),
+          ),
+          GoRoute(
+            path: '/profile',
+            builder: (_, __) => const ProfileScreen(),
           ),
         ],
       ),

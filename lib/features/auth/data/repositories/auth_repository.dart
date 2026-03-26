@@ -87,6 +87,23 @@ class AuthRepository {
     return response.data!.revokedTokens;
   }
 
+  /// Change password. On success, the user should be logged out.
+  Future<String> changePassword({
+    required String currentPassword,
+    required String newPassword,
+    required String confirmPassword,
+  }) async {
+    final response = await _client.post<void>(
+      ApiConstants.changePassword,
+      data: {
+        'current_password': currentPassword,
+        'password': newPassword,
+        'password_confirmation': confirmPassword,
+      },
+    );
+    return response.message;
+  }
+
   /// Get the currently authenticated employee's profile.
   ///
   /// Useful for validating a restored session on app startup.

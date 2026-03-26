@@ -289,6 +289,7 @@ class _PaginatedListViewState<T> extends State<PaginatedListView<T>> {
       child: ListView.builder(
         controller: _scrollController,
         physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.only(top: 4, bottom: 16),
         itemCount: itemCount,
         itemBuilder: (context, index) {
           // Header
