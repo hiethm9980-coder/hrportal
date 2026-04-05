@@ -2,13 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:hr_portal/core/constants/app_colors.dart';
+import 'package:hr_portal/core/constants/api_constants.dart';
 import 'package:hr_portal/core/localization/app_localizations.dart';
+import 'package:hr_portal/main.dart' show appConfig, clearIfBaseUrlChanged;
 
 import '../providers/auth_providers.dart';
 
 /// Splash screen shown while restoring the session.
 ///
-/// This screen triggers [AuthNotifier.checkSession] once.
+/// 1. Fetches base_url from Firebase Remote Config.
+/// 2. If offline → shows "No internet" screen with retry button.
+/// 3. If base_url loaded → checks session and navigates.
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
 
@@ -21,6 +25,8 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   late AnimationController _ctrl;
   late Animation<double> _scale;
   late Animation<double> _fade;
+  bool _isLoading = true;
+  bool _noInternet = false;
 
   @override
   void initState() {
@@ -31,8 +37,41 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     _fade = CurvedAnimation(parent: _ctrl, curve: Curves.easeIn);
     _ctrl.forward();
 
-    // Kick off session check.
-    Future.microtask(() => ref.read(authProvider.notifier).checkSession());
+    _loadConfigAndCheckSession();
+  }
+
+  Future<void> _loadConfigAndCheckSession() async {
+    setState(() {
+      _isLoading = true;
+      _noInternet = false;
+    });
+
+    // Fetch base_url from Firebase Remote Config
+    await appConfig.loadRemoteConfig();
+    print("base_url: ${appConfig.baseUrl}");
+
+    if (appConfig.baseUrl.isEmpty) {
+      // No internet — show retry screen
+      setState(() {
+        _isLoading = false;
+        _noInternet = true;
+      });
+      return;
+    }
+
+    // Configure API with the fetched base_url
+    ApiConstants.configure(appConfig);
+
+    // Check if base_url changed → clear session and force re-login
+    final urlChanged = await clearIfBaseUrlChanged(appConfig.baseUrl);
+    if (urlChanged) {
+      print("base_url changed — session cleared, redirecting to login");
+      ref.read(authProvider.notifier).onLogout();
+      return;
+    }
+
+    // Now check session
+    ref.read(authProvider.notifier).checkSession();
   }
 
   @override
@@ -142,35 +181,74 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 6),
-                      Text(
-                        'Loading...'.tr(context),
-                        style: TextStyle(fontFamily: 'Cairo',
-                          fontSize: 13,
-                          color: Colors.white38,
-                          letterSpacing: 2,
+                      if (_noInternet) ...[
+                        const SizedBox(height: 16),
+                        const Icon(
+                          Icons.wifi_off_rounded,
+                          color: Colors.white60,
+                          size: 48,
                         ),
-                      ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'No internet connection'.tr(context),
+                          style: TextStyle(fontFamily: 'Cairo',
+                            fontSize: 15,
+                            color: Colors.white70,
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        ElevatedButton.icon(
+                          onPressed: _loadConfigAndCheckSession,
+                          icon: const Icon(Icons.refresh),
+                          label: Text(
+                            'Retry'.tr(context),
+                            style: const TextStyle(fontFamily: 'Cairo',
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.gold,
+                            foregroundColor: Colors.black87,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 32,
+                              vertical: 12,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                        ),
+                      ] else
+                        Text(
+                          'Loading...'.tr(context),
+                          style: TextStyle(fontFamily: 'Cairo',
+                            fontSize: 13,
+                            color: Colors.white38,
+                            letterSpacing: 2,
+                          ),
+                        ),
                     ],
                   ),
                 ),
               ),
             ),
-            // Bottom spinner
-            Positioned(
-              bottom: 56,
-              left: 0,
-              right: 0,
-              child: Center(
-                child: SizedBox(
-                  width: 32,
-                  height: 32,
-                  child: CircularProgressIndicator(
-                    color: AppColors.gold.withOpacity(0.7),
-                    strokeWidth: 2,
+            // Bottom spinner (only when loading)
+            if (_isLoading)
+              Positioned(
+                bottom: 56,
+                left: 0,
+                right: 0,
+                child: Center(
+                  child: SizedBox(
+                    width: 32,
+                    height: 32,
+                    child: CircularProgressIndicator(
+                      color: AppColors.gold.withOpacity(0.7),
+                      strokeWidth: 2,
+                    ),
                   ),
                 ),
               ),
-            ),
           ],
         ),
       ),

@@ -379,10 +379,11 @@ class CustomAppBar extends StatelessWidget {
   final VoidCallback? onRefresh;
   final Widget? leading;
   final Widget? trailing;
+  final Widget? bottom;
 
   const CustomAppBar({
     super.key, required this.title, this.subtitle,
-    this.onBack, this.onRefresh, this.leading, this.trailing,
+    this.onBack, this.onRefresh, this.leading, this.trailing, this.bottom,
   });
 
   @override
@@ -451,23 +452,32 @@ class CustomAppBar extends StatelessWidget {
         top: MediaQuery.of(context).padding.top + 12,
         bottom: 16, left: 18, right: 18,
       ),
-      child: Row(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          startWidget,
-          Expanded(
-            child: Column(
-              children: [
-                Text(title, style: TextStyle(fontFamily: 'Cairo',
-                  fontSize: 16, fontWeight: FontWeight.w800, color: Colors.white,
-                )),
-                if (subtitle != null)
-                  Text(subtitle!, style: TextStyle(fontFamily: 'Cairo',
-                    fontSize: 11, color: Colors.white60,
-                  )),
-              ],
-            ),
+          Row(
+            children: [
+              startWidget,
+              Expanded(
+                child: Column(
+                  children: [
+                    Text(title, style: TextStyle(fontFamily: 'Cairo',
+                      fontSize: 16, fontWeight: FontWeight.w800, color: Colors.white,
+                    )),
+                    if (subtitle != null)
+                      Text(subtitle!, style: TextStyle(fontFamily: 'Cairo',
+                        fontSize: 11, color: Colors.white60,
+                      )),
+                  ],
+                ),
+              ),
+              endWidget,
+            ],
           ),
-          endWidget,
+          if (bottom != null) ...[
+            const SizedBox(height: 14),
+            bottom!,
+          ],
         ],
       ),
     );

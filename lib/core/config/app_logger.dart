@@ -87,16 +87,12 @@ class AppLogger {
     );
   }
 
-  /// Determine if this log level should be emitted for the current flavor.
+  /// Determine if this log level should be emitted.
   static bool _shouldLog(LogLevel level) {
-    switch (_config.flavor) {
-      case AppFlavor.dev:
-        return true; // All levels
-      case AppFlavor.staging:
-        return level.index >= LogLevel.info.index; // info, warning, error
-      case AppFlavor.prod:
-        return level.index >= LogLevel.error.index; // error only
+    if (_config.enableDebugLogs) {
+      return true; // All levels
     }
+    return level.index >= LogLevel.error.index; // error only
   }
 
   /// Prefix emoji for readability in logcat/console.

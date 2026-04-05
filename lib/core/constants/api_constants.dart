@@ -46,9 +46,15 @@ class ApiConstants {
   static const String checkOut = '/attendance/check-out';
   static const String attendanceHistory = '/attendance/history';
 
-  // ── Leaves ──────────────────────────────────────────────────────────
-  static const String leaves = '/leaves';
-  static String leaveDetail(int id) => '/leaves/$id';
+  // ── Leave Balances ──────────────────────────────────────────────────
+  static const String leaveBalances = '/leave-balances';
+
+  // ── Leave Requests ──────────────────────────────────────────────────
+  static const String leaveRequests = '/leave-requests';
+  static const String leaveRequestsSummary = '/leave-requests/summary';
+  static String leaveRequestDetail(int id) => '/leave-requests/$id';
+  static String leaveRequestSubmit(int id) => '/leave-requests/$id/submit';
+  static String leaveRequestDelete(int id) => '/leave-requests/$id';
 
   // ── Payroll ─────────────────────────────────────────────────────────
   static const String payroll = '/payroll';

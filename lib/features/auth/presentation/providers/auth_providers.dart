@@ -5,7 +5,9 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'dart:async';
 
 import '../../../../core/errors/exceptions.dart';
+import '../../../../core/constants/api_constants.dart';
 import '../../../../core/providers/core_providers.dart';
+import '../../../../main.dart';
 import '../../../profile/data/models/employee_profile_model.dart';
 import '../../../dashboard/presentation/providers/dashboard_providers.dart';
 import '../../../attendance/presentation/providers/attendance_providers.dart';
@@ -237,6 +239,23 @@ class LoginFormController extends StateNotifier<LoginFormState> {
     state = state.copyWith(isLoading: true, clearErrors: true);
 
     try {
+      // Fetch base_url from Firebase Remote Config before login
+      await appConfig.loadRemoteConfig();
+      ApiConstants.configure(appConfig);
+      print("base_url: ${appConfig.baseUrl}");
+
+      if (appConfig.baseUrl.isEmpty) {
+        state = state.copyWith(
+          isLoading: false,
+          error: const UiError(
+            title: 'Connection Error',
+            message: 'No internet connection',
+            action: ErrorAction.showSnackbar,
+          ),
+        );
+        return;
+      }
+
       // Get FCM token (non-blocking, nullable)
       String? fcmToken;
       try {

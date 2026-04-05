@@ -66,7 +66,7 @@ class CrashReporter {
       }).sendPort,
     );
 
-    AppLogger.i('CrashReporter initialized (${config.envName})', tag: 'Crash');
+    AppLogger.i('CrashReporter initialized', tag: 'Crash');
   }
 
   // ═══════════════════════════════════════════════════════════════════

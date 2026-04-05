@@ -2,7 +2,6 @@ import 'package:dio/dio.dart';
 
 import '../config/app_logger.dart';
 import '../constants/api_constants.dart';
-import '../errors/api_error_codes.dart';
 import '../storage/secure_token_storage.dart';
 import 'session_manager.dart';
 
@@ -69,19 +68,11 @@ class AuthInterceptor extends Interceptor {
     final response = err.response;
 
     if (response != null && response.statusCode == 401) {
-      final data = response.data;
-      if (data is Map<String, dynamic>) {
-        final code = data['code'] as String?;
-
-        if (code != null && ApiErrorCodes.requiresLogout(code)) {
-          AppLogger.w(
-            'Token expired/invalid ($code). Triggering auto-logout. '
-            'Trace: ${data['trace_id']}',
-            tag: 'Auth',
-          );
-          await _sessionManager.onTokenExpired();
-        }
-      }
+      AppLogger.w(
+        '401 Unauthorized. Triggering auto-logout.',
+        tag: 'Auth',
+      );
+      await _sessionManager.onTokenExpired();
     }
 
     handler.next(err);

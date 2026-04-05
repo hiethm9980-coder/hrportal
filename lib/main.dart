@@ -82,7 +82,8 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 
 /// Detects if the API base URL changed since last run.
 /// If changed, clears all session data so the user is forced to re-login.
-Future<void> _clearIfBaseUrlChanged(String currentUrl) async {
+/// Returns true if the URL changed (session was cleared).
+Future<bool> clearIfBaseUrlChanged(String currentUrl) async {
   final storage = sl<SecureTokenStorage>();
   final lastUrl = await storage.getLastBaseUrl();
 
@@ -92,10 +93,13 @@ Future<void> _clearIfBaseUrlChanged(String currentUrl) async {
       tag: 'Boot',
     );
     await storage.clearAll();
+    await storage.saveBaseUrl(currentUrl);
+    return true;
   }
 
   // Always save the current URL for next comparison.
   await storage.saveBaseUrl(currentUrl);
+  return false;
 }
 
 /// Global app config — accessible anywhere after init.
@@ -118,12 +122,12 @@ void main() async {
   }
   print('main: after initFCM');
 
-  // ── 1. Resolve environment from --dart-define=FLAVOR ──
-  appConfig = AppConfig.fromEnvironment();
+  // ── 1. Initialize AppConfig (base_url will be fetched at login) ──
+  appConfig = AppConfig(enableDebugLogs: true);
 
-  // ── 2. Initialize flavor-aware logging ──
+  // ── 2. Initialize logging ──
   AppLogger.init(appConfig);
-  AppLogger.i('Starting HR Mobile (${appConfig.envName})', tag: 'Boot');
+  AppLogger.i('Starting HR Mobile', tag: 'Boot');
 
   // ── 3. Configure API base URL from flavor ──
   ApiConstants.configure(appConfig);
@@ -134,8 +138,7 @@ void main() async {
   // ── 5. Initialize data-layer DI (GetIt) — NOT MODIFIED ──
   await initDependencies();
 
-  // ── 5b. Detect base URL change → clear stale session ──
-  await _clearIfBaseUrlChanged(appConfig.baseUrl);
+  // ── 5b. base URL change detection moved to splash_screen.dart ──
 
   AppLogger.i('All dependencies initialized', tag: 'Boot');
 

@@ -37,7 +37,7 @@ class CrashReporter {
       return true;
     };
 
-    AppLogger.i('CrashReporter initialized (WEB / ${config.envName})', tag: 'Crash');
+    AppLogger.i('CrashReporter initialized (WEB)', tag: 'Crash');
   }
 
   // ═══════════════════════════════════════════════════════════════════

@@ -7,54 +7,121 @@ import '../../data/models/leave_models.dart';
 import '../../../../shared/controllers/global_error_handler.dart';
 
 // ═══════════════════════════════════════════════════════════════════
-// Leaves List (balances + requests + types)
+// Leaves List
 // ═══════════════════════════════════════════════════════════════════
 
 class LeavesListState {
   final bool isLoading;
-  final List<LeaveBalance> balances;
   final List<LeaveRequest> requests;
-  final List<LeaveType> leaveTypes;
+  final LeaveSummary? summary;
   final UiError? error;
 
   const LeavesListState({
     this.isLoading = false,
-    this.balances = const [],
     this.requests = const [],
-    this.leaveTypes = const [],
+    this.summary,
     this.error,
   });
 }
 
 class LeavesListNotifier extends StateNotifier<LeavesListState> {
   final Ref _ref;
+  String? _currentStatus;
+  String? _currentDateFrom;
+  String? _currentDateTo;
+
   LeavesListNotifier(this._ref) : super(const LeavesListState());
 
-  Future<void> load({int? year, String? status}) async {
-    state = const LeavesListState(isLoading: true);
+  Future<void> load({String? status, String? dateFrom, String? dateTo}) async {
+    _currentStatus = status;
+    _currentDateFrom = dateFrom;
+    _currentDateTo = dateTo;
+    state = LeavesListState(isLoading: true, summary: state.summary);
     try {
       final repo = _ref.read(leaveRepositoryProvider);
-      final data = await repo.getLeaves(year: year, status: status);
+      // Fetch list and summary in parallel
+      final results = await Future.wait([
+        repo.getLeaves(status: status, dateFrom: dateFrom, dateTo: dateTo),
+        repo.getSummary(),
+      ]);
       state = LeavesListState(
-        balances: data.balances,
-        requests: data.requests,
-        leaveTypes: data.leaveTypes,
+        requests: (results[0] as LeavesData).requests,
+        summary: results[1] as LeaveSummary,
       );
     } catch (e) {
       state = LeavesListState(error: GlobalErrorHandler.handle(e));
     }
   }
 
-  Future<void> refresh() => load();
+  Future<void> refresh() => load(
+        status: _currentStatus,
+        dateFrom: _currentDateFrom,
+        dateTo: _currentDateTo,
+      );
+
+  Future<bool> submitLeave(int id) async {
+    try {
+      final repo = _ref.read(leaveRepositoryProvider);
+      await repo.submitLeave(id);
+      await refresh();
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<bool> deleteLeave(int id) async {
+    try {
+      final repo = _ref.read(leaveRepositoryProvider);
+      await repo.deleteLeave(id);
+      await refresh();
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
 }
 
 final leavesListProvider =
     StateNotifierProvider<LeavesListNotifier, LeavesListState>(
-  (ref) {
-    final notifier = LeavesListNotifier(ref);
-    notifier.load();
-    return notifier;
-  },
+  (ref) => LeavesListNotifier(ref),
+);
+
+// ═══════════════════════════════════════════════════════════════════
+// Leave Balances
+// ═══════════════════════════════════════════════════════════════════
+
+class LeaveBalancesState {
+  final bool isLoading;
+  final List<LeaveBalance> balances;
+  final UiError? error;
+
+  const LeaveBalancesState({
+    this.isLoading = false,
+    this.balances = const [],
+    this.error,
+  });
+}
+
+class LeaveBalancesNotifier extends StateNotifier<LeaveBalancesState> {
+  final Ref _ref;
+  LeaveBalancesNotifier(this._ref) : super(const LeaveBalancesState());
+
+  Future<void> load() async {
+    state = const LeaveBalancesState(isLoading: true);
+    try {
+      final repo = _ref.read(leaveRepositoryProvider);
+      final data = await repo.getBalances();
+      state = LeaveBalancesState(balances: data.balances);
+    } catch (e) {
+      state = LeaveBalancesState(error: GlobalErrorHandler.handle(e));
+    }
+  }
+}
+
+final leaveBalancesProvider =
+    StateNotifierProvider.autoDispose<LeaveBalancesNotifier, LeaveBalancesState>(
+  (ref) => LeaveBalancesNotifier(ref),
 );
 
 // ═══════════════════════════════════════════════════════════════════
@@ -65,23 +132,23 @@ class CreateLeaveFormState {
   final int? leaveTypeId;
   final String startDate;
   final String endDate;
-  final String dayPart;
   final String reason;
   final bool isLoading;
   final UiError? error;
   final Map<String, List<String>> fieldErrors;
   final bool isSuccess;
+  final String? successMessage;
 
   const CreateLeaveFormState({
     this.leaveTypeId,
     this.startDate = '',
     this.endDate = '',
-    this.dayPart = 'full',
     this.reason = '',
     this.isLoading = false,
     this.error,
     this.fieldErrors = const {},
     this.isSuccess = false,
+    this.successMessage,
   });
 
   bool get canSubmit =>
@@ -99,24 +166,25 @@ class CreateLeaveFormState {
     int? leaveTypeId,
     String? startDate,
     String? endDate,
-    String? dayPart,
     String? reason,
     bool? isLoading,
     UiError? error,
     Map<String, List<String>>? fieldErrors,
     bool? isSuccess,
+    String? successMessage,
     bool clearErrors = false,
+    bool clearLeaveType = false,
   }) {
     return CreateLeaveFormState(
-      leaveTypeId: leaveTypeId ?? this.leaveTypeId,
+      leaveTypeId: clearLeaveType ? null : (leaveTypeId ?? this.leaveTypeId),
       startDate: startDate ?? this.startDate,
       endDate: endDate ?? this.endDate,
-      dayPart: dayPart ?? this.dayPart,
       reason: reason ?? this.reason,
       isLoading: isLoading ?? this.isLoading,
       error: clearErrors ? null : (error ?? this.error),
       fieldErrors: clearErrors ? const {} : (fieldErrors ?? this.fieldErrors),
       isSuccess: isSuccess ?? this.isSuccess,
+      successMessage: successMessage ?? this.successMessage,
     );
   }
 }
@@ -131,15 +199,14 @@ class CreateLeaveFormController extends StateNotifier<CreateLeaveFormState> {
       state = state.copyWith(startDate: d, clearErrors: true);
   void setEndDate(String d) =>
       state = state.copyWith(endDate: d, clearErrors: true);
-  void setDayPart(String p) =>
-      state = state.copyWith(dayPart: p, clearErrors: true);
-  void setReason(String r) =>
-      state = state.copyWith(reason: r, clearErrors: true);
+  void setReason(String v) =>
+      state = state.copyWith(reason: v);
+  void setDateRange(String start, String end) =>
+      state = state.copyWith(startDate: start, endDate: end, clearErrors: true);
 
-  Future<void> submit() async {
+  Future<void> submit({required String action}) async {
     if (state.isLoading) return;
 
-    // ── Client-side validation ──
     final errors = <String, List<String>>{};
     if (state.leaveTypeId == null) errors['leave_type_id'] = ['This field is required'];
     if (state.startDate.isEmpty) errors['start_date'] = ['This field is required'];
@@ -157,10 +224,11 @@ class CreateLeaveFormController extends StateNotifier<CreateLeaveFormState> {
         leaveTypeId: state.leaveTypeId!,
         startDate: state.startDate,
         endDate: state.endDate,
-        dayPart: state.dayPart,
-        reason: state.reason.isEmpty ? null : state.reason,
+        action: action,
+        reason: state.reason.isNotEmpty ? state.reason : null,
       );
-      state = state.copyWith(isLoading: false, isSuccess: true);
+      final msg = action == 'draft' ? 'Saved as draft' : 'Leave request sent successfully';
+      state = state.copyWith(isLoading: false, isSuccess: true, successMessage: msg);
       _ref.read(leavesListProvider.notifier).refresh();
     } on ValidationException catch (e) {
       state = state.copyWith(

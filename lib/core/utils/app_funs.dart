@@ -68,23 +68,23 @@ class AppFuns {
     if (d == null) return '';
     if (withDay && withPeriods) {
       return replaceArabicNumbers(
-        Jiffy.parseFromDateTime(d).format(pattern: 'EEEE، d MMMM yyyy | h:mm a' ),
+        Jiffy.parseFromDateTime(d).format(pattern: 'EEEE، d MMMM yyyy hh:mm a' ),
       );
     } else if (withDay && !withPeriods) {
       return replaceArabicNumbers(
-        Jiffy.parseFromDateTime(d).format(pattern: 'd-MMMM-yyyy | H:mm' ),
+        Jiffy.parseFromDateTime(d).format(pattern: 'd-MMMM-yyyy H:mm' ),
       );
     } else if (!withDay && withPeriods) {
       return replaceArabicNumbers(
-        Jiffy.parseFromDateTime(d).format(pattern: 'h:mm a' ),
+        Jiffy.parseFromDateTime(d).format(pattern: 'hh:mm a' ),
       );
     } else if (!withDay && !withPeriods) {
       return replaceArabicNumbers(
         Jiffy.parseFromDateTime(d).format(pattern: 'H:mm' ),
       );
-    } else { 
+    } else {
       return replaceArabicNumbers(
-        Jiffy.parseFromDateTime(d).format(pattern: 'EEEE، d MMMM yyyy | h:mm a' ),
+        Jiffy.parseFromDateTime(d).format(pattern: 'EEEE، d MMMM yyyy hh:mm a' ),
       );
     }
   }
