@@ -49,6 +49,7 @@
   "This field is required": "This field is required",
   "Error loading profile": "Error loading profile",
   "Retry": "Retry",
+  "No internet connection": "No internet connection",
 
   "Attendance": "Attendance",
   "Leaves": "Leaves",
@@ -220,5 +221,20 @@
   "Enter a positive amount": "Enter a positive amount",
   "d": "d",
   "This field is required": "This field is required",
-  "Enter a valid positive number": "Enter a valid positive number"
+  "Enter a valid positive number": "Enter a valid positive number",
+  "Awaiting approval from": "Awaiting approval from",
+  "Save as draft": "Save as draft",
+  "Saved as draft": "Saved as draft",
+  "Submit for approval": "Submit for approval",
+  "Delete request": "Delete request",
+  "Are you sure you want to delete this request?": "Are you sure you want to delete this request?",
+  "Request deleted successfully": "Request deleted successfully",
+  "Failed to delete request": "Failed to delete request",
+  "Failed to submit request": "Failed to submit request",
+  "Filter by date": "Filter by date",
+  "Select leave type": "Select leave type",
+  "available of": "available of",
+  "Leave period": "Leave period",
+  "Select leave period": "Select leave period",
+  "Enter reason (optional)": "Enter reason (optional)"
 }
