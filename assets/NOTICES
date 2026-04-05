@@ -1951,7 +1951,6 @@ limitations under the License.
 --------------------------------------------------------------------------------
 cross_file
 go_router
-google_fonts
 path_provider_android
 path_provider_foundation
 url_launcher_android
