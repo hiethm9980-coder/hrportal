@@ -95,7 +95,7 @@ class GlobalErrorHandler {
         action: ErrorAction.showDialog,
         title: 'Unauthorized',
         message: (error as ApiException).message,
-        traceId: (error as ApiException).traceId,
+        traceId: (error).traceId,
       );
     }
 

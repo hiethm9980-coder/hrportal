@@ -29,7 +29,7 @@ class ManagerRequestRepository {
         if (status != null && status.isNotEmpty) 'status': status,
         if (requestType != null && requestType.isNotEmpty)
           'request_type': requestType,
-        if (employeeId != null) 'employee_id': employeeId,
+        'employee_id': ?employeeId,
       },
       fromJson: (json) =>
           ManagerRequestsData.fromJson(json as Map<String, dynamic>),

@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../constants/app_colors.dart';
 import 'app_spacing.dart';
+
+const String _fontFamily = 'Cairo';
 
 /// Centralized app themes.
 class AppTheme {
@@ -21,24 +22,22 @@ class AppTheme {
   static ThemeData _buildLightTheme() {
     const c = AppColorsExtension.light;
 
-    final textTheme = GoogleFonts.cairoTextTheme(
-      TextTheme(
-        displayLarge  : TextStyle(fontSize: 32, fontWeight: FontWeight.w900, color: c.textPrimary, height: 1.3),
-        displayMedium : TextStyle(fontSize: 28, fontWeight: FontWeight.w800, color: c.textPrimary, height: 1.3),
-        displaySmall  : TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: c.textPrimary, height: 1.3),
-        headlineLarge : TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: c.textPrimary, height: 1.4),
-        headlineMedium: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: c.textPrimary, height: 1.4),
-        headlineSmall : TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: c.textPrimary, height: 1.4),
-        titleLarge    : TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: c.textPrimary, height: 1.5),
-        titleMedium   : TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: c.textPrimary, height: 1.5),
-        titleSmall    : TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: c.textSecondary, height: 1.5),
-        bodyLarge     : TextStyle(fontSize: 15, fontWeight: FontWeight.w400, color: c.textPrimary, height: 1.6),
-        bodyMedium    : TextStyle(fontSize: 14, fontWeight: FontWeight.w400, color: c.textSecondary, height: 1.6),
-        bodySmall     : TextStyle(fontSize: 13, fontWeight: FontWeight.w400, color: c.textMuted, height: 1.6),
-        labelLarge    : TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: c.textPrimary, height: 1.4),
-        labelMedium   : TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: c.textMuted, height: 1.4),
-        labelSmall    : TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: c.textDisabled, height: 1.4),
-      ),
+    final textTheme = TextTheme(
+      displayLarge  : TextStyle(fontSize: 32, fontWeight: FontWeight.w900, color: c.textPrimary, height: 1.3),
+      displayMedium : TextStyle(fontSize: 28, fontWeight: FontWeight.w800, color: c.textPrimary, height: 1.3),
+      displaySmall  : TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: c.textPrimary, height: 1.3),
+      headlineLarge : TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: c.textPrimary, height: 1.4),
+      headlineMedium: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: c.textPrimary, height: 1.4),
+      headlineSmall : TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: c.textPrimary, height: 1.4),
+      titleLarge    : TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: c.textPrimary, height: 1.5),
+      titleMedium   : TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: c.textPrimary, height: 1.5),
+      titleSmall    : TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: c.textSecondary, height: 1.5),
+      bodyLarge     : TextStyle(fontSize: 15, fontWeight: FontWeight.w400, color: c.textPrimary, height: 1.6),
+      bodyMedium    : TextStyle(fontSize: 14, fontWeight: FontWeight.w400, color: c.textSecondary, height: 1.6),
+      bodySmall     : TextStyle(fontSize: 13, fontWeight: FontWeight.w400, color: c.textMuted, height: 1.6),
+      labelLarge    : TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: c.textPrimary, height: 1.4),
+      labelMedium   : TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: c.textMuted, height: 1.4),
+      labelSmall    : TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: c.textDisabled, height: 1.4),
     );
 
     return ThemeData(
@@ -55,14 +54,14 @@ class AppTheme {
       ),
       scaffoldBackgroundColor: c.bg,
       textTheme: textTheme,
-      fontFamily: GoogleFonts.cairo().fontFamily,
+      fontFamily: _fontFamily,
 
       appBarTheme: AppBarTheme(
         systemOverlayStyle: SystemUiOverlayStyle.light,
         backgroundColor: AppColors.primaryMid,
         elevation: 0,
         centerTitle: true,
-        titleTextStyle: GoogleFonts.cairo(fontSize: 17, fontWeight: FontWeight.w800, color: Colors.white),
+        titleTextStyle: const TextStyle(fontFamily: _fontFamily, fontSize: 17, fontWeight: FontWeight.w800, color: Colors.white),
         iconTheme: const IconThemeData(color: Colors.white),
       ),
 
@@ -80,8 +79,8 @@ class AppTheme {
         enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: c.inputBorder)),
         focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.primaryMid, width: 1.5)),
         errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.error)),
-        hintStyle: GoogleFonts.cairo(color: c.gray400, fontSize: 14),
-        labelStyle: GoogleFonts.cairo(color: c.textMuted, fontSize: 14),
+        hintStyle: TextStyle(fontFamily: _fontFamily, color: c.gray400, fontSize: 14),
+        labelStyle: TextStyle(fontFamily: _fontFamily, color: c.textMuted, fontSize: 14),
       ),
 
       elevatedButtonTheme: ElevatedButtonThemeData(
@@ -90,7 +89,7 @@ class AppTheme {
           elevation: 0,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
-          textStyle: GoogleFonts.cairo(fontSize: 14, fontWeight: FontWeight.w700),
+          textStyle: const TextStyle(fontFamily: _fontFamily, fontSize: 14, fontWeight: FontWeight.w700),
         ),
       ),
 
@@ -98,7 +97,7 @@ class AppTheme {
         style: FilledButton.styleFrom(
           minimumSize: const Size(double.infinity, 48),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          textStyle: GoogleFonts.cairo(fontSize: 14, fontWeight: FontWeight.w700),
+          textStyle: const TextStyle(fontFamily: _fontFamily, fontSize: 14, fontWeight: FontWeight.w700),
         ),
       ),
 
@@ -106,12 +105,12 @@ class AppTheme {
         style: OutlinedButton.styleFrom(
           minimumSize: const Size(0, 48),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          textStyle: GoogleFonts.cairo(fontSize: 14, fontWeight: FontWeight.w600),
+          textStyle: const TextStyle(fontFamily: _fontFamily, fontSize: 14, fontWeight: FontWeight.w600),
         ),
       ),
 
       textButtonTheme: TextButtonThemeData(
-        style: TextButton.styleFrom(textStyle: GoogleFonts.cairo(fontSize: 14, fontWeight: FontWeight.w600)),
+        style: TextButton.styleFrom(textStyle: const TextStyle(fontFamily: _fontFamily, fontSize: 14, fontWeight: FontWeight.w600)),
       ),
 
       bottomNavigationBarTheme: BottomNavigationBarThemeData(
@@ -120,8 +119,8 @@ class AppTheme {
         unselectedItemColor: c.gray400,
         showSelectedLabels: true, showUnselectedLabels: true,
         type: BottomNavigationBarType.fixed,
-        selectedLabelStyle: GoogleFonts.cairo(fontSize: 11, fontWeight: FontWeight.w700),
-        unselectedLabelStyle: GoogleFonts.cairo(fontSize: 11, fontWeight: FontWeight.w400),
+        selectedLabelStyle: const TextStyle(fontFamily: _fontFamily, fontSize: 11, fontWeight: FontWeight.w700),
+        unselectedLabelStyle: const TextStyle(fontFamily: _fontFamily, fontSize: 11, fontWeight: FontWeight.w400),
       ),
 
       navigationBarTheme: NavigationBarThemeData(
@@ -131,16 +130,16 @@ class AppTheme {
         indicatorShape: RoundedRectangleBorder(borderRadius: AppSpacing.borderRadiusMd),
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
-            return GoogleFonts.cairo(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.primaryMid);
+            return const TextStyle(fontFamily: _fontFamily, fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.primaryMid);
           }
-          return GoogleFonts.cairo(fontSize: 11, fontWeight: FontWeight.w400, color: c.gray400);
+          return TextStyle(fontFamily: _fontFamily, fontSize: 11, fontWeight: FontWeight.w400, color: c.gray400);
         }),
       ),
 
       navigationRailTheme: NavigationRailThemeData(
         indicatorShape: RoundedRectangleBorder(borderRadius: AppSpacing.borderRadiusMd),
-        selectedLabelTextStyle: GoogleFonts.cairo(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.primaryMid),
-        unselectedLabelTextStyle: GoogleFonts.cairo(fontSize: 12, fontWeight: FontWeight.w400, color: c.gray400),
+        selectedLabelTextStyle: const TextStyle(fontFamily: _fontFamily, fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.primaryMid),
+        unselectedLabelTextStyle: TextStyle(fontFamily: _fontFamily, fontSize: 12, fontWeight: FontWeight.w400, color: c.gray400),
       ),
 
       dividerTheme: DividerThemeData(color: c.divider, thickness: 1, space: 0),
@@ -148,12 +147,12 @@ class AppTheme {
       dialogTheme: DialogThemeData(
         backgroundColor: c.bgCard,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        titleTextStyle: GoogleFonts.cairo(fontSize: 18, fontWeight: FontWeight.w700, color: c.textPrimary),
+        titleTextStyle: TextStyle(fontFamily: _fontFamily, fontSize: 18, fontWeight: FontWeight.w700, color: c.textPrimary),
       ),
 
       chipTheme: ChipThemeData(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(99)),
-        labelStyle: GoogleFonts.cairo(fontSize: 11, fontWeight: FontWeight.w700),
+        labelStyle: const TextStyle(fontFamily: _fontFamily, fontSize: 11, fontWeight: FontWeight.w700),
       ),
 
       snackBarTheme: SnackBarThemeData(
@@ -186,24 +185,22 @@ class AppTheme {
   static ThemeData _buildDarkTheme() {
     const c = AppColorsExtension.dark;
 
-    final textTheme = GoogleFonts.cairoTextTheme(
-      TextTheme(
-        displayLarge  : TextStyle(fontSize: 32, fontWeight: FontWeight.w900, color: c.textPrimary, height: 1.3),
-        displayMedium : TextStyle(fontSize: 28, fontWeight: FontWeight.w800, color: c.textPrimary, height: 1.3),
-        displaySmall  : TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: c.textPrimary, height: 1.3),
-        headlineLarge : TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: c.textPrimary, height: 1.4),
-        headlineMedium: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: c.textPrimary, height: 1.4),
-        headlineSmall : TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: c.textPrimary, height: 1.4),
-        titleLarge    : TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: c.textPrimary, height: 1.5),
-        titleMedium   : TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: c.textPrimary, height: 1.5),
-        titleSmall    : TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: c.textSecondary, height: 1.5),
-        bodyLarge     : TextStyle(fontSize: 15, fontWeight: FontWeight.w400, color: c.textPrimary, height: 1.6),
-        bodyMedium    : TextStyle(fontSize: 14, fontWeight: FontWeight.w400, color: c.textSecondary, height: 1.6),
-        bodySmall     : TextStyle(fontSize: 13, fontWeight: FontWeight.w400, color: c.textMuted, height: 1.6),
-        labelLarge    : TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: c.textPrimary, height: 1.4),
-        labelMedium   : TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: c.textMuted, height: 1.4),
-        labelSmall    : TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: c.textDisabled, height: 1.4),
-      ),
+    final textTheme = TextTheme(
+      displayLarge  : TextStyle(fontSize: 32, fontWeight: FontWeight.w900, color: c.textPrimary, height: 1.3),
+      displayMedium : TextStyle(fontSize: 28, fontWeight: FontWeight.w800, color: c.textPrimary, height: 1.3),
+      displaySmall  : TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: c.textPrimary, height: 1.3),
+      headlineLarge : TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: c.textPrimary, height: 1.4),
+      headlineMedium: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: c.textPrimary, height: 1.4),
+      headlineSmall : TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: c.textPrimary, height: 1.4),
+      titleLarge    : TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: c.textPrimary, height: 1.5),
+      titleMedium   : TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: c.textPrimary, height: 1.5),
+      titleSmall    : TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: c.textSecondary, height: 1.5),
+      bodyLarge     : TextStyle(fontSize: 15, fontWeight: FontWeight.w400, color: c.textPrimary, height: 1.6),
+      bodyMedium    : TextStyle(fontSize: 14, fontWeight: FontWeight.w400, color: c.textSecondary, height: 1.6),
+      bodySmall     : TextStyle(fontSize: 13, fontWeight: FontWeight.w400, color: c.textMuted, height: 1.6),
+      labelLarge    : TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: c.textPrimary, height: 1.4),
+      labelMedium   : TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: c.textMuted, height: 1.4),
+      labelSmall    : TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: c.textDisabled, height: 1.4),
     );
 
     return ThemeData(
@@ -221,14 +218,14 @@ class AppTheme {
       ),
       scaffoldBackgroundColor: c.bg,
       textTheme: textTheme,
-      fontFamily: GoogleFonts.cairo().fontFamily,
+      fontFamily: _fontFamily,
 
       appBarTheme: AppBarTheme(
         systemOverlayStyle: SystemUiOverlayStyle.light,
         backgroundColor: AppColors.primaryMid,
         elevation: 0,
         centerTitle: true,
-        titleTextStyle: GoogleFonts.cairo(fontSize: 17, fontWeight: FontWeight.w800, color: Colors.white),
+        titleTextStyle: const TextStyle(fontFamily: _fontFamily, fontSize: 17, fontWeight: FontWeight.w800, color: Colors.white),
         iconTheme: const IconThemeData(color: Colors.white),
       ),
 
@@ -249,8 +246,8 @@ class AppTheme {
         enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: c.inputBorder)),
         focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.primaryLight, width: 1.5)),
         errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.error)),
-        hintStyle: GoogleFonts.cairo(color: c.gray400, fontSize: 14),
-        labelStyle: GoogleFonts.cairo(color: c.textMuted, fontSize: 14),
+        hintStyle: TextStyle(fontFamily: _fontFamily, color: c.gray400, fontSize: 14),
+        labelStyle: TextStyle(fontFamily: _fontFamily, color: c.textMuted, fontSize: 14),
       ),
 
       elevatedButtonTheme: ElevatedButtonThemeData(
@@ -259,7 +256,7 @@ class AppTheme {
           elevation: 0,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
-          textStyle: GoogleFonts.cairo(fontSize: 14, fontWeight: FontWeight.w700),
+          textStyle: const TextStyle(fontFamily: _fontFamily, fontSize: 14, fontWeight: FontWeight.w700),
         ),
       ),
 
@@ -267,7 +264,7 @@ class AppTheme {
         style: FilledButton.styleFrom(
           minimumSize: const Size(double.infinity, 48),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          textStyle: GoogleFonts.cairo(fontSize: 14, fontWeight: FontWeight.w700),
+          textStyle: const TextStyle(fontFamily: _fontFamily, fontSize: 14, fontWeight: FontWeight.w700),
         ),
       ),
 
@@ -276,12 +273,12 @@ class AppTheme {
           minimumSize: const Size(0, 48),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           side: BorderSide(color: c.inputBorder),
-          textStyle: GoogleFonts.cairo(fontSize: 14, fontWeight: FontWeight.w600),
+          textStyle: const TextStyle(fontFamily: _fontFamily, fontSize: 14, fontWeight: FontWeight.w600),
         ),
       ),
 
       textButtonTheme: TextButtonThemeData(
-        style: TextButton.styleFrom(textStyle: GoogleFonts.cairo(fontSize: 14, fontWeight: FontWeight.w600)),
+        style: TextButton.styleFrom(textStyle: const TextStyle(fontFamily: _fontFamily, fontSize: 14, fontWeight: FontWeight.w600)),
       ),
 
       bottomNavigationBarTheme: BottomNavigationBarThemeData(
@@ -290,8 +287,8 @@ class AppTheme {
         unselectedItemColor: c.gray400,
         showSelectedLabels: true, showUnselectedLabels: true,
         type: BottomNavigationBarType.fixed,
-        selectedLabelStyle: GoogleFonts.cairo(fontSize: 11, fontWeight: FontWeight.w700),
-        unselectedLabelStyle: GoogleFonts.cairo(fontSize: 11, fontWeight: FontWeight.w400),
+        selectedLabelStyle: const TextStyle(fontFamily: _fontFamily, fontSize: 11, fontWeight: FontWeight.w700),
+        unselectedLabelStyle: const TextStyle(fontFamily: _fontFamily, fontSize: 11, fontWeight: FontWeight.w400),
       ),
 
       navigationBarTheme: NavigationBarThemeData(
@@ -301,16 +298,16 @@ class AppTheme {
         indicatorShape: RoundedRectangleBorder(borderRadius: AppSpacing.borderRadiusMd),
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
-            return GoogleFonts.cairo(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.goldLight);
+            return const TextStyle(fontFamily: _fontFamily, fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.goldLight);
           }
-          return GoogleFonts.cairo(fontSize: 11, fontWeight: FontWeight.w400, color: c.gray400);
+          return TextStyle(fontFamily: _fontFamily, fontSize: 11, fontWeight: FontWeight.w400, color: c.gray400);
         }),
       ),
 
       navigationRailTheme: NavigationRailThemeData(
         indicatorShape: RoundedRectangleBorder(borderRadius: AppSpacing.borderRadiusMd),
-        selectedLabelTextStyle: GoogleFonts.cairo(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.goldLight),
-        unselectedLabelTextStyle: GoogleFonts.cairo(fontSize: 12, fontWeight: FontWeight.w400, color: c.gray400),
+        selectedLabelTextStyle: const TextStyle(fontFamily: _fontFamily, fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.goldLight),
+        unselectedLabelTextStyle: TextStyle(fontFamily: _fontFamily, fontSize: 12, fontWeight: FontWeight.w400, color: c.gray400),
       ),
 
       dividerTheme: DividerThemeData(color: c.divider, thickness: 1, space: 0),
@@ -318,12 +315,12 @@ class AppTheme {
       dialogTheme: DialogThemeData(
         backgroundColor: c.bgCard,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        titleTextStyle: GoogleFonts.cairo(fontSize: 18, fontWeight: FontWeight.w700, color: c.textPrimary),
+        titleTextStyle: TextStyle(fontFamily: _fontFamily, fontSize: 18, fontWeight: FontWeight.w700, color: c.textPrimary),
       ),
 
       chipTheme: ChipThemeData(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(99)),
-        labelStyle: GoogleFonts.cairo(fontSize: 11, fontWeight: FontWeight.w700),
+        labelStyle: const TextStyle(fontFamily: _fontFamily, fontSize: 11, fontWeight: FontWeight.w700),
       ),
 
       snackBarTheme: SnackBarThemeData(

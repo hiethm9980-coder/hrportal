@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
+
 import 'package:hr_portal/core/constants/app_colors.dart';
 import 'package:hr_portal/core/constants/app_shadows.dart';
 import 'package:hr_portal/core/localization/app_localizations.dart';
@@ -170,7 +170,7 @@ class _RequestTile extends StatelessWidget {
                   child: Text(
                     request.subject ??
                         _typeLabel(request.requestType).tr(context),
-                    style: GoogleFonts.cairo(
+                    style: TextStyle(fontFamily: 'Cairo',
                       fontSize: 18,
                       fontWeight: FontWeight.w800,
                       color: context.appColors.textPrimary,
@@ -262,7 +262,7 @@ class _RequestTile extends StatelessWidget {
                 Flexible(
                   child: Text(
                     typeName,
-                    style: GoogleFonts.cairo(
+                    style: TextStyle(fontFamily: 'Cairo',
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
                       color: context.appColors.textPrimary,
@@ -285,7 +285,7 @@ class _RequestTile extends StatelessWidget {
               const SizedBox(height: 4),
               Text(
                 subject,
-                style: GoogleFonts.cairo(
+                style: TextStyle(fontFamily: 'Cairo',
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
                   color: context.appColors.textPrimary,
@@ -300,7 +300,7 @@ class _RequestTile extends StatelessWidget {
               const SizedBox(height: 4),
               Text(
                 request.description!,
-                style: GoogleFonts.cairo(
+                style: TextStyle(fontFamily: 'Cairo',
                   fontSize: 12,
                   fontWeight: FontWeight.w500,
                   color: context.appColors.textSecondary,
@@ -315,7 +315,7 @@ class _RequestTile extends StatelessWidget {
               alignment: AlignmentDirectional.centerEnd,
               child: Text(
                 _formatCreatedDate(request.createdAt),
-                style: GoogleFonts.cairo(
+                style: TextStyle(fontFamily: 'Cairo',
                   fontSize: 10,
                   color: context.appColors.textMuted,
                 ),
@@ -357,7 +357,7 @@ class _DetailRow extends StatelessWidget {
               children: [
                 Text(
                   label,
-                  style: GoogleFonts.cairo(
+                  style: TextStyle(fontFamily: 'Cairo',
                     fontSize: 11,
                     color: context.appColors.textMuted,
                   ),
@@ -365,7 +365,7 @@ class _DetailRow extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   value,
-                  style: GoogleFonts.cairo(
+                  style: TextStyle(fontFamily: 'Cairo',
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
                     color: context.appColors.textPrimary,
@@ -439,13 +439,13 @@ class CreateRequestScreen extends ConsumerWidget {
                 children: [
                   // ── Type ──
                   Text('Request type *'.tr(context),
-                      style: GoogleFonts.cairo(
+                      style: TextStyle(fontFamily: 'Cairo',
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
                           color: context.appColors.textSecondary)),
                   const SizedBox(height: 6),
                   DropdownButtonFormField<String>(
-                    value: form.requestType.isEmpty
+                    initialValue: form.requestType.isEmpty
                         ? null
                         : form.requestType,
                     decoration: InputDecoration(
@@ -459,7 +459,7 @@ class CreateRequestScreen extends ConsumerWidget {
                                       style: const TextStyle(fontSize: 16)),
                                   const SizedBox(width: 8),
                                   Text(t.$2.tr(context),
-                                      style: GoogleFonts.cairo(fontSize: 13)),
+                                      style: TextStyle(fontFamily: 'Cairo',fontSize: 13)),
                                 ],
                               ),
                             ))
@@ -476,7 +476,7 @@ class CreateRequestScreen extends ConsumerWidget {
                   if (form.isLoanRequest) ...[
                     // Amount field
                     Text('${'Amount'.tr(context)} *',
-                        style: GoogleFonts.cairo(
+                        style: TextStyle(fontFamily: 'Cairo',
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
                             color: context.appColors.textSecondary)),
@@ -488,11 +488,11 @@ class CreateRequestScreen extends ConsumerWidget {
                       inputFormatters: [
                         FilteringTextInputFormatter.digitsOnly,
                       ],
-                      style: GoogleFonts.cairo(fontSize: 13),
+                      style: TextStyle(fontFamily: 'Cairo',fontSize: 13),
                       decoration: InputDecoration(
                         errorText: form.fieldError('subject')?.tr(context),
                         hintText: 'Enter a positive amount'.tr(context),
-                        hintStyle: GoogleFonts.cairo(
+                        hintStyle: TextStyle(fontFamily: 'Cairo',
                             fontSize: 13,
                             color: context.appColors.textMuted),
                       ),
@@ -500,7 +500,7 @@ class CreateRequestScreen extends ConsumerWidget {
                     const SizedBox(height: 16),
                     // Currency dropdown
                     Text('${'Currency'.tr(context)} *',
-                        style: GoogleFonts.cairo(
+                        style: TextStyle(fontFamily: 'Cairo',
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
                             color: context.appColors.textSecondary)),
@@ -514,7 +514,7 @@ class CreateRequestScreen extends ConsumerWidget {
                     ),
                   ] else ...[
                     Text('Subject *'.tr(context),
-                        style: GoogleFonts.cairo(
+                        style: TextStyle(fontFamily: 'Cairo',
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
                             color: context.appColors.textSecondary)),
@@ -522,7 +522,7 @@ class CreateRequestScreen extends ConsumerWidget {
                     TextField(
                       onChanged: notifier.setSubject,
                       enabled: !form.isLoading,
-                      style: GoogleFonts.cairo(fontSize: 13),
+                      style: TextStyle(fontFamily: 'Cairo',fontSize: 13),
                       decoration: InputDecoration(
                           errorText: form.fieldError('subject')?.tr(context)),
                     ),
@@ -531,7 +531,7 @@ class CreateRequestScreen extends ConsumerWidget {
 
                   // ── Description ──
                   Text('Details (optional)'.tr(context),
-                      style: GoogleFonts.cairo(
+                      style: TextStyle(fontFamily: 'Cairo',
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
                           color: context.appColors.textSecondary)),
@@ -540,7 +540,7 @@ class CreateRequestScreen extends ConsumerWidget {
                     onChanged: notifier.setDescription,
                     enabled: !form.isLoading,
                     maxLines: 4,
-                    style: GoogleFonts.cairo(fontSize: 13),
+                    style: TextStyle(fontFamily: 'Cairo',fontSize: 13),
                     decoration: InputDecoration(
                         errorText: form.fieldError('description')?.tr(context)),
                   ),
@@ -589,13 +589,13 @@ class _CurrencyDropdown extends StatelessWidget {
     final isAr = Localizations.localeOf(context).languageCode == 'ar';
 
     return DropdownButtonFormField<String>(
-      value: value,
+      initialValue: value,
       items: _currencies
           .map((c) => DropdownMenuItem(
                 value: c.$1,
                 child: Text(
                   '${isAr ? c.$3 : c.$2} - ${c.$1}',
-                  style: GoogleFonts.cairo(fontSize: 13),
+                  style: TextStyle(fontFamily: 'Cairo',fontSize: 13),
                 ),
               ))
           .toList(),

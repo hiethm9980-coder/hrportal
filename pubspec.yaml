@@ -59,7 +59,7 @@ dependencies:
   cached_network_image: ^3.4.1
 
   # fonts
-  google_fonts: ^6.2.1
+  # google_fonts: ^6.2.1  # replaced with local fonts
 
   # widgets
   flutter_slidable: ^4.0.3
@@ -119,14 +119,22 @@ flutter:
     # - assets/svg/dark/
     # - assets/svg/light/
 
-  # fonts:
-  #   - family: Almaria
-  #     fonts:
-  #       - asset: assets/fonts/Almaria/Almarai-Light.ttf
-  #         weight: 300
-  #       - asset: assets/fonts/Almaria/Almarai-Regular.ttf
-  #         weight: 400
-  #       - asset: assets/fonts/Almaria/Almarai-Bold.ttf
-  #         weight: 700
-  #       - asset: assets/fonts/Almaria/Almarai-ExtraBold.ttf
-  #         weight: 800
+  fonts:
+    - family: Cairo
+      fonts:
+        - asset: assets/fonts/Cairo-ExtraLight.ttf
+          weight: 200
+        - asset: assets/fonts/Cairo-Light.ttf
+          weight: 300
+        - asset: assets/fonts/Cairo-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/Cairo-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/Cairo-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/Cairo-Bold.ttf
+          weight: 700
+        - asset: assets/fonts/Cairo-ExtraBold.ttf
+          weight: 800
+        - asset: assets/fonts/Cairo-Black.ttf
+          weight: 900

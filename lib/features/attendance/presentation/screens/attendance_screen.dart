@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
+
 import 'package:hr_portal/core/constants/app_colors.dart';
 import 'package:hr_portal/core/constants/app_shadows.dart';
 import 'package:hr_portal/core/localization/app_localizations.dart';
-import 'package:hr_portal/core/theme/app_spacing.dart';
 import 'package:hr_portal/shared/widgets/common_widgets.dart';
 
 import '../../../../core/utils/app_funs.dart';
@@ -55,41 +54,7 @@ class AttendanceScreen extends ConsumerWidget {
             onRefresh: () => ref.read(attendanceHistoryProvider.notifier).refresh(),
           ),
 
-          // ── Check In / Out Buttons ──
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TealButton(
-                    text: 'Check in'.tr(context),
-                    icon: '▶',
-                    small: true,
-                    onTap: checkAction.isLoading
-                        ? null
-                        : () => ref.read(checkActionProvider.notifier).checkIn(),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: AppOutlineButton(
-                    text: 'Check out'.tr(context),
-                    color: AppColors.error,
-                    small: true,
-                    onTap: checkAction.isLoading
-                        ? null
-                        : () => ref.read(checkActionProvider.notifier).checkOut(),
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          if (checkAction.isLoading)
-            const Padding(
-              padding: EdgeInsets.only(bottom: 8),
-              child: LinearProgressIndicator(color: AppColors.primaryMid),
-            ),
+          const SizedBox(height: 8),
 
           if (summary != null)
             Padding(
@@ -161,7 +126,7 @@ class _Stat extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(value,
-            style: GoogleFonts.cairo(
+            style: TextStyle(fontFamily: 'Cairo',
               fontSize: 22,
               fontWeight: FontWeight.w900,
               color: color,
@@ -169,7 +134,7 @@ class _Stat extends StatelessWidget {
             )),
         const SizedBox(height: 4),
         Text(label,
-            style: GoogleFonts.cairo(fontSize: 11, color: context.appColors.textMuted)),
+            style: TextStyle(fontFamily: 'Cairo',fontSize: 11, color: context.appColors.textMuted)),
       ],
     );
   }
@@ -261,7 +226,7 @@ class _RecordTile extends StatelessWidget {
                 Expanded(
                   child: Text(
                     record.date,
-                    style: GoogleFonts.cairo(
+                    style: TextStyle(fontFamily: 'Cairo',
                       fontSize: 18,
                       fontWeight: FontWeight.w800,
                       color: context.appColors.textPrimary,
@@ -413,7 +378,7 @@ class _RecordTile extends StatelessWidget {
                 if (record.workedHours > 0)
                   Text(
                     _formatWorkedHours(context, record.workedHours),
-                    style: GoogleFonts.cairo(
+                    style: TextStyle(fontFamily: 'Cairo',
                       fontSize: 12,
                       fontWeight: FontWeight.w700,
                       color: AppColors.teal,
@@ -425,7 +390,7 @@ class _RecordTile extends StatelessWidget {
                     fit: BoxFit.scaleDown,
                     child: Text(
                       _buildDateLabel(),
-                      style: GoogleFonts.cairo(
+                      style: TextStyle(fontFamily: 'Cairo',
                         fontSize: 14,
                         fontWeight: FontWeight.w800,
                         color: context.appColors.textPrimary,
@@ -452,7 +417,7 @@ class _RecordTile extends StatelessWidget {
                       children: [
                         Text(
                           inTime ?? '--:--:--',
-                          style: GoogleFonts.cairo(
+                          style: TextStyle(fontFamily: 'Cairo',
                             fontSize: 16,
                             fontWeight: FontWeight.w800,
                             color: AppColors.success,
@@ -461,7 +426,7 @@ class _RecordTile extends StatelessWidget {
                         const SizedBox(height: 2),
                         Text(
                           'Check in'.tr(context),
-                          style: GoogleFonts.cairo(
+                          style: TextStyle(fontFamily: 'Cairo',
                             fontSize: 10,
                             color: context.appColors.textMuted,
                           ),
@@ -471,7 +436,7 @@ class _RecordTile extends StatelessWidget {
                   ),
                   Text(
                     '—',
-                    style: GoogleFonts.cairo(
+                    style: TextStyle(fontFamily: 'Cairo',
                       fontSize: 16,
                       color: context.appColors.textMuted,
                     ),
@@ -482,7 +447,7 @@ class _RecordTile extends StatelessWidget {
                       children: [
                         Text(
                           outTime ?? '--:--:--',
-                          style: GoogleFonts.cairo(
+                          style: TextStyle(fontFamily: 'Cairo',
                             fontSize: 16,
                             fontWeight: FontWeight.w800,
                             color: AppColors.error,
@@ -491,7 +456,7 @@ class _RecordTile extends StatelessWidget {
                         const SizedBox(height: 2),
                         Text(
                           'Check out'.tr(context),
-                          style: GoogleFonts.cairo(
+                          style: TextStyle(fontFamily: 'Cairo',
                             fontSize: 10,
                             color: context.appColors.textMuted,
                           ),
@@ -538,7 +503,7 @@ class _AttendanceDetailRow extends StatelessWidget {
               children: [
                 Text(
                   label,
-                  style: GoogleFonts.cairo(
+                  style: TextStyle(fontFamily: 'Cairo',
                     fontSize: 11,
                     color: context.appColors.textMuted,
                   ),
@@ -546,7 +511,7 @@ class _AttendanceDetailRow extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   value,
-                  style: GoogleFonts.cairo(
+                  style: TextStyle(fontFamily: 'Cairo',
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
                     color: context.appColors.textPrimary,

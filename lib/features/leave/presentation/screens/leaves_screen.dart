@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
+
 import 'package:hr_portal/core/constants/app_colors.dart';
 import 'package:hr_portal/core/constants/app_shadows.dart';
 import 'package:hr_portal/core/localization/app_localizations.dart';
@@ -92,7 +92,7 @@ class LeavesScreen extends ConsumerWidget {
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
             itemCount: state.balances.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 12),
+            separatorBuilder: (_, _) => const SizedBox(width: 12),
             itemBuilder: (context, index) {
               final b = state.balances[index];
               final avail = b.available;
@@ -112,7 +112,7 @@ class LeavesScreen extends ConsumerWidget {
                   children: [
                     Text(
                       b.leaveType?.name ?? '',
-                      style: GoogleFonts.cairo(
+                      style: TextStyle(fontFamily: 'Cairo',
                         fontSize: 11,
                         fontWeight: FontWeight.w700,
                         color: context.appColors.textSecondary,
@@ -122,7 +122,7 @@ class LeavesScreen extends ConsumerWidget {
                     ),
                     Text(
                       avail.toStringAsFixed(1),
-                      style: GoogleFonts.cairo(
+                      style: TextStyle(fontFamily: 'Cairo',
                         fontSize: 28,
                         fontWeight: FontWeight.w900,
                         color: AppColors.teal,
@@ -131,7 +131,7 @@ class LeavesScreen extends ConsumerWidget {
                     ),
                     Text(
                       '${'Used'.tr(context)}: ${b.used.toStringAsFixed(1)}',
-                      style: GoogleFonts.cairo(
+                      style: TextStyle(fontFamily: 'Cairo',
                         fontSize: 10,
                         color: context.appColors.textMuted,
                       ),
@@ -194,7 +194,7 @@ class LeavesScreen extends ConsumerWidget {
                         Center(
                           child: Text(
                             r.leaveType?.name ?? '',
-                            style: GoogleFonts.cairo(
+                            style: TextStyle(fontFamily: 'Cairo',
                               fontSize: 13,
                               fontWeight: FontWeight.w700,
                               color: context.appColors.textPrimary,
@@ -208,7 +208,7 @@ class LeavesScreen extends ConsumerWidget {
                           children: [
                             Text(
                               daysLabel,
-                              style: GoogleFonts.cairo(
+                              style: TextStyle(fontFamily: 'Cairo',
                                 fontSize: 12,
                                 fontWeight: FontWeight.w700,
                                 color: AppColors.teal,
@@ -234,7 +234,7 @@ class LeavesScreen extends ConsumerWidget {
                                 fit: BoxFit.scaleDown,
                                 child: Text(
                                   startFormatted,
-                                  style: GoogleFonts.cairo(
+                                  style: TextStyle(fontFamily: 'Cairo',
                                     fontSize: 13,
                                     fontWeight: FontWeight.w800,
                                     color: AppColors.success,
@@ -244,7 +244,7 @@ class LeavesScreen extends ConsumerWidget {
                               const SizedBox(height: 2),
                               Text(
                                 'From'.tr(context),
-                                style: GoogleFonts.cairo(
+                                style: TextStyle(fontFamily: 'Cairo',
                                   fontSize: 10,
                                   color: context.appColors.textMuted,
                                 ),
@@ -254,7 +254,7 @@ class LeavesScreen extends ConsumerWidget {
                         ),
                         Text(
                           '—',
-                          style: GoogleFonts.cairo(
+                          style: TextStyle(fontFamily: 'Cairo',
                             fontSize: 16,
                             color: context.appColors.textMuted,
                           ),
@@ -266,7 +266,7 @@ class LeavesScreen extends ConsumerWidget {
                                 fit: BoxFit.scaleDown,
                                 child: Text(
                                   endFormatted,
-                                  style: GoogleFonts.cairo(
+                                  style: TextStyle(fontFamily: 'Cairo',
                                     fontSize: 13,
                                     fontWeight: FontWeight.w800,
                                     color: AppColors.error,
@@ -276,7 +276,7 @@ class LeavesScreen extends ConsumerWidget {
                               const SizedBox(height: 2),
                               Text(
                                 'To'.tr(context),
-                                style: GoogleFonts.cairo(
+                                style: TextStyle(fontFamily: 'Cairo',
                                   fontSize: 10,
                                   color: context.appColors.textMuted,
                                 ),
@@ -290,7 +290,7 @@ class LeavesScreen extends ConsumerWidget {
                     const SizedBox(height: 6),
                     Text(
                       _formatLeaveDate(r.createdAt.substring(0, 10)),
-                      style: GoogleFonts.cairo(
+                      style: TextStyle(fontFamily: 'Cairo',
                         fontSize: 10,
                         color: context.appColors.textMuted,
                       ),
@@ -412,7 +412,7 @@ class LeavesScreen extends ConsumerWidget {
                 Expanded(
                   child: Text(
                     r.leaveType?.name ?? 'Leave'.tr(context),
-                    style: GoogleFonts.cairo(
+                    style: TextStyle(fontFamily: 'Cairo',
                       fontSize: 18,
                       fontWeight: FontWeight.w800,
                       color: context.appColors.textPrimary,
@@ -534,7 +534,7 @@ class _LeaveDetailRow extends StatelessWidget {
               children: [
                 Text(
                   label,
-                  style: GoogleFonts.cairo(
+                  style: TextStyle(fontFamily: 'Cairo',
                     fontSize: 11,
                     color: context.appColors.textMuted,
                   ),
@@ -542,7 +542,7 @@ class _LeaveDetailRow extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   value,
-                  style: GoogleFonts.cairo(
+                  style: TextStyle(fontFamily: 'Cairo',
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
                     color: context.appColors.textPrimary,

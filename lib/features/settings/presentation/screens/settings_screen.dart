@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
+
 import 'package:hr_portal/core/constants/app_colors.dart';
 import 'package:hr_portal/core/constants/app_shadows.dart';
 import 'package:hr_portal/core/localization/app_localizations.dart';
@@ -137,7 +137,7 @@ class SettingsScreen extends ConsumerWidget {
                   icon: const Icon(Icons.logout, size: 20),
                   label: Text(
                     'Logout'.tr(context),
-                    style: GoogleFonts.cairo(
+                    style: TextStyle(fontFamily: 'Cairo',
                       fontSize: 15,
                       fontWeight: FontWeight.w700,
                     ),
@@ -157,13 +157,13 @@ class SettingsScreen extends ConsumerWidget {
       builder: (dCtx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Text('Logout'.tr(context),
-            style: GoogleFonts.cairo(fontWeight: FontWeight.w700)),
+            style: TextStyle(fontFamily: 'Cairo',fontWeight: FontWeight.w700)),
         content: Text('Do you want to log out from this device?'.tr(context),
-            style: GoogleFonts.cairo()),
+            style: TextStyle(fontFamily: 'Cairo',)),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dCtx).pop(),
-            child: Text('Cancel'.tr(context), style: GoogleFonts.cairo()),
+            child: Text('Cancel'.tr(context), style: TextStyle(fontFamily: 'Cairo',)),
           ),
           TextButton(
             style: TextButton.styleFrom(
@@ -185,7 +185,7 @@ class SettingsScreen extends ConsumerWidget {
                 }
               }
             },
-            child: Text('Sign out'.tr(context), style: GoogleFonts.cairo()),
+            child: Text('Sign out'.tr(context), style: TextStyle(fontFamily: 'Cairo',)),
           ),
         ],
       ),
@@ -218,7 +218,7 @@ class _SectionHeader extends StatelessWidget {
         const SizedBox(width: 8),
         Text(
           title,
-          style: GoogleFonts.cairo(
+          style: TextStyle(fontFamily: 'Cairo',
             fontSize: 15,
             fontWeight: FontWeight.w800,
             color: context.appColors.textPrimary,
@@ -311,7 +311,7 @@ class _RadioOption<T> extends StatelessWidget {
                   ),
                   child: Text(
                     flagText!,
-                    style: GoogleFonts.cairo(
+                    style: TextStyle(fontFamily: 'Cairo',
                       fontSize: 10,
                       fontWeight: FontWeight.w800,
                       color: isSelected
@@ -326,7 +326,7 @@ class _RadioOption<T> extends StatelessWidget {
               Expanded(
                 child: Text(
                   label,
-                  style: GoogleFonts.cairo(
+                  style: TextStyle(fontFamily: 'Cairo',
                     fontSize: 14,
                     fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                     color: isSelected

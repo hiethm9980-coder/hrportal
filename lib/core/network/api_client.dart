@@ -55,6 +55,44 @@ class ApiClient {
     _dio.interceptors.add(
       AuthInterceptor(storage: storage, sessionManager: sessionManager),
     );
+
+    // ── Debug Logger ──
+    _dio.interceptors.add(
+      InterceptorsWrapper(
+        onRequest: (options, handler) {
+          print('┌── REQUEST ──────────────────────────────────');
+          print('│ ${options.method} ${options.baseUrl}${options.path}');
+          if (options.queryParameters.isNotEmpty) {
+            print('│ Query: ${options.queryParameters}');
+          }
+          if (options.data != null) {
+            print('│ Body: ${options.data}');
+          }
+          print('│ Headers: ${options.headers}');
+          print('└─────────────────────────────────────────────');
+          handler.next(options);
+        },
+        onResponse: (response, handler) {
+          print('┌── RESPONSE ─────────────────────────────────');
+          print('│ ${response.statusCode} ${response.requestOptions.method} ${response.requestOptions.path}');
+          print('│ Data: ${response.data}');
+          print('└─────────────────────────────────────────────');
+          handler.next(response);
+        },
+        onError: (error, handler) {
+          print('┌── ERROR ────────────────────────────────────');
+          print('│ ${error.requestOptions.method} ${error.requestOptions.path}');
+          print('│ Type: ${error.type}');
+          print('│ Message: ${error.message}');
+          if (error.response != null) {
+            print('│ Status: ${error.response?.statusCode}');
+            print('│ Data: ${error.response?.data}');
+          }
+          print('└─────────────────────────────────────────────');
+          handler.next(error);
+        },
+      ),
+    );
   }
 
   /// Expose Dio for testing or advanced usage.

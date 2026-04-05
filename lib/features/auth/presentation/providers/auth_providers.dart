@@ -1,11 +1,11 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:pwa_install/pwa_install.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'dart:async';
 
 import '../../../../core/errors/exceptions.dart';
 import '../../../../core/providers/core_providers.dart';
-import '../../data/models/auth_models.dart';
 import '../../../profile/data/models/employee_profile_model.dart';
 import '../../../dashboard/presentation/providers/dashboard_providers.dart';
 import '../../../attendance/presentation/providers/attendance_providers.dart';
@@ -237,10 +237,19 @@ class LoginFormController extends StateNotifier<LoginFormState> {
     state = state.copyWith(isLoading: true, clearErrors: true);
 
     try {
+      // Get FCM token (non-blocking, nullable)
+      String? fcmToken;
+      try {
+        fcmToken = await FirebaseMessaging.instance
+            .getToken()
+            .timeout(const Duration(seconds: 5), onTimeout: () => null);
+      } catch (_) {}
+
       final auth = _ref.read(authRepositoryProvider);
       final result = await auth.login(
         username: state.username,
         password: state.password,
+        fcmToken: fcmToken,
       );
 
       // Update global auth state → triggers navigation.

@@ -2,7 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
+
 import 'package:hr_portal/core/constants/app_colors.dart';
 import 'package:hr_portal/features/notifications/presentation/screens/notifications_screen.dart';
 import 'package:hr_portal/features/settings/presentation/screens/settings_screen.dart';
@@ -63,32 +63,32 @@ final routerProvider = Provider<GoRouter>((ref) {
 
     routes: [
       // ── Auth ──
-      GoRoute(path: '/splash', builder: (_, __) => const SplashScreen()),
-      GoRoute(path: '/login', builder: (_, __) => const LoginScreen()),
+      GoRoute(path: '/splash', builder: (_, _) => const SplashScreen()),
+      GoRoute(path: '/login', builder: (_, _) => const LoginScreen()),
 
       // ── Main App (with bottom nav shell) ──
       ShellRoute(
         builder: (context, state, child) =>
             _MainShell(state: state, child: child),
         routes: [
-          GoRoute(path: '/', builder: (_, __) => const DashboardScreen()),
+          GoRoute(path: '/', builder: (_, _) => const DashboardScreen()),
           GoRoute(
             path: '/attendance',
-            builder: (_, __) => const AttendanceScreen(),
+            builder: (_, _) => const AttendanceScreen(),
           ),
           GoRoute(
             path: '/leaves',
-            builder: (_, __) => const LeavesScreen(),
+            builder: (_, _) => const LeavesScreen(),
             routes: [
               GoRoute(
                 path: 'create',
-                builder: (_, __) => const CreateLeaveScreen(),
+                builder: (_, _) => const CreateLeaveScreen(),
               ),
             ],
           ),
           GoRoute(
             path: '/payroll',
-            builder: (_, __) => const PayrollScreen(),
+            builder: (_, _) => const PayrollScreen(),
             routes: [
               GoRoute(
                 path: ':month',
@@ -99,31 +99,31 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/requests',
-            builder: (_, __) => const RequestsScreen(),
+            builder: (_, _) => const RequestsScreen(),
             routes: [
               GoRoute(
                 path: 'create',
-                builder: (_, __) => const CreateRequestScreen(),
+                builder: (_, _) => const CreateRequestScreen(),
               ),
             ],
           ),
 
           GoRoute(
             path: '/approvals',
-            builder: (_, __) => const ManagerRequestsScreen(),
+            builder: (_, _) => const ManagerRequestsScreen(),
           ),
 
           GoRoute(
             path: '/notifications',
-            builder: (_, __) => const NotificationsScreen(),
+            builder: (_, _) => const NotificationsScreen(),
           ),
           GoRoute(
             path: '/settings',
-            builder: (_, __) => const SettingsScreen(),
+            builder: (_, _) => const SettingsScreen(),
           ),
           GoRoute(
             path: '/profile',
-            builder: (_, __) => const ProfileScreen(),
+            builder: (_, _) => const ProfileScreen(),
           ),
         ],
       ),
@@ -336,7 +336,7 @@ class _NavItem extends StatelessWidget {
             const SizedBox(height: 3),
             Text(
               label,
-              style: GoogleFonts.cairo(
+              style: TextStyle(fontFamily: 'Cairo',
                 fontSize: 10,
                 fontWeight: active ? FontWeight.w800 : FontWeight.w500,
                 color: active ? AppColors.primaryMid : context.appColors.gray400,

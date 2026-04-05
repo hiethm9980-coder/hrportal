@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+
 import 'package:hr_portal/core/constants/app_colors.dart';
 import 'package:hr_portal/core/constants/app_shadows.dart';
 import 'package:hr_portal/core/localization/app_localizations.dart';
@@ -34,7 +34,7 @@ class LoadingIndicator extends StatelessWidget {
           if (message != null) ...[
             AppSpacing.verticalMd,
             Text(message!,
-                style: GoogleFonts.cairo(
+                style: TextStyle(fontFamily: 'Cairo',
                     fontSize: 13, color: context.appColors.textSecondary)),
           ],
         ],
@@ -83,7 +83,7 @@ class ErrorFullScreen extends StatelessWidget {
             AppSpacing.verticalMd,
             Text(
               error.title.tr(context),
-              style: GoogleFonts.cairo(
+              style: TextStyle(fontFamily: 'Cairo',
                 fontSize: 18,
                 fontWeight: FontWeight.w800,
                 color: context.appColors.textPrimary,
@@ -93,7 +93,7 @@ class ErrorFullScreen extends StatelessWidget {
             AppSpacing.verticalSm,
             Text(
               error.message.tr(context),
-              style: GoogleFonts.cairo(
+              style: TextStyle(fontFamily: 'Cairo',
                   fontSize: 13, color: context.appColors.textSecondary),
               textAlign: TextAlign.center,
             ),
@@ -101,7 +101,7 @@ class ErrorFullScreen extends StatelessWidget {
               AppSpacing.verticalXs,
               Text(
                 'Trace: ${error.traceId}',
-                style: GoogleFonts.cairo(
+                style: TextStyle(fontFamily: 'Cairo',
                     fontSize: 11, color: context.appColors.textMuted),
               ),
             ],
@@ -126,7 +126,7 @@ class ErrorFullScreen extends StatelessWidget {
                       const SizedBox(width: 8),
                       Text(
                         'Retry'.tr(context),
-                        style: GoogleFonts.cairo(
+                        style: TextStyle(fontFamily: 'Cairo',
                           color: Colors.white,
                           fontWeight: FontWeight.w700,
                           fontSize: 14,
@@ -180,7 +180,7 @@ class EmptyState extends StatelessWidget {
             AppSpacing.verticalMd,
             Text(
               title,
-              style: GoogleFonts.cairo(
+              style: TextStyle(fontFamily: 'Cairo',
                 fontSize: 16,
                 fontWeight: FontWeight.w700,
                 color: context.appColors.textPrimary,
@@ -191,7 +191,7 @@ class EmptyState extends StatelessWidget {
               AppSpacing.verticalSm,
               Text(
                 subtitle!,
-                style: GoogleFonts.cairo(
+                style: TextStyle(fontFamily: 'Cairo',
                     fontSize: 13, color: context.appColors.textMuted),
                 textAlign: TextAlign.center,
               ),
@@ -350,10 +350,10 @@ class SessionExpiredDialog extends StatelessWidget {
         child: const Icon(Icons.lock_clock, size: 28, color: AppColors.gold),
       ),
       title: Text('Session expired'.tr(context),
-          style: GoogleFonts.cairo(fontWeight: FontWeight.w700)),
+          style: TextStyle(fontFamily: 'Cairo',fontWeight: FontWeight.w700)),
       content: Text(
           'Your session has expired. Please sign in again.'.tr(context),
-          style: GoogleFonts.cairo(color: context.appColors.textSecondary)),
+          style: TextStyle(fontFamily: 'Cairo',color: context.appColors.textSecondary)),
       actions: [
         GestureDetector(
           onTap: () => Navigator.of(context).pop(),
@@ -369,7 +369,7 @@ class SessionExpiredDialog extends StatelessWidget {
             alignment: Alignment.center,
             child: Text(
               'Sign in'.tr(context),
-              style: GoogleFonts.cairo(
+              style: TextStyle(fontFamily: 'Cairo',
                 color: Colors.white,
                 fontWeight: FontWeight.w700,
                 fontSize: 14,

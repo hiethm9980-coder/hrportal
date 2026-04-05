@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
+
 import 'package:hr_portal/core/constants/app_colors.dart';
 import 'package:hr_portal/core/constants/app_shadows.dart';
 import 'package:hr_portal/core/localization/app_localizations.dart';
@@ -58,14 +58,14 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Text('Delete all notifications'.tr(context),
-            style: GoogleFonts.cairo(fontWeight: FontWeight.w700)),
+            style: TextStyle(fontFamily: 'Cairo',fontWeight: FontWeight.w700)),
         content: Text("Are you sure? This action can't be undone.".tr(context),
-            style: GoogleFonts.cairo()),
+            style: TextStyle(fontFamily: 'Cairo',)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
             child: Text('Cancel'.tr(context),
-                style: GoogleFonts.cairo(color: context.appColors.textMuted)),
+                style: TextStyle(fontFamily: 'Cairo',color: context.appColors.textMuted)),
           ),
           FilledButton(
             style: FilledButton.styleFrom(
@@ -74,7 +74,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                   borderRadius: BorderRadius.circular(12)),
             ),
             onPressed: () => Navigator.pop(ctx, true),
-            child: Text('Delete'.tr(context), style: GoogleFonts.cairo()),
+            child: Text('Delete'.tr(context), style: TextStyle(fontFamily: 'Cairo',)),
           ),
         ],
       ),
@@ -245,17 +245,17 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                               borderRadius: BorderRadius.circular(20)),
                           title: Text('Delete notification'.tr(context),
                               style:
-                                  GoogleFonts.cairo(fontWeight: FontWeight.w700)),
+                                  TextStyle(fontFamily: 'Cairo',fontWeight: FontWeight.w700)),
                           content: Text(
                             'Do you want to delete this notification?'
                                 .tr(context),
-                            style: GoogleFonts.cairo(),
+                            style: TextStyle(fontFamily: 'Cairo',),
                           ),
                           actions: [
                             TextButton(
                               onPressed: () => Navigator.pop(dCtx, false),
                               child: Text('Cancel'.tr(context),
-                                  style: GoogleFonts.cairo(
+                                  style: TextStyle(fontFamily: 'Cairo',
                                       color: context.appColors.textMuted)),
                             ),
                             FilledButton(
@@ -266,7 +266,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                               ),
                               onPressed: () => Navigator.pop(dCtx, true),
                               child: Text('Delete'.tr(context),
-                                  style: GoogleFonts.cairo()),
+                                  style: TextStyle(fontFamily: 'Cairo',)),
                             ),
                           ],
                         ),
@@ -291,18 +291,18 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                             shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(20)),
                             title: Text('Delete notification'.tr(context),
-                                style: GoogleFonts.cairo(
+                                style: TextStyle(fontFamily: 'Cairo',
                                     fontWeight: FontWeight.w700)),
                             content: Text(
                               'Do you want to delete this notification?'
                                   .tr(context),
-                              style: GoogleFonts.cairo(),
+                              style: TextStyle(fontFamily: 'Cairo',),
                             ),
                             actions: [
                               TextButton(
                                 onPressed: () => Navigator.pop(dCtx, false),
                                 child: Text('Cancel'.tr(context),
-                                    style: GoogleFonts.cairo(
+                                    style: TextStyle(fontFamily: 'Cairo',
                                         color: context.appColors.textMuted)),
                               ),
                               FilledButton(
@@ -313,7 +313,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                                 ),
                                 onPressed: () => Navigator.pop(dCtx, true),
                                 child: Text('Delete'.tr(context),
-                                    style: GoogleFonts.cairo()),
+                                    style: TextStyle(fontFamily: 'Cairo',)),
                               ),
                             ],
                           ),
@@ -402,7 +402,7 @@ class _NormalHeader extends StatelessWidget {
                   children: [
                     Text(
                       'Notifications'.tr(context),
-                      style: GoogleFonts.cairo(
+                      style: TextStyle(fontFamily: 'Cairo',
                         fontSize: 18,
                         fontWeight: FontWeight.w800,
                         color: Colors.white,
@@ -419,7 +419,7 @@ class _NormalHeader extends StatelessWidget {
                         ),
                         child: Text(
                           unreadCount.toString(),
-                          style: GoogleFonts.cairo(
+                          style: TextStyle(fontFamily: 'Cairo',
                             color: Colors.white,
                             fontWeight: FontWeight.w700,
                             fontSize: 11,
@@ -516,7 +516,7 @@ class _SearchHeader extends StatelessWidget {
               autofocus: true,
               onChanged: onChanged,
               textInputAction: TextInputAction.search,
-              style: GoogleFonts.cairo(fontSize: 14),
+              style: TextStyle(fontFamily: 'Cairo',fontSize: 14),
               decoration: InputDecoration(
                 contentPadding:
                     const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
@@ -531,7 +531,7 @@ class _SearchHeader extends StatelessWidget {
                       color: context.appColors.textMuted),
                 ),
                 hintText: 'Search'.tr(context),
-                hintStyle: GoogleFonts.cairo(color: context.appColors.textMuted),
+                hintStyle: TextStyle(fontFamily: 'Cairo',color: context.appColors.textMuted),
                 border: InputBorder.none,
                 isDense: true,
               ),
@@ -608,7 +608,7 @@ class _NotificationTile extends StatelessWidget {
                       Expanded(
                         child: Text(
                           titleText,
-                          style: GoogleFonts.cairo(
+                          style: TextStyle(fontFamily: 'Cairo',
                             fontSize: 13,
                             fontWeight:
                                 isRead ? FontWeight.w600 : FontWeight.w800,
@@ -634,7 +634,7 @@ class _NotificationTile extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     bodyText,
-                    style: GoogleFonts.cairo(
+                    style: TextStyle(fontFamily: 'Cairo',
                         fontSize: 12, color: context.appColors.textSecondary),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
@@ -642,7 +642,7 @@ class _NotificationTile extends StatelessWidget {
                   const SizedBox(height: 6),
                   Text(
                     dateText,
-                    style: GoogleFonts.cairo(
+                    style: TextStyle(fontFamily: 'Cairo',
                         fontSize: 11, color: context.appColors.textMuted),
                   ),
                 ],

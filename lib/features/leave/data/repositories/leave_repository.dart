@@ -22,7 +22,7 @@ class LeaveRepository {
     final response = await _client.get<LeavesData>(
       ApiConstants.leaves,
       queryParameters: {
-        if (year != null) 'year': year,
+        'year': ?year,
         if (status != null && status.isNotEmpty) 'status': status,
         'page': page,
         'per_page': perPage,

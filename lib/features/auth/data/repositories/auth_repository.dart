@@ -2,7 +2,6 @@
 
 import '../../../../core/constants/api_constants.dart';
 import '../../../../core/network/api_client.dart';
-import '../../../../core/network/base_response.dart';
 import '../../../../core/network/session_manager.dart';
 import '../../../profile/data/models/employee_profile_model.dart';
 import '../models/auth_models.dart';
@@ -35,15 +34,20 @@ class AuthRepository {
   Future<LoginData> login({
     required String username,
     required String password,
+    String? fcmToken,
   }) async {
     print('Login request: ${ApiConstants.login}');
+    final data = <String, dynamic>{
+      'username': username,
+      'password': password,
+    };
+    if (fcmToken != null && fcmToken.isNotEmpty) {
+      data['fcm_token'] = fcmToken;
+    }
     final response = await _client.post<LoginData>(
       ApiConstants.login,
       fromJson: (json) => LoginData.fromJson(json as Map<String, dynamic>),
-      data: {
-        'username': username,
-        'password': password,
-      },
+      data: data,
     );
 
     final loginData = response.data!;

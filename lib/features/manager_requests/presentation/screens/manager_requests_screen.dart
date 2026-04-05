@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
+
 import 'package:hr_portal/core/constants/app_colors.dart';
 import 'package:hr_portal/core/constants/app_shadows.dart';
 import 'package:hr_portal/core/localization/app_localizations.dart';
@@ -69,11 +69,11 @@ class _ManagerRequestsScreenState extends ConsumerState<ManagerRequestsScreen>
             color: context.appColors.bgCard,
             child: TabBar(
               controller: _tabController,
-              labelStyle: GoogleFonts.cairo(
+              labelStyle: TextStyle(fontFamily: 'Cairo',
                 fontSize: 14,
                 fontWeight: FontWeight.w700,
               ),
-              unselectedLabelStyle: GoogleFonts.cairo(
+              unselectedLabelStyle: TextStyle(fontFamily: 'Cairo',
                 fontSize: 13,
                 fontWeight: FontWeight.w500,
               ),
@@ -146,7 +146,7 @@ class _ManagerLeavesTab extends ConsumerWidget {
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               itemCount: _statusFilters.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 8),
+              separatorBuilder: (_, _) => const SizedBox(width: 8),
               itemBuilder: (context, index) {
                 final filter = _statusFilters[index];
                 final isActive = controller.statusFilter == filter.$1;
@@ -168,7 +168,7 @@ class _ManagerLeavesTab extends ConsumerWidget {
                     ),
                     child: Text(
                       filter.$2.tr(context),
-                      style: GoogleFonts.cairo(
+                      style: TextStyle(fontFamily: 'Cairo',
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
                         color: isActive
@@ -284,7 +284,7 @@ class _ManagerLeaveTile extends StatelessWidget {
                 Center(
                   child: Text(
                     leave.leaveType?.name ?? '',
-                    style: GoogleFonts.cairo(
+                    style: TextStyle(fontFamily: 'Cairo',
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
                       color: context.appColors.textPrimary,
@@ -298,7 +298,7 @@ class _ManagerLeaveTile extends StatelessWidget {
                   children: [
                     Text(
                       daysLabel,
-                      style: GoogleFonts.cairo(
+                      style: TextStyle(fontFamily: 'Cairo',
                         fontSize: 12,
                         fontWeight: FontWeight.w700,
                         color: AppColors.teal,
@@ -325,7 +325,7 @@ class _ManagerLeaveTile extends StatelessWidget {
                         fit: BoxFit.scaleDown,
                         child: Text(
                           startFormatted,
-                          style: GoogleFonts.cairo(
+                          style: TextStyle(fontFamily: 'Cairo',
                             fontSize: 13,
                             fontWeight: FontWeight.w800,
                             color: AppColors.success,
@@ -335,7 +335,7 @@ class _ManagerLeaveTile extends StatelessWidget {
                       const SizedBox(height: 2),
                       Text(
                         'From'.tr(context),
-                        style: GoogleFonts.cairo(
+                        style: TextStyle(fontFamily: 'Cairo',
                           fontSize: 10,
                           color: context.appColors.textMuted,
                         ),
@@ -345,7 +345,7 @@ class _ManagerLeaveTile extends StatelessWidget {
                 ),
                 Text(
                   '—',
-                  style: GoogleFonts.cairo(
+                  style: TextStyle(fontFamily: 'Cairo',
                     fontSize: 16,
                     color: context.appColors.textMuted,
                   ),
@@ -357,7 +357,7 @@ class _ManagerLeaveTile extends StatelessWidget {
                         fit: BoxFit.scaleDown,
                         child: Text(
                           endFormatted,
-                          style: GoogleFonts.cairo(
+                          style: TextStyle(fontFamily: 'Cairo',
                             fontSize: 13,
                             fontWeight: FontWeight.w800,
                             color: AppColors.error,
@@ -367,7 +367,7 @@ class _ManagerLeaveTile extends StatelessWidget {
                       const SizedBox(height: 2),
                       Text(
                         'To'.tr(context),
-                        style: GoogleFonts.cairo(
+                        style: TextStyle(fontFamily: 'Cairo',
                           fontSize: 10,
                           color: context.appColors.textMuted,
                         ),
@@ -386,7 +386,7 @@ class _ManagerLeaveTile extends StatelessWidget {
                   Expanded(
                     child: Text(
                       leave.employee!.name,
-                      style: GoogleFonts.cairo(
+                      style: TextStyle(fontFamily: 'Cairo',
                         fontSize: 10,
                         color: context.appColors.textMuted,
                       ),
@@ -396,7 +396,7 @@ class _ManagerLeaveTile extends StatelessWidget {
                   ),
                 Text(
                   _formatCreatedDate(leave.createdAt),
-                  style: GoogleFonts.cairo(
+                  style: TextStyle(fontFamily: 'Cairo',
                     fontSize: 10,
                     color: context.appColors.textMuted,
                   ),
@@ -574,7 +574,7 @@ class _ManagerLeaveDetailSheetState
                 Expanded(
                   child: Text(
                     r.leaveType?.name ?? 'Leave'.tr(context),
-                    style: GoogleFonts.cairo(
+                    style: TextStyle(fontFamily: 'Cairo',
                       fontSize: 18,
                       fontWeight: FontWeight.w800,
                       color: context.appColors.textPrimary,
@@ -656,7 +656,7 @@ class _ManagerLeaveDetailSheetState
                 alignment: AlignmentDirectional.centerStart,
                 child: Text(
                   'Rejection reason'.tr(context),
-                  style: GoogleFonts.cairo(
+                  style: TextStyle(fontFamily: 'Cairo',
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
                     color: context.appColors.textSecondary,
@@ -668,10 +668,10 @@ class _ManagerLeaveDetailSheetState
                 controller: _notesController,
                 maxLines: 3,
                 enabled: !decideState.isLoading,
-                style: GoogleFonts.cairo(fontSize: 13),
+                style: TextStyle(fontFamily: 'Cairo',fontSize: 13),
                 decoration: InputDecoration(
                   hintText: 'Add notes (required for rejection)'.tr(context),
-                  hintStyle: GoogleFonts.cairo(
+                  hintStyle: TextStyle(fontFamily: 'Cairo',
                       fontSize: 12, color: context.appColors.textMuted),
                   errorText:
                       decideState.fieldError('rejection_reason'),
@@ -749,7 +749,7 @@ class _ManagerRequestsTab extends ConsumerWidget {
               scrollDirection: Axis.horizontal,
               itemCount: _statusFilters.length,
               shrinkWrap: true,
-              separatorBuilder: (_, __) => const SizedBox(width: 8),
+              separatorBuilder: (_, _) => const SizedBox(width: 8),
               itemBuilder: (context, index) {
                 final filter = _statusFilters[index];
                 final isActive = controller.statusFilter == filter.$1;
@@ -771,7 +771,7 @@ class _ManagerRequestsTab extends ConsumerWidget {
                     ),
                     child: Text(
                       filter.$2.tr(context),
-                      style: GoogleFonts.cairo(
+                      style: TextStyle(fontFamily: 'Cairo',
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
                         color: isActive
@@ -893,7 +893,7 @@ class _ManagerRequestTile extends StatelessWidget {
                   child: Text(
                     request.subject ??
                         _typeLabel(request.requestType).tr(context),
-                    style: GoogleFonts.cairo(
+                    style: TextStyle(fontFamily: 'Cairo',
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
                       color: context.appColors.textPrimary,
@@ -921,14 +921,14 @@ class _ManagerRequestTile extends StatelessWidget {
                   const SizedBox(width: 4),
                   Text(
                     request.employee!.name,
-                    style: GoogleFonts.cairo(
+                    style: TextStyle(fontFamily: 'Cairo',
                         fontSize: 11, color: context.appColors.textMuted),
                   ),
                   const SizedBox(width: 12),
                 ],
                 Text(
                   _typeLabel(request.requestType).tr(context),
-                  style: GoogleFonts.cairo(
+                  style: TextStyle(fontFamily: 'Cairo',
                       fontSize: 11, color: context.appColors.textMuted),
                 ),
                 const Spacer(),
@@ -936,7 +936,7 @@ class _ManagerRequestTile extends StatelessWidget {
                   request.createdAt.length >= 10
                       ? request.createdAt.substring(0, 10)
                       : request.createdAt,
-                  style: GoogleFonts.cairo(
+                  style: TextStyle(fontFamily: 'Cairo',
                       fontSize: 11, color: context.appColors.textMuted),
                 ),
               ],
@@ -1127,7 +1127,7 @@ class _ManagerRequestDetailSheetState
                 Expanded(
                   child: Text(
                     r.subject ?? _typeLabel(r.requestType).tr(context),
-                    style: GoogleFonts.cairo(
+                    style: TextStyle(fontFamily: 'Cairo',
                       fontSize: 18,
                       fontWeight: FontWeight.w800,
                       color: context.appColors.textPrimary,
@@ -1196,7 +1196,7 @@ class _ManagerRequestDetailSheetState
                 alignment: AlignmentDirectional.centerStart,
                 child: Text(
                   'Response notes'.tr(context),
-                  style: GoogleFonts.cairo(
+                  style: TextStyle(fontFamily: 'Cairo',
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
                     color: context.appColors.textSecondary,
@@ -1208,10 +1208,10 @@ class _ManagerRequestDetailSheetState
                 controller: _notesController,
                 maxLines: 3,
                 enabled: !decideState.isLoading,
-                style: GoogleFonts.cairo(fontSize: 13),
+                style: TextStyle(fontFamily: 'Cairo',fontSize: 13),
                 decoration: InputDecoration(
                   hintText: 'Add notes (required for rejection)'.tr(context),
-                  hintStyle: GoogleFonts.cairo(
+                  hintStyle: TextStyle(fontFamily: 'Cairo',
                       fontSize: 12, color: context.appColors.textMuted),
                   errorText: decideState.fieldError('response_notes'),
                 ),
@@ -1287,7 +1287,7 @@ class _InfoRow extends StatelessWidget {
               children: [
                 Text(
                   label,
-                  style: GoogleFonts.cairo(
+                  style: TextStyle(fontFamily: 'Cairo',
                     fontSize: 11,
                     color: context.appColors.textMuted,
                   ),
@@ -1295,7 +1295,7 @@ class _InfoRow extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   value,
-                  style: GoogleFonts.cairo(
+                  style: TextStyle(fontFamily: 'Cairo',
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
                     color: context.appColors.textPrimary,

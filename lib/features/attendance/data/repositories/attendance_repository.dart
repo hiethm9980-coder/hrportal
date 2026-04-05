@@ -21,8 +21,8 @@ class AttendanceRepository {
     final response = await _client.post<AttendanceRecord>(
       ApiConstants.checkIn,
       data: {
-        if (latitude != null) 'latitude': latitude,
-        if (longitude != null) 'longitude': longitude,
+        'latitude': ?latitude,
+        'longitude': ?longitude,
         if (notes != null && notes.isNotEmpty) 'notes': notes,
       },
       fromJson: (json) => AttendanceRecord.fromJson(
@@ -40,8 +40,8 @@ class AttendanceRepository {
     final response = await _client.post<AttendanceRecord>(
       ApiConstants.checkOut,
       data: {
-        if (latitude != null) 'latitude': latitude,
-        if (longitude != null) 'longitude': longitude,
+        'latitude': ?latitude,
+        'longitude': ?longitude,
         if (notes != null && notes.isNotEmpty) 'notes': notes,
       },
       fromJson: (json) => AttendanceRecord.fromJson(

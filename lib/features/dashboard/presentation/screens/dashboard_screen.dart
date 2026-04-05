@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
+
 import 'package:hr_portal/core/constants/app_colors.dart';
 import 'package:hr_portal/core/constants/app_shadows.dart';
 import 'package:hr_portal/core/localization/app_localizations.dart';
@@ -57,13 +57,13 @@ class DashboardScreen extends ConsumerWidget {
                             data: (profile) => _HeroProfileInfo(profile: profile),
                             loading: () => Text(
                               'Loading...'.tr(context),
-                              style: GoogleFonts.cairo(
+                              style: TextStyle(fontFamily: 'Cairo',
                                   fontSize: 13, color: Colors.white60),
                               textAlign: TextAlign.start,
                             ),
-                            error: (_, __) => Text(
+                            error: (_, _) => Text(
                               'Welcome'.tr(context),
-                              style: GoogleFonts.cairo(
+                              style: TextStyle(fontFamily: 'Cairo',
                                 fontSize: 18,
                                 fontWeight: FontWeight.w800,
                                 color: Colors.white,
@@ -128,7 +128,7 @@ class DashboardScreen extends ConsumerWidget {
                   //             const SizedBox(width: 8),
                   //             Text(
                   //               'Error loading attendance'.tr(context),
-                  //               style: GoogleFonts.cairo(
+                  //               style: TextStyle(fontFamily: 'Cairo',
                   //                   fontSize: 12, color: Colors.white54),
                   //             ),
                   //           ],
@@ -222,8 +222,8 @@ class _HeroProfileInfo extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              '${_getGreeting(context)}',
-              style: GoogleFonts.cairo(fontSize: 14, color: Colors.white),
+              _getGreeting(context),
+              style: TextStyle(fontFamily: 'Cairo',fontSize: 14, color: Colors.white),
             ),
             const SizedBox(width: 8),
             const Text('👋', style: TextStyle(fontSize: 16)),
@@ -231,7 +231,7 @@ class _HeroProfileInfo extends StatelessWidget {
         ),
         Text(
           profile.name,
-          style: GoogleFonts.cairo(
+          style: TextStyle(fontFamily: 'Cairo',
             fontSize: 20,
             fontWeight: FontWeight.w800,
             color: Colors.white,
@@ -242,7 +242,7 @@ class _HeroProfileInfo extends StatelessWidget {
         if (profile.jobTitle != null)
           Text(
             profile.jobTitle!,
-            style: GoogleFonts.cairo(fontSize: 11, color: AppColors.goldLight),
+            style: TextStyle(fontFamily: 'Cairo',fontSize: 11, color: AppColors.goldLight),
             overflow: TextOverflow.ellipsis,
             maxLines: 1,
           ),
@@ -291,10 +291,10 @@ class _HeroStat extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(label,
-            style: GoogleFonts.cairo(fontSize: 10, color: Colors.white54)),
+            style: TextStyle(fontFamily: 'Cairo',fontSize: 10, color: Colors.white54)),
         const SizedBox(height: 4),
         Text(value,
-            style: GoogleFonts.cairo(
+            style: TextStyle(fontFamily: 'Cairo',
               fontSize: 20,
               fontWeight: FontWeight.w900,
               color: Colors.white,
@@ -375,7 +375,7 @@ class _QuickActionsGrid extends ConsumerWidget {
                             const SizedBox(height: 6),
                             Text(
                               (a['label'] as String).tr(context),
-                              style: GoogleFonts.cairo(
+                              style: TextStyle(fontFamily: 'Cairo',
                                 fontSize: 10,
                                 fontWeight: FontWeight.w700,
                                 color: context.appColors.textSecondary,
@@ -442,7 +442,7 @@ class _SummaryStat extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(value,
-            style: GoogleFonts.cairo(
+            style: TextStyle(fontFamily: 'Cairo',
               fontSize: 22,
               fontWeight: FontWeight.w900,
               color: color,
@@ -451,7 +451,7 @@ class _SummaryStat extends StatelessWidget {
         const SizedBox(height: 4),
         Text(label,
             style:
-                GoogleFonts.cairo(fontSize: 11, color: context.appColors.textMuted)),
+                TextStyle(fontFamily: 'Cairo',fontSize: 11, color: context.appColors.textMuted)),
       ],
     );
   }
@@ -471,7 +471,7 @@ class _ErrorCard extends StatelessWidget {
           const SizedBox(width: 8),
           Expanded(
             child: Text(error.message.tr(context),
-                style: GoogleFonts.cairo(
+                style: TextStyle(fontFamily: 'Cairo',
                     fontSize: 13, color: context.appColors.textSecondary)),
           ),
           TextButton(

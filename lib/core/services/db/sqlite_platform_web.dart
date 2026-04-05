@@ -1,4 +1,3 @@
-import 'package:sqlite3/common.dart';
 import 'package:sqlite3/wasm.dart';
 
 WasmSqlite3? _sqlite;

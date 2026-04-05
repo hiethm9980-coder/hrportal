@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
+
 import 'package:jiffy/jiffy.dart';
 import 'package:hr_portal/core/constants/app_colors.dart';
 import 'package:hr_portal/core/constants/app_shadows.dart';
@@ -105,7 +105,7 @@ class _PayslipTile extends StatelessWidget {
                             child: Text(
                               'Payslip — {month}'.tr(context,
                                   params: {'month': _formatPeriodMonth(payslip.periodStart)}),
-                              style: GoogleFonts.cairo(
+                              style: TextStyle(fontFamily: 'Cairo',
                                 fontSize: 18,
                                 fontWeight: FontWeight.w800,
                                 color: context.appColors.textPrimary,
@@ -155,11 +155,11 @@ class _PayslipTile extends StatelessWidget {
                                     MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text('Net pay'.tr(context),
-                                      style: GoogleFonts.cairo(
+                                      style: TextStyle(fontFamily: 'Cairo',
                                           fontSize: 11,
                                           color: Colors.white60)),
                                   Text(_formatPeriodMonth(payslip.periodStart),
-                                      style: GoogleFonts.cairo(
+                                      style: TextStyle(fontFamily: 'Cairo',
                                           fontSize: 13,
                                           fontWeight: FontWeight.w600,
                                           color: Colors.white70)),
@@ -168,7 +168,7 @@ class _PayslipTile extends StatelessWidget {
                               const SizedBox(height: 8),
                               Text(
                                 ps.totalNet.toStringAsFixed(2),
-                                style: GoogleFonts.cairo(
+                                style: TextStyle(fontFamily: 'Cairo',
                                   fontSize: 30,
                                   fontWeight: FontWeight.w900,
                                   color: Colors.white,
@@ -176,7 +176,7 @@ class _PayslipTile extends StatelessWidget {
                               ),
                               if (ps.currency != null)
                                 Text(ps.currency!,
-                                    style: GoogleFonts.cairo(
+                                    style: TextStyle(fontFamily: 'Cairo',
                                         fontSize: 14,
                                         color: AppColors.goldLight)),
                             ],
@@ -236,14 +236,14 @@ class _PayslipTile extends StatelessWidget {
                                         line.ruleName ??
                                             line.ruleCode ??
                                             'Item'.tr(context),
-                                        style: GoogleFonts.cairo(
+                                        style: TextStyle(fontFamily: 'Cairo',
                                             fontSize: 13,
                                             fontWeight: FontWeight.w600),
                                       ),
                                     ),
                                     Text(
                                       '${line.isEarning ? '+' : '-'}${line.amount.toStringAsFixed(2)}',
-                                      style: GoogleFonts.cairo(
+                                      style: TextStyle(fontFamily: 'Cairo',
                                         fontSize: 14,
                                         fontWeight: FontWeight.w700,
                                         color: line.isEarning
@@ -328,7 +328,7 @@ class _PayslipTile extends StatelessWidget {
             // ── Row 1: Net pay (center, big) ──
             Text(
               '$netFormatted $currencyLabel',
-              style: GoogleFonts.cairo(
+              style: TextStyle(fontFamily: 'Cairo',
                 fontSize: 22,
                 fontWeight: FontWeight.w900,
                 color: AppColors.primaryMid,
@@ -336,7 +336,7 @@ class _PayslipTile extends StatelessWidget {
             ),
             Text(
               'Net pay'.tr(context),
-              style: GoogleFonts.cairo(
+              style: TextStyle(fontFamily: 'Cairo',
                 fontSize: 10,
                 color: context.appColors.textMuted,
               ),
@@ -350,7 +350,7 @@ class _PayslipTile extends StatelessWidget {
                   Center(
                     child: Text(
                       _formatPeriodMonth(payslip.periodStart),
-                      style: GoogleFonts.cairo(
+                      style: TextStyle(fontFamily: 'Cairo',
                         fontSize: 13,
                         fontWeight: FontWeight.w700,
                         color: context.appColors.textPrimary,
@@ -364,7 +364,7 @@ class _PayslipTile extends StatelessWidget {
                         children: [
                           Text(
                             '$grossFormatted $currencyLabel',
-                            style: GoogleFonts.cairo(
+                            style: TextStyle(fontFamily: 'Cairo',
                               fontSize: 13,
                               fontWeight: FontWeight.w700,
                               color: AppColors.success,
@@ -373,7 +373,7 @@ class _PayslipTile extends StatelessWidget {
                           const SizedBox(height: 2),
                           Text(
                             'Total gross'.tr(context),
-                            style: GoogleFonts.cairo(
+                            style: TextStyle(fontFamily: 'Cairo',
                               fontSize: 10,
                               color: context.appColors.textMuted,
                             ),
@@ -388,7 +388,7 @@ class _PayslipTile extends StatelessWidget {
                         children: [
                           Text(
                             '$deductionsFormatted $currencyLabel',
-                            style: GoogleFonts.cairo(
+                            style: TextStyle(fontFamily: 'Cairo',
                               fontSize: 13,
                               fontWeight: FontWeight.w700,
                               color: AppColors.error,
@@ -397,7 +397,7 @@ class _PayslipTile extends StatelessWidget {
                           const SizedBox(height: 2),
                           Text(
                             'Deductions'.tr(context),
-                            style: GoogleFonts.cairo(
+                            style: TextStyle(fontFamily: 'Cairo',
                               fontSize: 10,
                               color: context.appColors.textMuted,
                             ),
@@ -476,17 +476,17 @@ class PayslipDetailScreen extends ConsumerWidget {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Text('Net pay'.tr(context),
-                                style: GoogleFonts.cairo(
+                                style: TextStyle(fontFamily: 'Cairo',
                                     fontSize: 11, color: Colors.white60)),
                             Text(_formatMonth(month),
-                                style: GoogleFonts.cairo(
+                                style: TextStyle(fontFamily: 'Cairo',
                                     fontSize: 13, fontWeight: FontWeight.w600, color: Colors.white70)),
                           ],
                         ),
                         const SizedBox(height: 8),
                         Text(
                           payslip.totalNet.toStringAsFixed(2),
-                          style: GoogleFonts.cairo(
+                          style: TextStyle(fontFamily: 'Cairo',
                             fontSize: 30,
                             fontWeight: FontWeight.w900,
                             color: Colors.white,
@@ -494,7 +494,7 @@ class PayslipDetailScreen extends ConsumerWidget {
                         ),
                         if (payslip.currency != null)
                           Text(payslip.currency!,
-                              style: GoogleFonts.cairo(
+                              style: TextStyle(fontFamily: 'Cairo',
                                   fontSize: 14, color: AppColors.goldLight)),
                       ],
                     ),
@@ -551,13 +551,13 @@ class PayslipDetailScreen extends ConsumerWidget {
                                   line.ruleName ??
                                       line.ruleCode ??
                                       'Item'.tr(context),
-                                  style: GoogleFonts.cairo(
+                                  style: TextStyle(fontFamily: 'Cairo',
                                       fontSize: 13, fontWeight: FontWeight.w600),
                                 ),
                               ),
                               Text(
                                 '${line.isEarning ? '+' : '-'}${line.amount.toStringAsFixed(2)}',
-                                style: GoogleFonts.cairo(
+                                style: TextStyle(fontFamily: 'Cairo',
                                   fontSize: 14,
                                   fontWeight: FontWeight.w700,
                                   color: line.isEarning

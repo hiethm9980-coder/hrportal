@@ -3,6 +3,10 @@
 *.log
 *.pyc
 *.swp
+
+# Keystore
+upload-keystore.jks
+KEYSTORE_INFO.md
 .DS_Store
 .atom/
 .build/

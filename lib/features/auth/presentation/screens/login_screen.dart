@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
+
 import 'package:hr_portal/core/constants/app_colors.dart';
 import 'package:hr_portal/core/localization/app_localizations.dart';
 import 'package:hr_portal/core/localization/locale_provider.dart';
 import 'package:hr_portal/core/theme/theme_mode_provider.dart';
 import 'package:hr_portal/shared/widgets/common_widgets.dart';
-import 'package:pwa_install/pwa_install.dart';
 
 import '../../../../shared/controllers/global_error_handler.dart';
 import '../providers/auth_providers.dart';
@@ -80,7 +79,7 @@ class LoginScreen extends ConsumerWidget {
                   const SizedBox(height: 12),
                   Text(
                     'Welcome'.tr(context),
-                    style: GoogleFonts.cairo(
+                    style: TextStyle(fontFamily: 'Cairo',
                       fontSize: 22,
                       fontWeight: FontWeight.w800,
                       color: Colors.white,
@@ -89,7 +88,7 @@ class LoginScreen extends ConsumerWidget {
                   const SizedBox(height: 4),
                   Text(
                     'Employee Self Service Portal'.tr(context),
-                    style: GoogleFonts.cairo(
+                    style: TextStyle(fontFamily: 'Cairo',
                       fontSize: 13,
                       color: Colors.white60,
                     ),
@@ -164,7 +163,7 @@ class LoginScreen extends ConsumerWidget {
                     // ── Username Label ──
                     Text(
                       'Email or username'.tr(context),
-                      style: GoogleFonts.cairo(
+                      style: TextStyle(fontFamily: 'Cairo',
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
                         color: context.appColors.textSecondary,
@@ -176,7 +175,7 @@ class LoginScreen extends ConsumerWidget {
                       enabled: !form.isLoading,
                       textInputAction: TextInputAction.next,
                       keyboardType: TextInputType.emailAddress,
-                      style: GoogleFonts.cairo(fontSize: 13),
+                      style: TextStyle(fontFamily: 'Cairo',fontSize: 13),
                       decoration: InputDecoration(
                         hintText: 'Email or username'.tr(context),
                         errorText: form.fieldError('username')?.tr(context),
@@ -187,7 +186,7 @@ class LoginScreen extends ConsumerWidget {
                     // ── Password Label ──
                     Text(
                       'Password'.tr(context),
-                      style: GoogleFonts.cairo(
+                      style: TextStyle(fontFamily: 'Cairo',
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
                         color: context.appColors.textSecondary,
@@ -199,7 +198,7 @@ class LoginScreen extends ConsumerWidget {
                       enabled: !form.isLoading,
                       obscureText: form.obscurePassword,
                       textInputAction: TextInputAction.done,
-                      style: GoogleFonts.cairo(fontSize: 13),
+                      style: TextStyle(fontFamily: 'Cairo',fontSize: 13),
                       onSubmitted: (_) {
                         if (form.canSubmit) notifier.submit();
                       },
@@ -240,7 +239,7 @@ class LoginScreen extends ConsumerWidget {
                           ),
                           child: Text(
                             form.error!.message,
-                            style: GoogleFonts.cairo(
+                            style: TextStyle(fontFamily: 'Cairo',
                               fontSize: 13,
                               color: AppColors.errorDark,
                             ),
@@ -295,7 +294,7 @@ class _SettingChip extends StatelessWidget {
             const SizedBox(width: 6),
             Text(
               label,
-              style: GoogleFonts.cairo(
+              style: TextStyle(fontFamily: 'Cairo',
                 fontSize: 11,
                 fontWeight: FontWeight.w600,
                 color: context.appColors.textSecondary,

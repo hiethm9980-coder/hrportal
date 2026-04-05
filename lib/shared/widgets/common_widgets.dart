@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_shadows.dart';
 import '../../core/theme/app_spacing.dart';
@@ -52,7 +52,7 @@ class PrimaryButton extends StatelessWidget {
                     Text(icon!, style: TextStyle(fontSize: small ? 14 : 16)),
                     const SizedBox(width: 6),
                   ],
-                  Text(text, style: GoogleFonts.cairo(
+                  Text(text, style: TextStyle(fontFamily: 'Cairo',
                     fontSize: small ? 13 : 14,
                     fontWeight: FontWeight.w700,
                     color: Colors.white,
@@ -100,7 +100,7 @@ class GoldButton extends StatelessWidget {
               Text(icon!, style: TextStyle(fontSize: small ? 14 : 16)),
               const SizedBox(width: 6),
             ],
-            Text(text, style: GoogleFonts.cairo(
+            Text(text, style: TextStyle(fontFamily: 'Cairo',
               fontSize: small ? 13 : 14,
               fontWeight: FontWeight.w700,
               color: AppColors.primaryDeep,
@@ -147,7 +147,7 @@ class TealButton extends StatelessWidget {
               Text(icon!, style: TextStyle(fontSize: small ? 14 : 16)),
               const SizedBox(width: 6),
             ],
-            Text(text, style: GoogleFonts.cairo(
+            Text(text, style: TextStyle(fontFamily: 'Cairo',
               fontSize: small ? 13 : 14,
               fontWeight: FontWeight.w700,
               color: Colors.white,
@@ -188,7 +188,7 @@ class AppOutlineButton extends StatelessWidget {
           border: Border.all(color: c, width: 1.5),
         ),
         child: Center(
-          child: Text(text, style: GoogleFonts.cairo(
+          child: Text(text, style: TextStyle(fontFamily: 'Cairo',
             fontSize: small ? 13 : 14,
             fontWeight: FontWeight.w600,
             color: c,
@@ -245,7 +245,7 @@ class StatusBadge extends StatelessWidget {
             Text(icon!, style: const TextStyle(fontSize: 10)),
             const SizedBox(width: 3),
           ],
-          Text(text, style: GoogleFonts.cairo(
+          Text(text, style: TextStyle(fontFamily: 'Cairo',
             fontSize: 11, fontWeight: FontWeight.w700, color: fg)),
         ],
       ),
@@ -303,14 +303,14 @@ class AppSectionHeader extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(title, style: GoogleFonts.cairo(
+          Text(title, style: TextStyle(fontFamily: 'Cairo',
             fontSize: 16, fontWeight: FontWeight.w800,
             color: context.appColors.textPrimary,
           )),
           if (onAction != null)
             GestureDetector(
               onTap: onAction,
-              child: Text(actionLabel ?? 'View all', style: GoogleFonts.cairo(
+              child: Text(actionLabel ?? 'View all', style: TextStyle(fontFamily: 'Cairo',
                 fontSize: 13, fontWeight: FontWeight.w700,
                 color: AppColors.primaryMid,
               )),
@@ -354,13 +354,13 @@ class InfoRow extends StatelessWidget {
                 Text(icon!, style: const TextStyle(fontSize: 14)),
                 const SizedBox(width: 6),
               ],
-              Text(label, style: GoogleFonts.cairo(
+              Text(label, style: TextStyle(fontFamily: 'Cairo',
                 fontSize: 13, color: context.appColors.textMuted,
               )),
             ],
           ),
           Flexible(
-            child: Text(value, style: GoogleFonts.cairo(
+            child: Text(value, style: TextStyle(fontFamily: 'Cairo',
               fontSize: 13, fontWeight: FontWeight.w600, color: context.appColors.textSecondary,
             ), textAlign: TextAlign.end),
           ),
@@ -457,11 +457,11 @@ class CustomAppBar extends StatelessWidget {
           Expanded(
             child: Column(
               children: [
-                Text(title, style: GoogleFonts.cairo(
+                Text(title, style: TextStyle(fontFamily: 'Cairo',
                   fontSize: 16, fontWeight: FontWeight.w800, color: Colors.white,
                 )),
                 if (subtitle != null)
-                  Text(subtitle!, style: GoogleFonts.cairo(
+                  Text(subtitle!, style: TextStyle(fontFamily: 'Cairo',
                     fontSize: 11, color: Colors.white60,
                   )),
               ],
@@ -529,7 +529,7 @@ class AvatarCircle extends StatelessWidget {
         boxShadow: AppShadows.sm,
       ),
       child: Center(
-        child: Text(initials, style: GoogleFonts.cairo(
+        child: Text(initials, style: TextStyle(fontFamily: 'Cairo',
           fontSize: fontSize ?? size * 0.35,
           fontWeight: FontWeight.w800,
           color: Colors.white,
@@ -582,7 +582,7 @@ class TimelineWidget extends StatelessWidget {
                     child: s.isDone
                       ? const Icon(Icons.check, color: Colors.white, size: 14)
                       : Text(s.isActive ? '◉' : '${i+1}',
-                          style: GoogleFonts.cairo(
+                          style: TextStyle(fontFamily: 'Cairo',
                             fontSize: 11, fontWeight: FontWeight.w700,
                             color: s.isDone || s.isActive ? Colors.white : context.appColors.gray400,
                           )),
@@ -600,14 +600,14 @@ class TimelineWidget extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    Text(s.label, style: GoogleFonts.cairo(
+                    Text(s.label, style: TextStyle(fontFamily: 'Cairo',
                       fontSize: 13, fontWeight: FontWeight.w700,
                       color: s.isActive ? AppColors.primaryMid
                           : s.isDone ? context.appColors.textSecondary
                           : context.appColors.gray400,
                     )),
                     if (s.subtitle != null)
-                      Text(s.subtitle!, style: GoogleFonts.cairo(
+                      Text(s.subtitle!, style: TextStyle(fontFamily: 'Cairo',
                         fontSize: 11, color: context.appColors.textMuted,
                       )),
                   ],
@@ -645,12 +645,12 @@ class EmptyStateWidget extends StatelessWidget {
           children: [
             Text(icon, style: const TextStyle(fontSize: 48)),
             const SizedBox(height: 16),
-            Text(title, style: GoogleFonts.cairo(
+            Text(title, style: TextStyle(fontFamily: 'Cairo',
               fontSize: 16, fontWeight: FontWeight.w700, color: context.appColors.textSecondary,
             ), textAlign: TextAlign.center),
             if (subtitle != null) ...[
               const SizedBox(height: 8),
-              Text(subtitle!, style: GoogleFonts.cairo(
+              Text(subtitle!, style: TextStyle(fontFamily: 'Cairo',
                 fontSize: 13, color: context.appColors.textMuted, height: 1.7,
               ), textAlign: TextAlign.center),
             ],
@@ -734,7 +734,7 @@ class FilterTabs extends StatelessWidget {
                   color: isActive ? AppColors.primaryMid : Colors.transparent,
                   borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
                 ),
-                child: Text(e.value, style: GoogleFonts.cairo(
+                child: Text(e.value, style: TextStyle(fontFamily: 'Cairo',
                   fontSize: 12,
                   fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
                   color: isActive ? Colors.white : context.appColors.textMuted,
@@ -770,11 +770,11 @@ class AttachmentUploadBox extends StatelessWidget {
           children: [
             const Text('📎', style: TextStyle(fontSize: 28)),
             const SizedBox(height: 8),
-            Text('انقر لإرفاق ملف', style: GoogleFonts.cairo(
+            Text('انقر لإرفاق ملف', style: TextStyle(fontFamily: 'Cairo',
               fontSize: 13, color: context.appColors.textMuted,
             )),
             const SizedBox(height: 4),
-            Text('PDF، JPG، PNG — حد أقصى 5MB', style: GoogleFonts.cairo(
+            Text('PDF، JPG، PNG — حد أقصى 5MB', style: TextStyle(fontFamily: 'Cairo',
               fontSize: 11, color: context.appColors.gray400,
             )),
           ],

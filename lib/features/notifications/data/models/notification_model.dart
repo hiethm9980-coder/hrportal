@@ -81,8 +81,9 @@ class NotificationModel {
 
     int createdAt = 0;
     final ca = row['created_at'];
-    if (ca is int) createdAt = ca;
-    else if (ca is BigInt) createdAt = ca.toInt();
+    if (ca is int) {
+      createdAt = ca;
+    } else if (ca is BigInt) createdAt = ca.toInt();
     else createdAt = int.tryParse(ca?.toString() ?? '') ?? 0;
 
     final isReadInt = int.tryParse(row['is_read']?.toString() ?? '0') ?? 0;

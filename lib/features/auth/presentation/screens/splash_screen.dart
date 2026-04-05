@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
+
 import 'package:hr_portal/core/constants/app_colors.dart';
 import 'package:hr_portal/core/localization/app_localizations.dart';
 
@@ -133,7 +133,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                       const SizedBox(height: 24),
                       Text(
                         'Employee Self Service Portal'.tr(context),
-                        style: GoogleFonts.cairo(
+                        style: TextStyle(fontFamily: 'Cairo',
                           fontSize: 22,
                           fontWeight: FontWeight.w900,
                           color: Colors.white,
@@ -144,7 +144,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                       const SizedBox(height: 6),
                       Text(
                         'Loading...'.tr(context),
-                        style: GoogleFonts.cairo(
+                        style: TextStyle(fontFamily: 'Cairo',
                           fontSize: 13,
                           color: Colors.white38,
                           letterSpacing: 2,

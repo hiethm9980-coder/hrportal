@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
+
 import 'package:hr_portal/core/constants/app_colors.dart';
 import 'package:hr_portal/features/leave/data/models/leave_models.dart';
 import 'package:hr_portal/core/localization/app_localizations.dart';
@@ -60,12 +60,12 @@ class CreateLeaveScreen extends ConsumerWidget {
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
                             Text('Leave type'.tr(context),
-                                style: GoogleFonts.cairo(fontSize: 12,
+                                style: TextStyle(fontFamily: 'Cairo',fontSize: 12,
                                     fontWeight: FontWeight.w600,
                                     color: context.appColors.textSecondary)),
                             const SizedBox(height: 6),
                             DropdownButtonFormField<int>(
-                              value: form.leaveTypeId,
+                              initialValue: form.leaveTypeId,
                               isExpanded: true,
                               itemHeight: null,
                               items: listState.leaveTypes.map((t) {
@@ -83,7 +83,7 @@ class CreateLeaveScreen extends ConsumerWidget {
                                   value: t.id ?? 0,
                                   child: Text('${t.name} ($meta)',
                                       maxLines: 2, overflow: TextOverflow.ellipsis,
-                                      style: GoogleFonts.cairo(fontSize: 13)),
+                                      style: TextStyle(fontFamily: 'Cairo',fontSize: 13)),
                                 );
                               }).toList(),
                               onChanged: (v) { if (v != null) notifier.setLeaveType(v); },
@@ -105,23 +105,23 @@ class CreateLeaveScreen extends ConsumerWidget {
                             ),
                             const SizedBox(height: 14),
                             Text('Duration'.tr(context),
-                                style: GoogleFonts.cairo(fontSize: 12,
+                                style: TextStyle(fontFamily: 'Cairo',fontSize: 12,
                                     fontWeight: FontWeight.w600,
                                     color: context.appColors.textSecondary)),
                             const SizedBox(height: 6),
                             DropdownButtonFormField<String>(
-                              value: form.dayPart,
+                              initialValue: form.dayPart,
                               items: [
                                 DropdownMenuItem(value: 'full',
                                     child: Text('Full day'.tr(context),
-                                        style: GoogleFonts.cairo(fontSize: 13))),
+                                        style: TextStyle(fontFamily: 'Cairo',fontSize: 13))),
                               ],
                               onChanged: (v) { if (v != null) notifier.setDayPart(v); },
                               decoration: InputDecoration(errorText: form.fieldError('day_part')?.tr(context)),
                             ),
                             const SizedBox(height: 14),
                             Text('Reason (optional)'.tr(context),
-                                style: GoogleFonts.cairo(fontSize: 12,
+                                style: TextStyle(fontFamily: 'Cairo',fontSize: 12,
                                     fontWeight: FontWeight.w600,
                                     color: context.appColors.textSecondary)),
                             const SizedBox(height: 6),
@@ -129,7 +129,7 @@ class CreateLeaveScreen extends ConsumerWidget {
                               initialValue: form.reason,
                               maxLines: 3,
                               onChanged: notifier.setReason,
-                              style: GoogleFonts.cairo(fontSize: 13),
+                              style: TextStyle(fontFamily: 'Cairo',fontSize: 13),
                               decoration: InputDecoration(errorText: form.fieldError('reason')?.tr(context)),
                             ),
                           ],
@@ -162,7 +162,7 @@ class _DateField extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: GoogleFonts.cairo(fontSize: 12,
+        Text(label, style: TextStyle(fontFamily: 'Cairo',fontSize: 12,
             fontWeight: FontWeight.w600, color: context.appColors.textSecondary)),
         const SizedBox(height: 6),
         InkWell(
@@ -184,7 +184,7 @@ class _DateField extends StatelessWidget {
               children: [
                 Expanded(child: Text(
                     value.isEmpty ? 'Select date'.tr(context) : value,
-                    style: GoogleFonts.cairo(fontSize: 13))),
+                    style: TextStyle(fontFamily: 'Cairo',fontSize: 13))),
                 const Icon(Icons.calendar_today, size: 18, color: AppColors.primaryMid),
               ],
             ),

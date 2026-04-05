@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
+
 import 'package:hr_portal/core/constants/app_colors.dart';
 import 'package:hr_portal/core/constants/app_shadows.dart';
 import 'package:hr_portal/core/errors/exceptions.dart';
@@ -32,7 +32,7 @@ class ProfileScreen extends ConsumerWidget {
               const SizedBox(height: 12),
               Text(
                 'Error loading profile'.tr(context),
-                style: GoogleFonts.cairo(
+                style: TextStyle(fontFamily: 'Cairo',
                   fontSize: 14,
                   color: context.appColors.textMuted,
                 ),
@@ -86,7 +86,7 @@ class ProfileScreen extends ConsumerWidget {
                         const SizedBox(width: 12),
                         Text(
                           'Profile'.tr(context),
-                          style: GoogleFonts.cairo(
+                          style: TextStyle(fontFamily: 'Cairo',
                             fontSize: 16,
                             fontWeight: FontWeight.w700,
                             color: Colors.white,
@@ -113,10 +113,10 @@ class ProfileScreen extends ConsumerWidget {
                                   child: Image.network(
                                     profile.photoUrl!,
                                     fit: BoxFit.cover,
-                                    errorBuilder: (_, __, ___) => Center(
+                                    errorBuilder: (_, _, _) => Center(
                                       child: Text(
                                         profile.initials,
-                                        style: GoogleFonts.cairo(
+                                        style: TextStyle(fontFamily: 'Cairo',
                                           fontSize: 20,
                                           fontWeight: FontWeight.w800,
                                           color: Colors.white,
@@ -128,7 +128,7 @@ class ProfileScreen extends ConsumerWidget {
                               : Center(
                                   child: Text(
                                     profile.initials,
-                                    style: GoogleFonts.cairo(
+                                    style: TextStyle(fontFamily: 'Cairo',
                                       fontSize: 20,
                                       fontWeight: FontWeight.w800,
                                       color: Colors.white,
@@ -144,7 +144,7 @@ class ProfileScreen extends ConsumerWidget {
                             children: [
                               Text(
                                 profile.name,
-                                style: GoogleFonts.cairo(
+                                style: TextStyle(fontFamily: 'Cairo',
                                   fontSize: 17,
                                   fontWeight: FontWeight.w800,
                                   color: Colors.white,
@@ -155,7 +155,7 @@ class ProfileScreen extends ConsumerWidget {
                               if (profile.jobTitle != null)
                                 Text(
                                   profile.jobTitle!,
-                                  style: GoogleFonts.cairo(
+                                  style: TextStyle(fontFamily: 'Cairo',
                                     fontSize: 12,
                                     color: AppColors.goldLight,
                                   ),
@@ -172,7 +172,7 @@ class ProfileScreen extends ConsumerWidget {
                                 ),
                                 child: Text(
                                   profile.code,
-                                  style: GoogleFonts.cairo(
+                                  style: TextStyle(fontFamily: 'Cairo',
                                     fontSize: 11,
                                     fontWeight: FontWeight.w600,
                                     color: Colors.white70,
@@ -435,7 +435,7 @@ class _SectionCard extends StatelessWidget {
                 const SizedBox(width: 10),
                 Text(
                   title,
-                  style: GoogleFonts.cairo(
+                  style: TextStyle(fontFamily: 'Cairo',
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
                     color: context.appColors.textPrimary,
@@ -485,7 +485,7 @@ class _InfoTile extends StatelessWidget {
               children: [
                 Text(
                   label,
-                  style: GoogleFonts.cairo(
+                  style: TextStyle(fontFamily: 'Cairo',
                     fontSize: 11,
                     color: context.appColors.textMuted,
                   ),
@@ -493,7 +493,7 @@ class _InfoTile extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   value,
-                  style: GoogleFonts.cairo(
+                  style: TextStyle(fontFamily: 'Cairo',
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
                     color: context.appColors.textPrimary,
@@ -557,7 +557,7 @@ class _ChangePasswordSectionState
       // Show success then logout
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(message, style: GoogleFonts.cairo()),
+          content: Text(message, style: TextStyle(fontFamily: 'Cairo',)),
           backgroundColor: AppColors.success,
         ),
       );
@@ -569,7 +569,7 @@ class _ChangePasswordSectionState
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(e.message, style: GoogleFonts.cairo()),
+          content: Text(e.message, style: TextStyle(fontFamily: 'Cairo',)),
           backgroundColor: AppColors.error,
         ),
       );
@@ -577,7 +577,7 @@ class _ChangePasswordSectionState
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(e.toString(), style: GoogleFonts.cairo()),
+          content: Text(e.toString(), style: TextStyle(fontFamily: 'Cairo',)),
           backgroundColor: AppColors.error,
         ),
       );
@@ -611,7 +611,7 @@ class _ChangePasswordSectionState
           ),
           title: Text(
             'Change password'.tr(context),
-            style: GoogleFonts.cairo(
+            style: TextStyle(fontFamily: 'Cairo',
               fontSize: 14,
               fontWeight: FontWeight.w700,
               color: context.appColors.textPrimary,
@@ -700,7 +700,7 @@ class _ChangePasswordSectionState
                             )
                           : Text(
                               'Change password'.tr(context),
-                              style: GoogleFonts.cairo(
+                              style: TextStyle(fontFamily: 'Cairo',
                                 fontSize: 14,
                                 fontWeight: FontWeight.w700,
                               ),
@@ -738,10 +738,10 @@ class _PasswordField extends StatelessWidget {
       controller: controller,
       obscureText: obscure,
       validator: validator,
-      style: GoogleFonts.cairo(fontSize: 14),
+      style: TextStyle(fontFamily: 'Cairo',fontSize: 14),
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: GoogleFonts.cairo(
+        labelStyle: TextStyle(fontFamily: 'Cairo',
             fontSize: 13, color: context.appColors.textMuted),
         filled: true,
         fillColor: context.appColors.bg,

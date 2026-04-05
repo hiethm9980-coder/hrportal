@@ -84,7 +84,7 @@ class AppConfig {
           flavor: AppFlavor.staging,
           // ── STAGING (Internal Beta) ────────────────────
           // TODO: Replace with actual staging URL
-          baseUrl: 'https://staging-api.company.com/api/v1',
+          baseUrl: 'https://account.alzajeltravel.com/api/v1',
           envName: 'Staging',
           enableDebugLogs: true,
           showEnvBanner: true,
@@ -97,8 +97,7 @@ class AppConfig {
         return const AppConfig(
           flavor: AppFlavor.dev,
           // ── DEVELOPMENT ────────────────────────────────
-          // baseUrl: 'http://192.168.1.41:8000/api/v1', // Android emulator localhost
-          baseUrl: 'https://account.alzajeltravel.com/api/v1', // Android emulator localhost
+          baseUrl: 'http://192.168.1.41:8000/api/v1', // Android emulator localhost
           envName: 'Development', 
           enableDebugLogs: true,
           showEnvBanner: true,

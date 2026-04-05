@@ -71,4 +71,5 @@ class DefaultFirebaseOptions {
     storageBucket: 'hr-portal-8317c.firebasestorage.app',
     iosBundleId: 'com.newhorizon.hr.hrPortal',
   );
+
 }
