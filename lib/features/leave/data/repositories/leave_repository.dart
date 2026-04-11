@@ -1,3 +1,5 @@
+import 'package:dio/dio.dart';
+
 import '../../../../core/constants/api_constants.dart';
 import '../../../../core/network/api_client.dart';
 import '../models/leave_models.dart';
@@ -57,17 +59,46 @@ class LeaveRepository {
     required String endDate,
     required String action,
     String? reason,
+    String? attachmentPath,
   }) async {
+    final fields = <String, dynamic>{
+      'leave_type_id': leaveTypeId,
+      'start_date': startDate,
+      'end_date': endDate,
+      'action': action,
+      if (reason != null && reason.isNotEmpty) 'reason': reason,
+    };
+
+    Object data;
+    if (attachmentPath != null && attachmentPath.isNotEmpty) {
+      final filename = attachmentPath.split(RegExp(r'[/\\]')).last;
+      data = FormData.fromMap({
+        ...fields,
+        'file': await MultipartFile.fromFile(attachmentPath, filename: filename),
+      });
+    } else {
+      data = fields;
+    }
+
     final response = await _client.post<LeaveRequest>(
       ApiConstants.leaveRequests,
-      data: {
-        'leave_type_id': leaveTypeId,
-        'start_date': startDate,
-        'end_date': endDate,
-        'action': action,
-        if (reason != null && reason.isNotEmpty) 'reason': reason,
-      },
+      data: data,
       fromJson: (json) => LeaveRequest.fromJson(json as Map<String, dynamic>),
+    );
+    return response.data!;
+  }
+
+  /// Get a single leave request by ID.
+  Future<LeaveRequest> getLeaveDetail(int id) async {
+    final response = await _client.get<LeaveRequest>(
+      ApiConstants.leaveRequestDetail(id),
+      fromJson: (json) {
+        final map = json as Map<String, dynamic>;
+        final leaveJson = map['leave_request'] is Map<String, dynamic>
+            ? map['leave_request'] as Map<String, dynamic>
+            : map;
+        return LeaveRequest.fromJson(leaveJson);
+      },
     );
     return response.data!;
   }

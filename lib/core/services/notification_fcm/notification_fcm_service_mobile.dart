@@ -4,10 +4,12 @@ import 'dart:convert';
 import 'dart:developer';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/widgets.dart';
+import 'package:go_router/go_router.dart';
 import 'package:hr_portal/core/services/awesome_notification_service.dart';
 import 'package:hr_portal/core/services/db/db_helper.dart';
 import 'package:hr_portal/core/services/notification_fcm/topic_service.dart';
 import 'package:hr_portal/core/services/notifications_bus.dart';
+import 'package:hr_portal/router/app_router.dart';
 
 class NotificationFCMService {
   static const String _defaultTopic = 'hr_portal';
@@ -117,6 +119,12 @@ class NotificationFCMService {
       imageUrl: d['image']?.toString(),
       payload: d.map((k, v) => MapEntry(k, v.toString())),
     );
+
+    // 3) Notify screens to auto-refresh if the route is relevant.
+    final route = d['route']?.toString();
+    if (route != null && route.isNotEmpty) {
+      NotificationsBus.notifyRouteChanged(route);
+    }
   }
 
   /// يحفظ الإشعار محليًا ويُرجّع true إذا تم الإدخال فعلاً.
@@ -189,7 +197,13 @@ class NotificationFCMService {
 
     final route = d['route']?.toString();
     if (route != null && route.isNotEmpty) {
-      // لاحقًا: تنقل بالـ GoRouter إذا رغبت
+      final ctx = rootNavigatorKey.currentContext;
+      if (ctx != null && ctx.mounted) {
+        ctx.go(route);
+      } else {
+        // App not fully ready (terminated launch) — defer to router redirect.
+        pendingDeepLink = route;
+      }
     } else {
       log('FCM open without route: data=$d');
     }

@@ -9,16 +9,41 @@ import 'package:hr_portal/core/localization/locale_provider.dart';
 import 'package:hr_portal/core/providers/core_providers.dart';
 import 'package:hr_portal/core/theme/theme_mode_provider.dart';
 import 'package:hr_portal/shared/widgets/common_widgets.dart';
+import 'package:hr_portal/shared/widgets/shared_widgets.dart';
 import 'package:hr_portal/shared/controllers/global_error_handler.dart';
 import '../../../auth/presentation/providers/auth_providers.dart';
+import '../../../requests/data/models/request_models.dart' show Currency;
+import '../../../requests/presentation/providers/request_providers.dart';
+import '../providers/default_currency_provider.dart';
 
-class SettingsScreen extends ConsumerWidget {
+class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<SettingsScreen> createState() => _SettingsScreenState();
+}
+
+class _SettingsScreenState extends ConsumerState<SettingsScreen> {
+  @override
+  void initState() {
+    super.initState();
+    Future.microtask(() {
+      if (!mounted) return;
+      // Load currency options if not loaded yet (so the radio list has data).
+      final state = ref.read(currenciesProvider);
+      if (state.currencies.isEmpty && !state.isLoading) {
+        ref.read(currenciesProvider.notifier).load();
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final themeMode = ref.watch(themeModeProvider);
     final localeMode = ref.watch(localeModeProvider);
+    final currenciesState = ref.watch(currenciesProvider);
+    final defaultCurrencyId = ref.watch(defaultCurrencyProvider);
+    final isAr = Localizations.localeOf(context).languageCode == 'ar';
 
     return Scaffold(
       backgroundColor: context.appColors.bg,
@@ -113,6 +138,88 @@ class SettingsScreen extends ConsumerWidget {
                   ],
                 ),
 
+                const SizedBox(height: 24),
+
+                // ══════════ Default Currency Section ══════════
+                _SectionHeader(
+                  icon: Icons.attach_money,
+                  title: 'Default currency'.tr(context),
+                ),
+                const SizedBox(height: 8),
+                if (currenciesState.isLoading &&
+                    currenciesState.currencies.isEmpty)
+                  _OptionCard(
+                    children: const [
+                      Padding(
+                        padding: EdgeInsets.symmetric(vertical: 18),
+                        child: Center(child: LoadingIndicator()),
+                      ),
+                    ],
+                  )
+                else if (currenciesState.error != null &&
+                    currenciesState.currencies.isEmpty)
+                  _OptionCard(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          children: [
+                            Text(
+                              currenciesState.error!.message.tr(context),
+                              style: const TextStyle(
+                                  fontFamily: 'Cairo', fontSize: 13),
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: 8),
+                            TextButton(
+                              onPressed: () => ref
+                                  .read(currenciesProvider.notifier)
+                                  .load(),
+                              child: Text(
+                                'Retry'.tr(context),
+                                style: const TextStyle(fontFamily: 'Cairo'),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  )
+                else
+                  _OptionCard(
+                    children: [
+                      _RadioOption<int?>(
+                        label: 'Not set'.tr(context),
+                        icon: Icons.do_not_disturb_alt_outlined,
+                        value: null,
+                        groupValue: defaultCurrencyId,
+                        onChanged: (v) => ref
+                            .read(defaultCurrencyProvider.notifier)
+                            .setCurrency(v),
+                      ),
+                      for (var i = 0;
+                          i < currenciesState.currencies.length;
+                          i++) ...[
+                        _divider(context),
+                        _RadioOption<int?>(
+                          label: _currencyLabel(
+                              currenciesState.currencies[i], isAr),
+                          icon: null,
+                          flagText:
+                              currenciesState.currencies[i].code.isNotEmpty
+                                  ? currenciesState.currencies[i].code
+                                      .toUpperCase()
+                                  : null,
+                          value: currenciesState.currencies[i].id,
+                          groupValue: defaultCurrencyId,
+                          onChanged: (v) => ref
+                              .read(defaultCurrencyProvider.notifier)
+                              .setCurrency(v),
+                        ),
+                      ],
+                    ],
+                  ),
+
                 const SizedBox(height: 32),
               ],
             ),
@@ -190,6 +297,13 @@ class SettingsScreen extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  static String _currencyLabel(Currency c, bool isAr) {
+    final localized = isAr
+        ? (c.nameAr?.isNotEmpty == true ? c.nameAr! : c.name)
+        : (c.nameEn?.isNotEmpty == true ? c.nameEn! : c.name);
+    return localized.isNotEmpty ? localized : c.code;
   }
 
   static Widget _divider(BuildContext context) => Divider(

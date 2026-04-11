@@ -2,7 +2,7 @@ name: hr_portal
 description: "A new Flutter project."
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 
-version: 1.0.1+2
+version: 1.0.3+3
 
 environment:
   sdk: ^3.11.0
@@ -64,6 +64,11 @@ dependencies:
 
   # widgets
   flutter_slidable: ^4.0.3
+
+  # file picker (for leave attachments)
+  file_picker: ^11.0.2
+  path_provider: ^2.1.5
+  open_filex: ^4.7.0
 
 
 dev_dependencies:

@@ -1,9 +1,10 @@
 // ⚠️ API CONTRACT v1.0.0 — Endpoints match §3 exactly.
 
+import 'dart:convert';
+
 import '../../../../core/constants/api_constants.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../core/network/session_manager.dart';
-import '../../../profile/data/models/employee_profile_model.dart';
 import '../models/auth_models.dart';
 
 /// Repository for authentication operations.
@@ -62,6 +63,21 @@ class AuthRepository {
     // Persist manager flag for session restore
     await _sessionManager.storage.saveIsManager(loginData.employee.isManager);
 
+    // Persist approvals context — `/auth/me` may not return these on every
+    // backend version, so we keep a local copy to survive session restore.
+    await _sessionManager.storage.saveApprovalsFlagsJson(
+      loginData.approvals != null
+          ? jsonEncode(loginData.approvals!.toJson())
+          : null,
+    );
+    await _sessionManager.storage.saveManagedCompaniesJson(
+      loginData.managedCompanies.isEmpty
+          ? null
+          : jsonEncode(
+              loginData.managedCompanies.map((e) => e.toJson()).toList(),
+            ),
+    );
+
     return loginData;
   }
 
@@ -108,14 +124,15 @@ class AuthRepository {
     return response.message;
   }
 
-  /// Get the currently authenticated employee's profile.
+  /// Get the currently authenticated employee's profile, along with approval
+  /// flags and managed companies.
   ///
   /// Useful for validating a restored session on app startup.
-  Future<EmployeeProfile> getCurrentUser() async {
-    final response = await _client.get<EmployeeProfile>(
+  Future<CurrentUserData> getCurrentUser() async {
+    final response = await _client.get<CurrentUserData>(
       ApiConstants.me,
       fromJson: (json) =>
-          EmployeeProfile.fromJson(json as Map<String, dynamic>),
+          CurrentUserData.fromJson(json as Map<String, dynamic>),
     );
     return response.data!;
   }

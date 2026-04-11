@@ -72,6 +72,32 @@ class SecureTokenStorage {
     return value == '1';
   }
 
+  // ── Approvals context (cached from login) ────────────────────────
+
+  Future<void> saveApprovalsFlagsJson(String? json) async {
+    if (json == null) {
+      await _storage.delete(key: StorageKeys.approvalsFlags);
+    } else {
+      await _storage.write(key: StorageKeys.approvalsFlags, value: json);
+    }
+  }
+
+  Future<String?> getApprovalsFlagsJson() async {
+    return _storage.read(key: StorageKeys.approvalsFlags);
+  }
+
+  Future<void> saveManagedCompaniesJson(String? json) async {
+    if (json == null) {
+      await _storage.delete(key: StorageKeys.managedCompanies);
+    } else {
+      await _storage.write(key: StorageKeys.managedCompanies, value: json);
+    }
+  }
+
+  Future<String?> getManagedCompaniesJson() async {
+    return _storage.read(key: StorageKeys.managedCompanies);
+  }
+
   // ── Base URL Tracking ────────────────────────────────────────────
 
   Future<void> saveBaseUrl(String url) async {
@@ -91,5 +117,7 @@ class SecureTokenStorage {
     await _storage.delete(key: StorageKeys.employeeId);
     await _storage.delete(key: StorageKeys.companyId);
     await _storage.delete(key: StorageKeys.isManager);
+    await _storage.delete(key: StorageKeys.approvalsFlags);
+    await _storage.delete(key: StorageKeys.managedCompanies);
   }
 }

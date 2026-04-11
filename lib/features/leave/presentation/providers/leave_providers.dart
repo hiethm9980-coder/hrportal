@@ -124,6 +124,17 @@ final leaveBalancesProvider =
   (ref) => LeaveBalancesNotifier(ref),
 );
 
+/// Resolves the currently selected LeaveBalance from the form.
+final selectedBalanceProvider = Provider.autoDispose<LeaveBalance?>((ref) {
+  final form = ref.watch(createLeaveFormProvider);
+  final balances = ref.watch(leaveBalancesProvider).balances;
+  if (form.leaveTypeId == null) return null;
+  for (final b in balances) {
+    if (b.leaveType?.id == form.leaveTypeId) return b;
+  }
+  return null;
+});
+
 // ═══════════════════════════════════════════════════════════════════
 // Create Leave Form
 // ═══════════════════════════════════════════════════════════════════
@@ -133,6 +144,8 @@ class CreateLeaveFormState {
   final String startDate;
   final String endDate;
   final String reason;
+  final String? attachmentPath;
+  final String? attachmentName;
   final bool isLoading;
   final UiError? error;
   final Map<String, List<String>> fieldErrors;
@@ -144,6 +157,8 @@ class CreateLeaveFormState {
     this.startDate = '',
     this.endDate = '',
     this.reason = '',
+    this.attachmentPath,
+    this.attachmentName,
     this.isLoading = false,
     this.error,
     this.fieldErrors = const {},
@@ -167,6 +182,8 @@ class CreateLeaveFormState {
     String? startDate,
     String? endDate,
     String? reason,
+    String? attachmentPath,
+    String? attachmentName,
     bool? isLoading,
     UiError? error,
     Map<String, List<String>>? fieldErrors,
@@ -174,12 +191,15 @@ class CreateLeaveFormState {
     String? successMessage,
     bool clearErrors = false,
     bool clearLeaveType = false,
+    bool clearAttachment = false,
   }) {
     return CreateLeaveFormState(
       leaveTypeId: clearLeaveType ? null : (leaveTypeId ?? this.leaveTypeId),
       startDate: startDate ?? this.startDate,
       endDate: endDate ?? this.endDate,
       reason: reason ?? this.reason,
+      attachmentPath: clearAttachment ? null : (attachmentPath ?? this.attachmentPath),
+      attachmentName: clearAttachment ? null : (attachmentName ?? this.attachmentName),
       isLoading: isLoading ?? this.isLoading,
       error: clearErrors ? null : (error ?? this.error),
       fieldErrors: clearErrors ? const {} : (fieldErrors ?? this.fieldErrors),
@@ -201,6 +221,10 @@ class CreateLeaveFormController extends StateNotifier<CreateLeaveFormState> {
       state = state.copyWith(endDate: d, clearErrors: true);
   void setReason(String v) =>
       state = state.copyWith(reason: v);
+  void setAttachment(String path, String name) =>
+      state = state.copyWith(attachmentPath: path, attachmentName: name, clearErrors: true);
+  void clearAttachment() =>
+      state = state.copyWith(clearAttachment: true, clearErrors: true);
   void setDateRange(String start, String end) =>
       state = state.copyWith(startDate: start, endDate: end, clearErrors: true);
 
@@ -226,6 +250,7 @@ class CreateLeaveFormController extends StateNotifier<CreateLeaveFormState> {
         endDate: state.endDate,
         action: action,
         reason: state.reason.isNotEmpty ? state.reason : null,
+        attachmentPath: state.attachmentPath,
       );
       final msg = action == 'draft' ? 'Saved as draft' : 'Leave request sent successfully';
       state = state.copyWith(isLoading: false, isSuccess: true, successMessage: msg);

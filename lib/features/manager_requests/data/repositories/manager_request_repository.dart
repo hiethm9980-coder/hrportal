@@ -13,23 +13,32 @@ class ManagerRequestRepository {
 
   ManagerRequestRepository({required ApiClient client}) : _client = client;
 
-  /// Fetch paginated list of requests visible to this manager.
+  /// Fetch paginated list of (other) requests visible to this manager.
+  ///
+  /// [filter] is one of `pending|approved|rejected|all` — backend default is
+  /// `all` (merged history). The "Pending" tab MUST pass `pending` explicitly.
+  /// [companyId] is omitted entirely for the "All companies" option (do not
+  /// send `0` — the backend rejects it with 422).
   Future<ManagerRequestsData> getRequests({
     int page = 1,
     int perPage = 20,
-    String? status,
+    String? filter,
     String? requestType,
     int? employeeId,
+    int? companyId,
+    int? isCurrent,
   }) async {
     final response = await _client.get<ManagerRequestsData>(
       ApiConstants.managerRequests,
       queryParameters: {
         'page': page,
         'per_page': perPage,
-        if (status != null && status.isNotEmpty) 'status': status,
+        if (filter != null && filter.isNotEmpty) 'filter': filter,
         if (requestType != null && requestType.isNotEmpty)
           'request_type': requestType,
-        'employee_id': ?employeeId,
+        if (employeeId != null) 'employee_id': employeeId,
+        if (companyId != null) 'company_id': companyId,
+        if (isCurrent != null) 'is_current': isCurrent,
       },
       fromJson: (json) =>
           ManagerRequestsData.fromJson(json as Map<String, dynamic>),
@@ -41,28 +50,37 @@ class ManagerRequestRepository {
   Future<ManagerRequestDetail> getRequestDetail(int id) async {
     final response = await _client.get<ManagerRequestDetail>(
       ApiConstants.managerRequestDetail(id),
-      fromJson: (json) =>
-          ManagerRequestDetail.fromJson(json as Map<String, dynamic>),
+      fromJson: (json) {
+        final map = json as Map<String, dynamic>;
+        final reqJson = map['request'] is Map<String, dynamic>
+            ? map['request'] as Map<String, dynamic>
+            : map;
+        return ManagerRequestDetail.fromJson(reqJson);
+      },
     );
     return response.data!;
   }
 
-  /// Submit a decision (approve/reject/processing/completed) on a request.
-  Future<ManagerRequest> decideRequest({
+  /// Submit a decision on a request.
+  ///
+  /// Unlike leaves, the backend exposes **separate** `/approve` and `/reject`
+  /// endpoints for employee requests — there is no `/decide` alias here. This
+  /// method routes to the right URL based on [status].
+  Future<void> decideRequest({
     required int id,
     required String status,
     String? responseNotes,
   }) async {
-    final response = await _client.post<ManagerRequest>(
-      ApiConstants.managerRequestDecide(id),
+    final url = status == 'rejected'
+        ? ApiConstants.managerRequestReject(id)
+        : ApiConstants.managerRequestApprove(id);
+
+    await _client.post<void>(
+      url,
       data: {
-        'status': status,
         if (responseNotes != null && responseNotes.isNotEmpty)
           'response_notes': responseNotes,
       },
-      fromJson: (json) =>
-          ManagerRequest.fromJson(json as Map<String, dynamic>),
     );
-    return response.data!;
   }
 }

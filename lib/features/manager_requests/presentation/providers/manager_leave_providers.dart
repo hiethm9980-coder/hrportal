@@ -6,6 +6,31 @@ import '../../../../core/providers/core_providers.dart';
 import '../../data/models/manager_leave_models.dart';
 import '../../../../shared/controllers/paginated_controller.dart';
 import '../../../../shared/controllers/global_error_handler.dart';
+import '../../../auth/presentation/providers/auth_providers.dart';
+
+// ═══════════════════════════════════════════════════════════════════
+// Selected company filter (shared by both approval lists)
+// ═══════════════════════════════════════════════════════════════════
+
+/// Currently-selected company id used to scope approval lists.
+/// `null` means "default" (the user's primary company on the backend).
+final selectedApprovalCompanyIdProvider = StateProvider<int?>((ref) => null);
+
+// ═══════════════════════════════════════════════════════════════════
+// Pending counts — lightweight providers that do NOT affect GoRouter.
+// ═══════════════════════════════════════════════════════════════════
+
+/// Live pending-leave count. Updated by a quick `filter=pending&per_page=1`
+/// API call so the tab label always shows the real number.
+final pendingLeavesCountProvider = StateProvider<int>((ref) {
+  // Seed from the auth state so the first render is correct.
+  return ref.read(authProvider).approvals?.pendingLeavesCount ?? 0;
+});
+
+/// Live pending-request count.
+final pendingRequestsCountProvider = StateProvider<int>((ref) {
+  return ref.read(authProvider).approvals?.pendingRequestsCount ?? 0;
+});
 
 // ═══════════════════════════════════════════════════════════════════
 // Manager Leaves List (paginated)
@@ -14,32 +39,82 @@ import '../../../../shared/controllers/global_error_handler.dart';
 class ManagerLeavesListController
     extends PaginatedController<ManagerLeave> {
   final Ref _ref;
-  String? _statusFilter;
+  // Default filter = 'awaiting_me' so the first view shows actionable items.
+  String? _filterKey = 'awaiting_me';
+  int? _companyId;
 
   ManagerLeavesListController(this._ref) : super(_ref);
 
-  String? get statusFilter => _statusFilter;
+  String? get statusFilter => _filterKey;
+  int? get companyId => _companyId;
 
-  void setStatusFilter(String? status) {
-    _statusFilter = status;
+  /// Map UI filter key → API query params (filter + is_current).
+  static ({String? filter, int? isCurrent}) _toApiParams(String? key) {
+    switch (key) {
+      case 'awaiting_me':
+        return (filter: 'pending', isCurrent: 1);
+      case 'pending':
+        return (filter: 'pending', isCurrent: 0);
+      case 'approved':
+        return (filter: 'approved', isCurrent: null);
+      case 'rejected':
+        return (filter: 'rejected', isCurrent: null);
+      default:
+        return (filter: null, isCurrent: null); // all
+    }
+  }
+
+  void setStatusFilter(String? key) {
+    _filterKey = key;
+    refresh();
+  }
+
+  void setCompanyId(int? companyId) {
+    if (_companyId == companyId) return;
+    _companyId = companyId;
     refresh();
   }
 
   @override
   Future<PaginatedResult<ManagerLeave>> fetchPage(int page) async {
+    final params = _toApiParams(_filterKey);
     final repo = _ref.read(managerLeaveRepositoryProvider);
     final data = await repo.getLeaves(
       page: page,
       perPage: 20,
-      status: _statusFilter,
+      filter: params.filter,
+      companyId: _companyId,
+      isCurrent: params.isCurrent,
     );
     return PaginatedResult(items: data.leaves, pagination: data.pagination);
+  }
+
+  /// Fetch the total pending count with a lightweight API call.
+  Future<void> refreshPendingCount() async {
+    try {
+      final repo = _ref.read(managerLeaveRepositoryProvider);
+      final data = await repo.getLeaves(
+        page: 1,
+        perPage: 1,
+        filter: 'pending',
+        companyId: _companyId,
+      );
+      _ref.read(pendingLeavesCountProvider.notifier).state =
+          data.pagination.total;
+    } catch (_) {
+      // Stale count is acceptable.
+    }
   }
 }
 
 final managerLeavesListProvider = StateNotifierProvider<
     ManagerLeavesListController, PaginatedState<ManagerLeave>>((ref) {
   final controller = ManagerLeavesListController(ref);
+  // React to company filter changes globally.
+  ref.listen<int?>(selectedApprovalCompanyIdProvider, (prev, next) {
+    controller.setCompanyId(next);
+  });
+  controller._companyId = ref.read(selectedApprovalCompanyIdProvider);
   controller.loadInitial();
   return controller;
 });
@@ -102,8 +177,13 @@ class DecideLeaveController extends StateNotifier<DecideLeaveState> {
       );
       state = state.copyWith(isLoading: false, isSuccess: true);
 
-      // Refresh the list after decision
+      // Refresh the list after decision (the company-manager bypass may stamp
+      // multiple levels at once, so a hard refresh is required, not just the
+      // single item).
       _ref.read(managerLeavesListProvider.notifier).refresh();
+      // Update pending leave count via lightweight API call — avoids mutating
+      // authProvider which would trigger a GoRouter rebuild.
+      _ref.read(managerLeavesListProvider.notifier).refreshPendingCount();
     } on ValidationException catch (e) {
       state = state.copyWith(
         isLoading: false,

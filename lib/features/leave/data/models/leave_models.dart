@@ -1,6 +1,10 @@
 import 'package:equatable/equatable.dart';
 
 import '../../../../core/network/pagination.dart';
+import '../../../../shared/models/approval_models.dart';
+
+export '../../../../shared/models/approval_models.dart'
+    show ApprovalChainItem, ApprovalHistoryItem;
 
 // ═══════════════════════════════════════════════════════════════════
 // LeaveType
@@ -168,7 +172,16 @@ class LeaveRequest extends Equatable {
   final LeaveApprover? approver;
   final String? reason;
   final String? rejectionReason;
+  final String? attachmentUrl;
+  final String? attachmentPath;
+  final String? attachmentName;
   final String? createdAt;
+
+  // Approval chain (template) and live history.
+  final int? currentApprovalLevel;
+  final int? totalLevels;
+  final List<ApprovalChainItem> approvalChain;
+  final List<ApprovalHistoryItem> approvalHistory;
 
   const LeaveRequest({
     required this.id,
@@ -181,7 +194,14 @@ class LeaveRequest extends Equatable {
     this.approver,
     this.reason,
     this.rejectionReason,
+    this.attachmentUrl,
+    this.attachmentPath,
+    this.attachmentName,
     this.createdAt,
+    this.currentApprovalLevel,
+    this.totalLevels,
+    this.approvalChain = const [],
+    this.approvalHistory = const [],
   });
 
   factory LeaveRequest.fromJson(Map<String, dynamic> json) {
@@ -200,8 +220,37 @@ class LeaveRequest extends Equatable {
           : null,
       reason: json['reason'] as String?,
       rejectionReason: json['rejection_reason'] as String?,
+      attachmentUrl: json['attachment_url'] as String? ?? json['attachment'] as String?,
+      attachmentPath: json['attachment_path'] as String?,
+      attachmentName: json['attachment_name'] as String?,
       createdAt: json['created_at'] as String?,
+      currentApprovalLevel: json['current_approval_level'] as int?,
+      totalLevels: json['total_levels'] as int?,
+      approvalChain: (json['approval_chain'] as List?)
+              ?.map((e) =>
+                  ApprovalChainItem.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          const [],
+      approvalHistory: (json['approval_history'] as List?)
+              ?.map((e) =>
+                  ApprovalHistoryItem.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          const [],
     );
+  }
+
+  /// The current pending approver from `approval_history` (the row that has
+  /// `is_current=true` and `decision=pending`), if any.
+  ApprovalHistoryItem? get currentApprover =>
+      currentApproverFromHistory(approvalHistory);
+
+  /// Display name for the current pending approver. Prefers a real user name,
+  /// falls back to the snapshot role label, then the legacy `approver` field.
+  String currentApproverDisplay(bool isAr) {
+    final fromHistory = currentApproverDisplayFromHistory(approvalHistory, isAr);
+    if (fromHistory.isNotEmpty) return fromHistory;
+    if (approver != null && approver!.name.isNotEmpty) return approver!.name;
+    return '';
   }
 
   bool get isDraft => status == 'draft';

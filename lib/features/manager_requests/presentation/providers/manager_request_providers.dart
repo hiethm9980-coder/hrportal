@@ -6,6 +6,8 @@ import '../../../../core/providers/core_providers.dart';
 import '../../data/models/manager_request_models.dart';
 import '../../../../shared/controllers/paginated_controller.dart';
 import '../../../../shared/controllers/global_error_handler.dart';
+import 'manager_leave_providers.dart'
+    show selectedApprovalCompanyIdProvider, pendingRequestsCountProvider;
 
 // ═══════════════════════════════════════════════════════════════════
 // Manager Requests List (paginated)
@@ -14,32 +16,81 @@ import '../../../../shared/controllers/global_error_handler.dart';
 class ManagerRequestsListController
     extends PaginatedController<ManagerRequest> {
   final Ref _ref;
-  String? _statusFilter;
+  // Default filter = 'awaiting_me' so the first view shows actionable items.
+  String? _filterKey = 'awaiting_me';
+  int? _companyId;
 
   ManagerRequestsListController(this._ref) : super(_ref);
 
-  String? get statusFilter => _statusFilter;
+  String? get statusFilter => _filterKey;
+  int? get companyId => _companyId;
 
-  void setStatusFilter(String? status) {
-    _statusFilter = status;
+  /// Map UI filter key → API query params (filter + is_current).
+  static ({String? filter, int? isCurrent}) _toApiParams(String? key) {
+    switch (key) {
+      case 'awaiting_me':
+        return (filter: 'pending', isCurrent: 1);
+      case 'pending':
+        return (filter: 'pending', isCurrent: 0);
+      case 'approved':
+        return (filter: 'approved', isCurrent: null);
+      case 'rejected':
+        return (filter: 'rejected', isCurrent: null);
+      default:
+        return (filter: null, isCurrent: null); // all
+    }
+  }
+
+  void setStatusFilter(String? key) {
+    _filterKey = key;
+    refresh();
+  }
+
+  void setCompanyId(int? companyId) {
+    if (_companyId == companyId) return;
+    _companyId = companyId;
     refresh();
   }
 
   @override
   Future<PaginatedResult<ManagerRequest>> fetchPage(int page) async {
+    final params = _toApiParams(_filterKey);
     final repo = _ref.read(managerRequestRepositoryProvider);
     final data = await repo.getRequests(
       page: page,
       perPage: 20,
-      status: _statusFilter,
+      filter: params.filter,
+      companyId: _companyId,
+      isCurrent: params.isCurrent,
     );
     return PaginatedResult(items: data.requests, pagination: data.pagination);
+  }
+
+  /// Fetch the total pending count with a lightweight API call.
+  Future<void> refreshPendingCount() async {
+    try {
+      final repo = _ref.read(managerRequestRepositoryProvider);
+      final data = await repo.getRequests(
+        page: 1,
+        perPage: 1,
+        filter: 'pending',
+        companyId: _companyId,
+      );
+      _ref.read(pendingRequestsCountProvider.notifier).state =
+          data.pagination.total;
+    } catch (_) {
+      // Stale count is acceptable.
+    }
   }
 }
 
 final managerRequestsListProvider = StateNotifierProvider<
     ManagerRequestsListController, PaginatedState<ManagerRequest>>((ref) {
   final controller = ManagerRequestsListController(ref);
+  ref.listen<int?>(selectedApprovalCompanyIdProvider, (prev, next) {
+    controller.setCompanyId(next);
+  });
+  controller._companyId = ref.read(selectedApprovalCompanyIdProvider);
   controller.loadInitial();
   return controller;
 });
@@ -160,6 +211,9 @@ class DecideRequestController extends StateNotifier<DecideRequestState> {
 
       // Refresh the list after decision
       _ref.read(managerRequestsListProvider.notifier).refresh();
+      // Update pending request count via lightweight API call — avoids mutating
+      // authProvider which would trigger a GoRouter rebuild.
+      _ref.read(managerRequestsListProvider.notifier).refreshPendingCount();
     } on ValidationException catch (e) {
       state = state.copyWith(
         isLoading: false,

@@ -3,9 +3,11 @@ import 'dart:developer';
 
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/widgets.dart';
+import 'package:go_router/go_router.dart';
 import 'package:hr_portal/core/services/awesome_notification_service.dart';
 import 'package:hr_portal/core/services/db/db_helper.dart';
 import 'package:hr_portal/core/services/notifications_bus.dart';
+import 'package:hr_portal/router/app_router.dart';
 
 class NotificationFCMService {
   static const String _tableNotifications = 'notifications';
@@ -121,6 +123,11 @@ class NotificationFCMService {
         if (route.isNotEmpty) 'route': route,
       },
     );
+
+    // Notify screens to auto-refresh if the route is relevant.
+    if (route.isNotEmpty) {
+      NotificationsBus.notifyRouteChanged(route);
+    }
   }
 
   Future<bool> _saveToLocalDb({
@@ -186,6 +193,16 @@ class NotificationFCMService {
         );
         NotificationsBus.notifyChanged();
       } catch (_) {}
+    }
+
+    final route = d['route']?.toString() ?? _routeFromUrl(d['url']?.toString());
+    if (route != null && route.isNotEmpty) {
+      final ctx = rootNavigatorKey.currentContext;
+      if (ctx != null && ctx.mounted) {
+        ctx.go(route);
+      } else {
+        pendingDeepLink = route;
+      }
     }
   }
 

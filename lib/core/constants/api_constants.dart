@@ -31,45 +31,61 @@ class ApiConstants {
   static const int receiveTimeout = 15000;
   static const int sendTimeout = 10000;
 
+  // ── API Version Prefix ─────────────────────────────────────────────
+  static const String _v1 = '/api/v1';
+
   // ── Auth ────────────────────────────────────────────────────────────
-  static const String login = '/auth/login';
-  static const String logout = '/auth/logout';
-  static const String logoutAll = '/auth/logout-all';
-  static const String me = '/me';
-  static const String changePassword = '/change-password';
+  static const String login = '$_v1/auth/login';
+  static const String logout = '$_v1/auth/logout';
+  static const String logoutAll = '$_v1/auth/logout-all';
+  static const String me = '$_v1/auth/me';
+  static const String changePassword = '$_v1/change-password';
 
   // ── Profile ─────────────────────────────────────────────────────────
-  static const String profile = '/employee/profile';
+  static const String profile = '$_v1/employee/profile';
 
   // ── Attendance ──────────────────────────────────────────────────────
-  static const String checkIn = '/attendance/check-in';
-  static const String checkOut = '/attendance/check-out';
-  static const String attendanceHistory = '/attendance/history';
+  static const String checkIn = '$_v1/attendance/check-in';
+  static const String checkOut = '$_v1/attendance/check-out';
+  static const String attendanceHistory = '$_v1/attendance/history';
 
   // ── Leave Balances ──────────────────────────────────────────────────
-  static const String leaveBalances = '/leave-balances';
+  static const String leaveBalances = '$_v1/leave-balances';
 
   // ── Leave Requests ──────────────────────────────────────────────────
-  static const String leaveRequests = '/leave-requests';
-  static const String leaveRequestsSummary = '/leave-requests/summary';
-  static String leaveRequestDetail(int id) => '/leave-requests/$id';
-  static String leaveRequestSubmit(int id) => '/leave-requests/$id/submit';
-  static String leaveRequestDelete(int id) => '/leave-requests/$id';
+  static const String leaveRequests = '$_v1/leave-requests';
+  static const String leaveRequestsSummary = '$_v1/leave-requests/summary';
+  static String leaveRequestDetail(int id) => '$_v1/leave-requests/$id';
+  static String leaveRequestSubmit(int id) => '$_v1/leave-requests/$id/submit';
+  static String leaveRequestDelete(int id) => '$_v1/leave-requests/$id';
 
   // ── Payroll ─────────────────────────────────────────────────────────
-  static const String payroll = '/payroll';
-  static String payslipDetail(String month) => '/payroll/$month';
+  static const String payroll = '$_v1/payroll';
+  static String payslipDetail(String month) => '$_v1/payroll/$month';
 
   // ── Employee Requests ───────────────────────────────────────────────
-  static const String requests = '/requests';
+  static const String requests = '$_v1/requests';
+  static const String employeeRequestTypes = '$_v1/employee-request-types';
+  static const String currencies = '$_v1/currencies';
+  static const String employeeRequests = '$_v1/employee-requests';
+  static const String employeeRequestsSummary = '$_v1/employee-requests/summary';
+  static String employeeRequestDetail(int id) => '$_v1/employee-requests/$id';
+  static String employeeRequestSubmit(int id) => '$_v1/employee-requests/$id/submit';
+  static String employeeRequestDelete(int id) => '$_v1/employee-requests/$id';
 
-  // ── Manager Requests (Approvals) ──────────────────────────────────
-  static const String managerRequests = '/manager/requests';
-  static String managerRequestDetail(int id) => '/manager/requests/$id';
-  static String managerRequestDecide(int id) => '/manager/requests/$id/decide';
+  // ── Approvals ─────────────────────────────────────────────────────
+  // Other (employee) requests — backend exposes separate approve/reject
+  // endpoints (no /decide alias for this resource).
+  static const String managerRequests = '$_v1/approvals/requests';
+  static String managerRequestDetail(int id) => '$_v1/approvals/requests/$id';
+  static String managerRequestApprove(int id) =>
+      '$_v1/approvals/requests/$id/approve';
+  static String managerRequestReject(int id) =>
+      '$_v1/approvals/requests/$id/reject';
 
-  // ── Manager Leaves (Approvals) ──────────────────────────────────
-  static const String managerLeaves = '/manager/leaves';
-  static String managerLeaveDetail(int id) => '/manager/leaves/$id';
-  static String managerLeaveDecide(int id) => '/manager/leaves/$id/decide';
+  // Leave requests — backend exposes /approve, /reject AND a /decide alias.
+  static const String managerLeaves = '$_v1/approvals/leaves';
+  static String managerLeaveDetail(int id) => '$_v1/approvals/leaves/$id';
+  static String managerLeaveDecide(int id) =>
+      '$_v1/approvals/leaves/$id/decide';
 }

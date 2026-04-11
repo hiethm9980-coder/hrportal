@@ -276,13 +276,15 @@ class ProfileManager extends Equatable {
   List<Object?> get props => [id];
 }
 
-/// `{id: int, type: string?, start_date: date?, end_date: date?, status: string}`
+/// `{id: int, type: string?, start_date: date?, end_date: date?, status: string,
+///   currency?: {id, code, name, symbol}}`
 class ProfileContract extends Equatable {
   final int id;
   final String? type;
   final String? startDate;  // Y-m-d
   final String? endDate;    // Y-m-d
   final String status;
+  final ContractCurrency? currency;
 
   const ProfileContract({
     required this.id,
@@ -290,15 +292,19 @@ class ProfileContract extends Equatable {
     this.startDate,
     this.endDate,
     required this.status,
+    this.currency,
   });
 
   factory ProfileContract.fromJson(Map<String, dynamic> json) {
     return ProfileContract(
       id: json['id'] as int,
-      type: json['type'] as String?,
+      type: (json['type'] ?? json['contract_type']) as String?,
       startDate: json['start_date'] as String?,
       endDate: json['end_date'] as String?,
       status: json['status'] as String,
+      currency: json['currency'] is Map<String, dynamic>
+          ? ContractCurrency.fromJson(json['currency'] as Map<String, dynamic>)
+          : null,
     );
   }
 
@@ -308,6 +314,41 @@ class ProfileContract extends Equatable {
         'start_date': startDate,
         'end_date': endDate,
         'status': status,
+        if (currency != null) 'currency': currency!.toJson(),
+      };
+
+  @override
+  List<Object?> get props => [id, currency];
+}
+
+/// `{id: int, code: string, name: string, symbol: string?}` (e.g. YER / ر.ي)
+class ContractCurrency extends Equatable {
+  final int id;
+  final String code;
+  final String name;
+  final String? symbol;
+
+  const ContractCurrency({
+    required this.id,
+    required this.code,
+    required this.name,
+    this.symbol,
+  });
+
+  factory ContractCurrency.fromJson(Map<String, dynamic> json) {
+    return ContractCurrency(
+      id: json['id'] as int,
+      code: json['code'] as String,
+      name: json['name'] as String,
+      symbol: json['symbol'] as String?,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'code': code,
+        'name': name,
+        'symbol': symbol,
       };
 
   @override

@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:hr_portal/core/constants/app_colors.dart';
 import 'package:hr_portal/core/constants/app_shadows.dart';
 import 'package:hr_portal/core/localization/app_localizations.dart';
+import 'package:hr_portal/core/services/notification_route_handler.dart';
 import 'package:hr_portal/core/utils/app_funs.dart';
 import 'package:hr_portal/shared/widgets/shared_widgets.dart';
 import 'package:hr_portal/shared/widgets/common_widgets.dart';
@@ -216,7 +217,19 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
               await notifier.markAsRead(n.id);
             }
 
-            if (route.isNotEmpty) {
+            if (route.isNotEmpty && context.mounted) {
+              // Try to open a bottomsheet for known routes (leaves, requests, approvals).
+              final parsed = parseNotificationRoute(route);
+              if (parsed != null) {
+                await handleNotificationRoute(
+                  context: context,
+                  ref: ref,
+                  route: route,
+                );
+                return;
+              }
+
+              // Unknown route — fallback to normal navigation.
               final path = route.startsWith('/') ? route : '/$route';
               if (context.mounted) {
                 context.push(path, extra: n.payload ?? const {});

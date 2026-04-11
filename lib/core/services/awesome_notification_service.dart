@@ -246,6 +246,9 @@ class AwesomeNotificationController {
 
         if (ctx != null && ctx.mounted) {
           ctx.go(route);
+        } else {
+          // App not fully ready (terminated launch) — defer to router redirect.
+          pendingDeepLink = route;
         }
       }
     }

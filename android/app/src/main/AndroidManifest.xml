@@ -1,4 +1,5 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <!-- إذن إشعارات أندرويد 13+ -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
@@ -11,6 +12,16 @@
 
     <!-- لتحميل الصور من الإنترنت إذا استخدمت رابط صورة -->
     <uses-permission android:name="android.permission.INTERNET" />
+
+    <!--
+        إزالة أذونات الوسائط المُدمَجة من إضافة file_picker.
+        التطبيق يستخدم اختيار ملفات PDF/JPG/PNG/ZIP فقط عبر FileType.custom،
+        و Android 13+ يستخدم Photo Picker الذي لا يتطلب أي إذن.
+        Google Play كان يطالب بالإفصاح عنهما في نموذج البيان لذا أزلناهما.
+    -->
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" tools:node="remove" />
+    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" tools:node="remove" />
+    <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" tools:node="remove" />
 
     <!-- Provide required visibility configuration for API level 30 and above -->
     <queries>

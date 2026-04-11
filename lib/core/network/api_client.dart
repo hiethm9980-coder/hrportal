@@ -119,7 +119,7 @@ class ApiClient {
   Future<BaseResponse<T>> post<T>(
     String path, {
     T Function(Object? json)? fromJson,
-    Map<String, dynamic>? data,
+    Object? data,
   }) async {
     final response = await _execute<T>(
       () => _dio.post(path, data: data),

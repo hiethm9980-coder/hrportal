@@ -44,14 +44,26 @@ class AppConfig {
         'base_url': '',
       });
 
-      await remoteConfig.fetchAndActivate();
+      final activated = await remoteConfig.fetchAndActivate();
+      // ignore: avoid_print
+      print('[RemoteConfig] fetchAndActivate => $activated');
+      // ignore: avoid_print
+      print('[RemoteConfig] lastFetchStatus => ${remoteConfig.lastFetchStatus}');
+      // ignore: avoid_print
+      print('[RemoteConfig] lastFetchTime => ${remoteConfig.lastFetchTime}');
 
       final remoteUrl = remoteConfig.getString('base_url');
+      // ignore: avoid_print
+      print('[RemoteConfig] base_url value => "$remoteUrl"');
+
       if (remoteUrl.isNotEmpty) {
         baseUrl = remoteUrl;
       }
-    } catch (_) {
-      // Offline or Firebase error — baseUrl stays empty
+    } catch (e, st) {
+      // ignore: avoid_print
+      print('[RemoteConfig] ERROR: $e');
+      // ignore: avoid_print
+      print('[RemoteConfig] STACK: $st');
     }
   }
 

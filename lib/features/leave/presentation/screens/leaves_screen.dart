@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -8,13 +11,38 @@ import 'package:hr_portal/core/constants/app_shadows.dart';
 import 'package:hr_portal/core/localization/app_localizations.dart';
 import 'package:hr_portal/shared/widgets/common_widgets.dart';
 
+import '../../../../core/providers/core_providers.dart';
+import '../../../../core/services/notification_route_handler.dart';
+import '../../../../core/services/notifications_bus.dart';
 import '../../../../core/utils/app_funs.dart';
+import '../../../../shared/widgets/approval_timeline.dart';
 import '../../../../shared/widgets/shared_widgets.dart';
 import '../../data/models/leave_models.dart';
 import '../providers/leave_providers.dart';
 
+/// Public helper to show the employee leave detail bottomsheet from any screen.
+void showEmployeeLeaveDetailSheet(BuildContext context, LeaveRequest request,
+    {VoidCallback? onChanged}) {
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    constraints: BoxConstraints(
+      maxHeight: MediaQuery.of(context).size.height * 0.80,
+    ),
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+    ),
+    backgroundColor: context.appColors.bgCard,
+    builder: (_) => _LeaveDetailSheet(
+      request: request,
+      onChanged: onChanged ?? () {},
+    ),
+  );
+}
+
 class LeavesScreen extends ConsumerStatefulWidget {
-  const LeavesScreen({super.key});
+  final String? openId;
+  const LeavesScreen({super.key, this.openId});
 
   @override
   ConsumerState<LeavesScreen> createState() => _LeavesScreenState();
@@ -23,6 +51,8 @@ class LeavesScreen extends ConsumerStatefulWidget {
 class _LeavesScreenState extends ConsumerState<LeavesScreen> {
   int _tab = 0;
   DateTimeRange? _dateRange;
+  bool _didAutoOpen = false;
+  StreamSubscription<String>? _routeSub;
 
   static const _labels = ['Pending', 'All', 'Draft', 'Approved', 'Rejected'];
   static const _statusMap = ['pending', null, 'draft', 'approved', 'rejected'];
@@ -39,7 +69,28 @@ class _LeavesScreenState extends ConsumerState<LeavesScreen> {
   @override
   void initState() {
     super.initState();
-    Future.microtask(() => _loadWithFilter());
+    Future.microtask(() {
+      _loadWithFilter();
+      // When opened via notification deep-link, switch to "All" tab
+      // so the target request is visible regardless of its status.
+      if (widget.openId != null) {
+        setState(() => _tab = 1); // "All"
+      }
+    });
+
+    // Auto-refresh when a foreground notification about employee leaves arrives.
+    _routeSub = NotificationsBus.routeStream.listen((route) {
+      final parsed = parseNotificationRoute(route);
+      if (parsed != null && parsed.type == NotificationRouteType.employeeLeave) {
+        _loadWithFilter();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _routeSub?.cancel();
+    super.dispose();
   }
 
   void _loadWithFilter() {
@@ -83,9 +134,31 @@ class _LeavesScreenState extends ConsumerState<LeavesScreen> {
     _loadWithFilter();
   }
 
+  void _tryAutoOpen(LeavesListState state) {
+    if (_didAutoOpen || widget.openId == null) return;
+    if (state.isLoading || state.requests.isEmpty) return;
+    _didAutoOpen = true;
+
+    final targetId = int.tryParse(widget.openId!);
+    if (targetId == null) return;
+
+    final target = state.requests.cast<LeaveRequest?>().firstWhere(
+          (r) => r!.id == targetId,
+          orElse: () => null,
+        );
+    if (target != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _showLeaveDetailSheet(context, ref, target);
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(leavesListProvider);
+
+    // Auto-open bottomsheet when navigated from notification
+    _tryAutoOpen(state);
 
     return Scaffold(
       backgroundColor: context.appColors.bg,
@@ -287,6 +360,7 @@ class _LeavesScreenState extends ConsumerState<LeavesScreen> {
       itemBuilder: (context, index) {
         final r = state.requests[index];
         return _LeaveRequestCard(
+          key: ValueKey('leave-card-${r.id}'),
           request: r,
           onTap: () => _showLeaveDetailSheet(context, ref, r),
         );
@@ -294,20 +368,48 @@ class _LeavesScreenState extends ConsumerState<LeavesScreen> {
     );
   }
 
-  void _showLeaveDetailSheet(BuildContext context, WidgetRef ref, LeaveRequest r) {
-    showModalBottomSheet(
+  Future<void> _showLeaveDetailSheet(BuildContext context, WidgetRef ref, LeaveRequest r) async {
+    // Show loading overlay while fetching fresh data from server.
+    final rootNav = Navigator.of(context, rootNavigator: true);
+    showDialog(
       context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      backgroundColor: context.appColors.bgCard,
-      builder: (_) => _LeaveDetailSheet(
-        request: r,
-        ref: ref,
-        onChanged: () => _loadWithFilter(),
+      barrierDismissible: false,
+      useRootNavigator: true,
+      barrierColor: Colors.black26,
+      builder: (_) => const PopScope(
+        canPop: false,
+        child: Center(child: CircularProgressIndicator()),
       ),
     );
+
+    try {
+      final repo = ref.read(leaveRepositoryProvider);
+      final fresh = await repo.getLeaveDetail(r.id!);
+      rootNav.pop(); // dismiss loading
+      if (!context.mounted) return;
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.80,
+        ),
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        backgroundColor: context.appColors.bgCard,
+        builder: (_) => _LeaveDetailSheet(
+          request: fresh,
+          onChanged: () => _loadWithFilter(),
+        ),
+      );
+    } catch (_) {
+      rootNav.pop(); // dismiss loading
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to load details'.tr(context))),
+        );
+      }
+    }
   }
 }
 
@@ -315,15 +417,119 @@ class _LeavesScreenState extends ConsumerState<LeavesScreen> {
 // Leave Request Card
 // ═══════════════════════════════════════════════════════════════════
 
-class _LeaveRequestCard extends StatelessWidget {
+class _LeaveRequestCard extends ConsumerStatefulWidget {
   final LeaveRequest request;
   final VoidCallback onTap;
 
-  const _LeaveRequestCard({required this.request, required this.onTap});
+  const _LeaveRequestCard({super.key, required this.request, required this.onTap});
+
+  @override
+  ConsumerState<_LeaveRequestCard> createState() => _LeaveRequestCardState();
+}
+
+class _LeaveRequestCardState extends ConsumerState<_LeaveRequestCard> {
+  bool _downloading = false;
+  bool _exists = false;
+  String? _localPath;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkExists();
+  }
+
+  Future<void> _checkExists() async {
+    final r = widget.request;
+    if (r.attachmentPath == null || r.attachmentPath!.isEmpty || r.requestNumber == null) {
+      return;
+    }
+    final svc = ref.read(attachmentServiceProvider);
+    final path = await svc.localPath(
+      key: r.requestNumber!,
+      attachmentPath: r.attachmentPath!,
+    );
+    final ok = await svc.exists(
+      key: r.requestNumber!,
+      attachmentPath: r.attachmentPath!,
+    );
+    if (!mounted) return;
+    setState(() {
+      _localPath = path;
+      _exists = ok;
+    });
+  }
+
+  Future<void> _onDownloadOrOpen() async {
+    final r = widget.request;
+    if (r.attachmentPath == null || r.attachmentPath!.isEmpty || r.requestNumber == null) {
+      return;
+    }
+    final svc = ref.read(attachmentServiceProvider);
+
+    // Web: just open in a new tab.
+    if (kIsWeb) {
+      try {
+        await svc.openInBrowser(r.attachmentPath!);
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(e.toString())),
+          );
+        }
+      }
+      return;
+    }
+
+    // If already downloaded → just open it.
+    if (_exists && _localPath != null) {
+      try {
+        await svc.openLocal(_localPath!);
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(e.toString())),
+          );
+        }
+      }
+      return;
+    }
+
+    // Otherwise → download then refresh state.
+    setState(() => _downloading = true);
+    try {
+      final path = await svc.download(
+        key: r.requestNumber!,
+        attachmentPath: r.attachmentPath!,
+      );
+      if (!mounted) return;
+      setState(() {
+        _downloading = false;
+        _exists = path != null;
+        _localPath = path;
+      });
+      if (path != null) {
+        await svc.openLocal(path);
+      }
+    } catch (e, st) {
+      // Detailed log so backend / network issues are easy to diagnose.
+      final url = svc.buildUrl(r.attachmentPath!);
+      print('err download $url: $e');
+      print(st);
+      if (!mounted) return;
+      setState(() => _downloading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('${'Failed to download file'.tr(context)}\n$e'),
+          duration: const Duration(seconds: 6),
+        ),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final r = request;
+    final r = widget.request;
+    final onTap = widget.onTap;
     final startFormatted = _formatDate(r.startDate);
     final endFormatted = _formatDate(r.endDate);
     final days = r.totalDays;
@@ -438,32 +644,92 @@ class _LeaveRequestCard extends StatelessWidget {
                   ),
                 ],
               ),
-              // Row 3: Approver (if pending)
-              if (r.approver != null && r.approver!.decision == 'pending') ...[
-                const SizedBox(height: 8),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.hourglass_top, size: 14, color: AppColors.warning),
-                    const SizedBox(width: 4),
-                    Flexible(
-                      child: Text(
-                        '${'Awaiting approval from'.tr(context)}: ${r.approver!.name}',
-                        style: TextStyle(fontFamily: 'Cairo',
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.warning,
-                        ),
-                        textAlign: TextAlign.center,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+              // Row 3: Approver (start) | Attachment download (end)
+              Builder(builder: (context) {
+                final isAr =
+                    Localizations.localeOf(context).languageCode == 'ar';
+                final pendingApprover = r.status == 'pending'
+                    ? r.currentApproverDisplay(isAr)
+                    : '';
+                final hasApprover = pendingApprover.isNotEmpty;
+                final hasAttachment =
+                    r.attachmentPath != null && r.attachmentPath!.isNotEmpty;
+                if (!hasApprover && !hasAttachment) {
+                  return const SizedBox.shrink();
+                }
+                return Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Row(
+                    children: [
+                      if (hasApprover)
+                        Expanded(
+                          child: Row(
+                            children: [
+                              Icon(Icons.hourglass_top,
+                                  size: 14, color: AppColors.warning),
+                              const SizedBox(width: 4),
+                              Flexible(
+                                child: Text(
+                                  '${'Awaiting approval from'.tr(context)}: $pendingApprover',
+                                  style: TextStyle(
+                                    fontFamily: 'Cairo',
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.warning,
+                                  ),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                      else
+                        const Spacer(),
+                      if (hasAttachment) _buildAttachmentButton(context),
+                    ],
+                  ),
+                );
+              }),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAttachmentButton(BuildContext context) {
+    if (_downloading) {
+      return Container(
+        width: 32,
+        height: 32,
+        padding: const EdgeInsets.all(7),
+        decoration: BoxDecoration(
+          color: AppColors.primaryMid.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: const CircularProgressIndicator(
+          strokeWidth: 2,
+          valueColor: AlwaysStoppedAnimation<Color>(AppColors.primaryMid),
+        ),
+      );
+    }
+    final showOpen = kIsWeb ? false : _exists;
+    return GestureDetector(
+      onTap: _onDownloadOrOpen,
+      child: Container(
+        width: 32,
+        height: 32,
+        decoration: BoxDecoration(
+          color: showOpen
+              ? AppColors.success.withValues(alpha: 0.12)
+              : AppColors.primaryMid.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Icon(
+          showOpen ? Icons.folder_open_rounded : Icons.download_rounded,
+          size: 18,
+          color: showOpen ? AppColors.success : AppColors.primaryMid,
         ),
       ),
     );
@@ -502,69 +768,181 @@ class _LeaveRequestCard extends StatelessWidget {
 // Leave Detail Bottom Sheet
 // ═══════════════════════════════════════════════════════════════════
 
-class _LeaveDetailSheet extends StatelessWidget {
+class _LeaveDetailSheet extends ConsumerStatefulWidget {
   final LeaveRequest request;
-  final WidgetRef ref;
   final VoidCallback onChanged;
 
-  const _LeaveDetailSheet({required this.request, required this.ref, required this.onChanged});
+  const _LeaveDetailSheet({required this.request, required this.onChanged});
+
+  @override
+  ConsumerState<_LeaveDetailSheet> createState() => _LeaveDetailSheetState();
+}
+
+class _LeaveDetailSheetState extends ConsumerState<_LeaveDetailSheet> {
+  bool _downloading = false;
+  bool _exists = false;
+  String? _localPath;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkExists();
+  }
+
+  Future<void> _checkExists() async {
+    final r = widget.request;
+    if (r.attachmentPath == null || r.attachmentPath!.isEmpty || r.requestNumber == null) {
+      return;
+    }
+    final svc = ref.read(attachmentServiceProvider);
+    final path = await svc.localPath(
+      key: r.requestNumber!,
+      attachmentPath: r.attachmentPath!,
+    );
+    final ok = await svc.exists(
+      key: r.requestNumber!,
+      attachmentPath: r.attachmentPath!,
+    );
+    if (!mounted) return;
+    setState(() {
+      _localPath = path;
+      _exists = ok;
+    });
+  }
+
+  Future<void> _onDownloadOrOpen() async {
+    final r = widget.request;
+    if (r.attachmentPath == null || r.attachmentPath!.isEmpty || r.requestNumber == null) {
+      return;
+    }
+    final svc = ref.read(attachmentServiceProvider);
+
+    if (kIsWeb) {
+      try {
+        await svc.openInBrowser(r.attachmentPath!);
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+        }
+      }
+      return;
+    }
+
+    if (_exists && _localPath != null) {
+      try {
+        await svc.openLocal(_localPath!);
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+        }
+      }
+      return;
+    }
+
+    setState(() => _downloading = true);
+    try {
+      final path = await svc.download(
+        key: r.requestNumber!,
+        attachmentPath: r.attachmentPath!,
+      );
+      if (!mounted) return;
+      setState(() {
+        _downloading = false;
+        _exists = path != null;
+        _localPath = path;
+      });
+      if (path != null) {
+        await svc.openLocal(path);
+      }
+    } catch (e, st) {
+      final url = svc.buildUrl(r.attachmentPath!);
+      print('err download $url: $e');
+      print(st);
+      if (!mounted) return;
+      setState(() => _downloading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('${'Failed to download file'.tr(context)}\n$e'),
+          duration: const Duration(seconds: 6),
+        ),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final r = request;
-    return Padding(
-      padding: EdgeInsets.only(
-        top: 16,
-        left: 20,
-        right: 20,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Handle
-          Container(
-            width: 40, height: 4,
-            decoration: BoxDecoration(
-              color: context.appColors.gray200,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          const SizedBox(height: 16),
-
-          // Title & Status
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    final r = widget.request;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // ── Fixed header (handle + close + title + status badge) ──
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              GestureDetector(
-                onTap: () => Navigator.pop(context),
-                child: Padding(
-                  padding: const EdgeInsetsDirectional.only(end: 10, top: 2),
-                  child: Icon(Icons.close, size: 22, color: context.appColors.textMuted),
+              // Handle
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: context.appColors.gray200,
+                  borderRadius: BorderRadius.circular(2),
                 ),
               ),
-              Expanded(
-                child: Text(
-                  r.leaveType?.name ?? 'Leave'.tr(context),
-                  style: TextStyle(fontFamily: 'Cairo',
-                    fontSize: 18,
-                    fontWeight: FontWeight.w800,
-                    color: context.appColors.textPrimary,
+              const SizedBox(height: 16),
+
+              // Title & Status
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  GestureDetector(
+                    onTap: () => Navigator.pop(context),
+                    child: Padding(
+                      padding:
+                          const EdgeInsetsDirectional.only(end: 10, top: 2),
+                      child: Icon(Icons.close,
+                          size: 22, color: context.appColors.textMuted),
+                    ),
                   ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              StatusBadge(
-                text: _statusLabel(r.status).tr(context),
-                type: _statusType(r.status),
-                dot: true,
+                  Expanded(
+                    child: Text(
+                      r.leaveType?.name ?? 'Leave'.tr(context),
+                      style: TextStyle(
+                        fontFamily: 'Cairo',
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                        color: context.appColors.textPrimary,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  StatusBadge(
+                    text: _statusLabel(r.status).tr(context),
+                    type: _statusType(r.status),
+                    dot: true,
+                  ),
+                ],
               ),
             ],
           ),
-          const SizedBox(height: 20),
+        ),
+        Divider(height: 1, color: context.appColors.gray200),
 
-          // Info Rows
-          if (r.requestNumber != null)
+        // ── Scrollable body ──
+        Flexible(
+          child: SingleChildScrollView(
+            padding: EdgeInsets.only(
+              top: 16,
+              left: 20,
+              right: 20,
+              bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Info Rows
+                if (r.requestNumber != null)
             _LeaveDetailRow(icon: '🔢', label: 'Code'.tr(context), value: r.requestNumber!),
           _LeaveDetailRow(icon: '📅', label: 'From'.tr(context), value: AppFuns.formatDate(DateTime.tryParse(r.startDate))),
           _LeaveDetailRow(icon: '📅', label: 'To'.tr(context), value: AppFuns.formatDate(DateTime.tryParse(r.endDate))),
@@ -579,17 +957,17 @@ class _LeaveDetailSheet extends StatelessWidget {
               label: 'Reason'.tr(context),
               value: r.reason!,
             ),
+          if (r.attachmentPath != null && r.attachmentPath!.isNotEmpty)
+            _LeaveDetailRow(
+              icon: '📎',
+              label: 'Attachment'.tr(context),
+              value: r.attachmentName ?? '${r.requestNumber ?? ''}.${_extOf(r.attachmentPath!)}',
+            ),
           if (r.rejectionReason != null && r.rejectionReason!.isNotEmpty)
             _LeaveDetailRow(
               icon: '❌',
               label: 'Rejection reason'.tr(context),
               value: r.rejectionReason!,
-            ),
-          if (r.approver != null && r.approver!.decision == 'pending')
-            _LeaveDetailRow(
-              icon: '👤',
-              label: 'Awaiting approval from'.tr(context),
-              value: r.approver!.name,
             ),
           if (r.createdAt != null)
             _LeaveDetailRow(
@@ -597,6 +975,26 @@ class _LeaveDetailSheet extends StatelessWidget {
               label: 'Created at'.tr(context),
               value: _formatDateTime(r.createdAt!),
             ),
+
+          // Approval Timeline (stepper)
+          if (r.approvalHistory.isNotEmpty || r.approvalChain.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            ApprovalTimeline(
+              chain: r.approvalChain,
+              history: r.approvalHistory,
+              totalLevels: r.totalLevels ??
+                  (r.approvalChain.isNotEmpty
+                      ? r.approvalChain.length
+                      : r.approvalHistory.length),
+              currentLevel: r.currentApprovalLevel,
+            ),
+          ],
+
+          // Attachment download/open (full width, above action buttons)
+          if (r.attachmentPath != null && r.attachmentPath!.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            _buildAttachmentButton(context),
+          ],
 
           // Action buttons
           if (r.canSubmit || r.canDelete) ...[
@@ -638,7 +1036,62 @@ class _LeaveDetailSheet extends StatelessWidget {
             ),
           ],
           const SizedBox(height: 8),
-        ],
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  String _extOf(String path) {
+    final cleaned = path.split('?').first.split('#').first;
+    final lastDot = cleaned.lastIndexOf('.');
+    final lastSlash = cleaned.lastIndexOf('/');
+    if (lastDot > lastSlash && lastDot != -1) {
+      return cleaned.substring(lastDot + 1).toLowerCase();
+    }
+    return 'file';
+  }
+
+  Widget _buildAttachmentButton(BuildContext context) {
+    final showOpen = kIsWeb ? false : _exists;
+    final bgColor = showOpen ? AppColors.success : AppColors.primaryMid;
+    final label = _downloading
+        ? 'Downloading...'.tr(context)
+        : showOpen
+            ? 'Open file'.tr(context)
+            : 'Download file'.tr(context);
+
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton.icon(
+        onPressed: _downloading ? null : _onDownloadOrOpen,
+        icon: _downloading
+            ? const SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+              )
+            : Icon(
+                showOpen ? Icons.folder_open_rounded : Icons.download_rounded,
+                size: 20,
+              ),
+        label: Text(
+          label,
+          style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w700),
+        ),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: bgColor,
+          foregroundColor: Colors.white,
+          disabledBackgroundColor: bgColor.withValues(alpha: 0.7),
+          disabledForegroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
       ),
     );
   }
@@ -646,7 +1099,7 @@ class _LeaveDetailSheet extends StatelessWidget {
   void _submitLeave(BuildContext context, int id) async {
     Navigator.pop(context);
     final success = await ref.read(leavesListProvider.notifier).submitLeave(id);
-    onChanged();
+    widget.onChanged();
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -678,7 +1131,7 @@ class _LeaveDetailSheet extends StatelessWidget {
               Navigator.pop(ctx);
               Navigator.pop(context);
               final success = await ref.read(leavesListProvider.notifier).deleteLeave(id);
-              onChanged();
+              widget.onChanged();
               if (context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
@@ -732,8 +1185,16 @@ class _LeaveDetailRow extends StatelessWidget {
   final String icon;
   final String label;
   final String value;
+  final Color? valueColor;
+  final bool underline;
 
-  const _LeaveDetailRow({required this.icon, required this.label, required this.value});
+  const _LeaveDetailRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+    this.valueColor,
+    this.underline = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -752,7 +1213,9 @@ class _LeaveDetailRow extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(value, style: TextStyle(fontFamily: 'Cairo',
                     fontSize: 13, fontWeight: FontWeight.w600,
-                    color: context.appColors.textPrimary)),
+                    color: valueColor ?? context.appColors.textPrimary,
+                    decoration: underline ? TextDecoration.underline : null,
+                    decorationColor: valueColor)),
               ],
             ),
           ),

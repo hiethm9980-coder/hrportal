@@ -24,12 +24,18 @@ import '../features/profile/presentation/screens/profile_screen.dart';
 /// Global navigator key for SessionManager callback.
 final rootNavigatorKey = GlobalKey<NavigatorState>();
 
+/// Pending deep-link route from a notification that launched the app while
+/// it was terminated. Consumed once by the GoRouter redirect so the user
+/// lands on the correct screen after auth completes.
+String? pendingDeepLink;
+
 /// GoRouter configuration.
 ///
 /// Auth redirect logic:
 /// - If [AuthStatus.unknown] → stay on /splash
 /// - If [AuthStatus.unauthenticated] → redirect to /login
 /// - If [AuthStatus.authenticated] and on /splash or /login → redirect to /
+///   (or to [pendingDeepLink] if set)
 final routerProvider = Provider<GoRouter>((ref) {
   final authState = ref.watch(authProvider);
 
@@ -53,9 +59,13 @@ final routerProvider = Provider<GoRouter>((ref) {
         return '/login';
       }
 
-      // Authenticated but on splash or login → go home.
+      // Authenticated but on splash or login → go home (or pending deep-link).
       if (auth.isAuthenticated) {
-        if (location == '/splash' || location == '/login') return '/';
+        if (location == '/splash' || location == '/login') {
+          final deepLink = pendingDeepLink;
+          pendingDeepLink = null; // consume once
+          return deepLink ?? '/';
+        }
       }
 
       return null; // No redirect needed.
@@ -78,13 +88,30 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/leaves',
-            builder: (_, _) => const LeavesScreen(),
+            builder: (_, state) => LeavesScreen(
+              openId: state.uri.queryParameters['openId'],
+            ),
             routes: [
               GoRoute(
                 path: 'create',
                 builder: (_, _) => const CreateLeaveScreen(),
               ),
+              GoRoute(
+                path: ':id',
+                redirect: (_, state) {
+                  final id = state.pathParameters['id'];
+                  return '/leaves?openId=$id';
+                },
+              ),
             ],
+          ),
+          // Alias: backend sends /leave-requests/{id} to the employee
+          GoRoute(
+            path: '/leave-requests/:id',
+            redirect: (_, state) {
+              final id = state.pathParameters['id'];
+              return '/leaves?openId=$id';
+            },
           ),
           GoRoute(
             path: '/payroll',
@@ -99,18 +126,46 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/requests',
-            builder: (_, _) => const RequestsScreen(),
+            builder: (_, state) => RequestsScreen(
+              openId: state.uri.queryParameters['openId'],
+            ),
             routes: [
               GoRoute(
                 path: 'create',
                 builder: (_, _) => const CreateRequestScreen(),
+              ),
+              GoRoute(
+                path: ':id',
+                redirect: (_, state) {
+                  final id = state.pathParameters['id'];
+                  return '/requests?openId=$id';
+                },
               ),
             ],
           ),
 
           GoRoute(
             path: '/approvals',
-            builder: (_, _) => const ManagerRequestsScreen(),
+            builder: (_, state) => ManagerRequestsScreen(
+              openLeaveId: state.uri.queryParameters['openLeaveId'],
+              openRequestId: state.uri.queryParameters['openRequestId'],
+            ),
+            routes: [
+              GoRoute(
+                path: 'leaves/:id',
+                redirect: (_, state) {
+                  final id = state.pathParameters['id'];
+                  return '/approvals?openLeaveId=$id';
+                },
+              ),
+              GoRoute(
+                path: 'requests/:id',
+                redirect: (_, state) {
+                  final id = state.pathParameters['id'];
+                  return '/approvals?openRequestId=$id';
+                },
+              ),
+            ],
           ),
 
           GoRoute(
@@ -141,17 +196,17 @@ class _MainShell extends ConsumerWidget {
 
   const _MainShell({required this.state, required this.child});
 
-  int _currentIndex(bool isManager) {
+  int _currentIndex(bool showApprovals) {
     final location = state.matchedLocation;
     if (location.startsWith('/attendance')) return 1;
     if (location.startsWith('/leaves')) return 2;
     if (location.startsWith('/payroll')) return 3;
     if (location.startsWith('/requests')) return 4;
-    if (isManager && location.startsWith('/approvals')) return 5;
+    if (showApprovals && location.startsWith('/approvals')) return 5;
     return 0;
   }
 
-  void _onDestinationSelected(BuildContext context, int index, bool isManager) {
+  void _onDestinationSelected(BuildContext context, int index, bool showApprovals) {
     switch (index) {
       case 0:
         context.go('/');
@@ -169,7 +224,7 @@ class _MainShell extends ConsumerWidget {
         context.go('/requests');
         break;
       case 5:
-        if (isManager) context.go('/approvals');
+        if (showApprovals) context.go('/approvals');
         break;
     }
   }
@@ -177,8 +232,10 @@ class _MainShell extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final auth = ref.watch(authProvider);
-    final isManager = auth.isManager;
-    final currentIdx = _currentIndex(isManager);
+    // Show the Approvals destination if the backend says the user has any
+    // actionable approvals OR they have legacy manager permissions.
+    final showApprovals = auth.hasAnyApprovals;
+    final currentIdx = _currentIndex(showApprovals);
     final width = MediaQuery.sizeOf(context).width;
     final isMobile = width < AppBreakpoints.mobile;
     final isExtended = width >= AppBreakpoints.tablet;
@@ -209,39 +266,39 @@ class _MainShell extends ConsumerWidget {
                     icon: '🏠',
                     label: 'Home'.tr(context),
                     active: currentIdx == 0,
-                    onTap: () => _onDestinationSelected(context, 0, isManager),
+                    onTap: () => _onDestinationSelected(context, 0, showApprovals),
                   ),
                   _NavItem(
                     icon: '⏱',
                     label: 'Attendance'.tr(context),
                     active: currentIdx == 1,
-                    onTap: () => _onDestinationSelected(context, 1, isManager),
+                    onTap: () => _onDestinationSelected(context, 1, showApprovals),
                   ),
                   _NavItem(
                     icon: '🌴',
                     label: 'Leaves'.tr(context),
                     active: currentIdx == 2,
-                    onTap: () => _onDestinationSelected(context, 2, isManager),
+                    onTap: () => _onDestinationSelected(context, 2, showApprovals),
                   ),
                   _NavItem(
                     icon: '💰',
                     label: 'Payroll'.tr(context),
                     active: currentIdx == 3,
-                    onTap: () => _onDestinationSelected(context, 3, isManager),
+                    onTap: () => _onDestinationSelected(context, 3, showApprovals),
                   ),
                   _NavItem(
                     icon: '📝',
                     label: 'Requests'.tr(context),
                     active: currentIdx == 4,
-                    onTap: () => _onDestinationSelected(context, 4, isManager),
+                    onTap: () => _onDestinationSelected(context, 4, showApprovals),
                   ),
-                  if (isManager)
+                  if (showApprovals)
                     _NavItem(
                       icon: '✅',
                       label: 'Approvals'.tr(context),
                       active: currentIdx == 5,
                       onTap: () =>
-                          _onDestinationSelected(context, 5, isManager),
+                          _onDestinationSelected(context, 5, showApprovals),
                     ),
                 ],
               ),
@@ -278,7 +335,7 @@ class _MainShell extends ConsumerWidget {
         selectedIcon: const Icon(Icons.description),
         label: Text('Requests'.tr(context)),
       ),
-      if (isManager)
+      if (showApprovals)
         NavigationRailDestination(
           icon: const Icon(Icons.assignment_turned_in_outlined),
           selectedIcon: const Icon(Icons.assignment_turned_in),
@@ -292,7 +349,7 @@ class _MainShell extends ConsumerWidget {
           NavigationRail(
             selectedIndex: currentIdx,
             onDestinationSelected: (index) =>
-                _onDestinationSelected(context, index, isManager),
+                _onDestinationSelected(context, index, showApprovals),
             extended: isExtended,
             labelType: isExtended
                 ? NavigationRailLabelType.none

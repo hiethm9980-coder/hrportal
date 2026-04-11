@@ -16,6 +16,7 @@ import '../../features/auth/data/repositories/auth_repository.dart';
 import '../../features/profile/data/repositories/profile_repository.dart';
 import '../../features/attendance/data/repositories/attendance_repository.dart';
 import '../../features/leave/data/repositories/leave_repository.dart';
+import '../../core/services/attachment_service.dart';
 import '../../features/payroll/data/repositories/payroll_repository.dart';
 import '../../features/requests/data/repositories/request_repository.dart';
 import '../../features/manager_requests/data/repositories/manager_request_repository.dart';
@@ -45,6 +46,10 @@ final attendanceRepositoryProvider = Provider<AttendanceRepository>(
 
 final leaveRepositoryProvider = Provider<LeaveRepository>(
   (_) => sl<LeaveRepository>(),
+);
+
+final attachmentServiceProvider = Provider<AttachmentService>(
+  (_) => AttachmentService(storage: sl<SecureTokenStorage>()),
 );
 
 final payrollRepositoryProvider = Provider<PayrollRepository>(
