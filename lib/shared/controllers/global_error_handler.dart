@@ -182,7 +182,7 @@ class GlobalErrorHandler {
     switch (error.action) {
       case ErrorAction.showFieldErrors:
         // Field errors are handled inline by form widgets.
-        // Show a summary snackbar as well.
+        // Show the server message directly (already user-friendly).
         _showSnackbar(context, error.message, isError: true);
         break;
 

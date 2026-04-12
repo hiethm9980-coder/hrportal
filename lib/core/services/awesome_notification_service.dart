@@ -3,6 +3,7 @@ import 'package:awesome_notifications/awesome_notifications.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hr_portal/core/services/notification_action_service.dart';
 import 'package:hr_portal/router/app_router.dart';
 import 'package:share_plus/share_plus.dart';
 
@@ -14,12 +15,10 @@ class AwesomeNotificationService {
   static bool _bgInited = false;
 
   /// تهيئة الحزمة والقناة + تسجيل المستمعات
-  /// ملاحظة: على الويب لا تطلب الإذن هنا (خليه من زر)
   static Future<void> init() async {
     if (_inited) return;
     _inited = true;
     await AwesomeNotifications().initialize(
-      // على الويب: الأفضل null (بدون resource://)
       kIsWeb ? null : 'resource://drawable/ic_notify',
       [
         NotificationChannel(
@@ -31,10 +30,7 @@ class AwesomeNotificationService {
           channelShowBadge: true,
           defaultColor: const Color(0xffe7b245),
           ledColor: Colors.white,
-
-          // على الويب عطّل/اتركها null
           playSound: !kIsWeb,
-          // soundSource: kIsWeb ? null : 'resource://raw/notify',
           icon: kIsWeb ? null : 'resource://drawable/ic_notify',
         ),
       ],
@@ -58,7 +54,6 @@ class AwesomeNotificationService {
           AwesomeNotificationController.onDismissedActionReceivedMethod,
     );
 
-    // ❌ لا تطلب الإذن تلقائياً على الويب
     if (!kIsWeb) {
       await requestPermissionFromUser();
     }
@@ -67,7 +62,6 @@ class AwesomeNotificationService {
   static Future<void> initForBackground() async {
     if (_bgInited) return;
     _bgInited = true;
-    // لا permissions ولا listeners هنا
     await AwesomeNotifications().initialize(
       kIsWeb ? null : 'resource://drawable/ic_notify',
       [
@@ -92,7 +86,6 @@ class AwesomeNotificationService {
     );
   }
 
-  /// استدعها من زر "تفعيل الإشعارات" (خصوصاً للويب)
   static Future<void> requestPermissionFromUser() async {
     final allowed = await AwesomeNotifications().isNotificationAllowed();
     if (!allowed) {
@@ -108,7 +101,6 @@ class AwesomeNotificationService {
     String? imageUrl,
     Map<String, String>? payload,
   }) async {
-    // على الويب: لو ما في إذن، لا تحاول ترسل إشعار (أفضل UX)
     if (kIsWeb) {
       final allowed = await AwesomeNotifications().isNotificationAllowed();
       if (!allowed) return;
@@ -123,57 +115,68 @@ class AwesomeNotificationService {
       'body': payload?['body'] ?? bodyEn,
     };
 
+    // Determine if this is an approval notification (for managers).
+    final route = payload?['route'];
+    final isApproval = NotificationActionService.isApprovalRoute(route);
+
+    // Build action buttons based on notification type.
+    final List<NotificationActionButton> actionButtons;
+
+    if (isApproval) {
+      // Manager approval notification — show approve/reject with reply input.
+      actionButtons = [
+        NotificationActionButton(
+          key: 'APPROVE',
+          label: 'Approve',
+          requireInputText: true,
+          actionType: ActionType.SilentBackgroundAction,
+          color: const Color(0xFF16A34A),
+        ),
+        NotificationActionButton(
+          key: 'REJECT',
+          label: 'Reject',
+          requireInputText: true,
+          actionType: ActionType.SilentBackgroundAction,
+          color: const Color(0xFFDC2626),
+        ),
+      ];
+    } else {
+      // Employee notification — no action buttons.
+      actionButtons = [];
+    }
+
     await AwesomeNotifications().createNotification(
       content: NotificationContent(
         id: id,
         channelKey: channelKey,
         title: titleEn,
         body: bodyEn,
-
-        // على الويب: لا تضع icon resource://
         icon: kIsWeb ? null : 'resource://drawable/ic_notify',
-
-        // الويب غالباً سيتجاهل Layouts المتقدمة، لكن لا بأس
         notificationLayout: hasImage
             ? NotificationLayout.BigPicture
             : NotificationLayout.BigText,
         bigPicture: hasImage ? imageUrl : null,
         largeIcon: hasImage ? imageUrl : null,
         hideLargeIconOnExpand: true,
-
         payload: mergedPayload,
       ),
       localizations: {
         'ar': NotificationLocalization(
           title: titleAr,
           body: bodyAr,
-          buttonLabels: {'OPEN': 'فتح', 'SHARE': 'مشاركة', 'DISMISS': 'إلغاء'},
+          buttonLabels: isApproval
+              ? {'APPROVE': 'موافقة ✅', 'REJECT': 'رفض ❌'}
+              : {},
         ),
         'en': NotificationLocalization(
           title: titleEn,
           body: bodyEn,
-          buttonLabels: {'OPEN': 'Open', 'SHARE': 'Share', 'DISMISS': 'Cancel'},
+          buttonLabels: isApproval
+              ? {'APPROVE': 'Approve ✅', 'REJECT': 'Reject ❌'}
+              : {},
         ),
       },
-
-      // ملاحظة: أزرار الإجراء قد لا تظهر في بعض المتصفحات على الويب
-      actionButtons: [
-        NotificationActionButton(
-          key: 'OPEN',
-          label: 'Open',
-          actionType: ActionType.Default,
-        ),
-        NotificationActionButton(
-          key: 'SHARE',
-          label: 'Share',
-          actionType: ActionType.Default,
-        ),
-        NotificationActionButton(
-          key: 'DISMISS',
-          label: 'Cancel',
-          actionType: ActionType.DismissAction,
-        ),
-      ],
+      actionButtons: actionButtons,
     );
   }
 
@@ -187,13 +190,13 @@ class AwesomeNotificationService {
   }
 }
 
+@pragma('vm:entry-point')
 class AwesomeNotificationController {
   @pragma('vm:entry-point')
   static Future<void> onNotificationCreatedMethod(
     ReceivedNotification received,
   ) async {
     print('🛠 [CREATED] id=${received.id} title=${received.title}');
-    print('🧩 [CREATED payload] ${received.payload}');
   }
 
   @pragma('vm:entry-point')
@@ -201,19 +204,75 @@ class AwesomeNotificationController {
     ReceivedNotification received,
   ) async {
     print('👀 [DISPLAYED] id=${received.id} body=${received.body}');
-    print('🧩 [DISPLAYED payload] ${received.payload}');
   }
 
   @pragma('vm:entry-point')
   static Future<void> onActionReceivedMethod(ReceivedAction action) async {
-    final String key = action.buttonKeyPressed ?? '';
+    // Ensure Flutter binding is available (needed in background isolate).
+    WidgetsFlutterBinding.ensureInitialized();
+
+    final String key = action.buttonKeyPressed;
     final bool isBodyTap = key.isEmpty || key == 'DEFAULT';
 
     print(
       '🖱️ [ACTION] key=${key.isEmpty ? '(body)' : key} type=${action.actionType}',
     );
-    print('🧩 [ACTION payload] ${action.payload}');
 
+    // ── Approve / Reject from notification ──
+    if (key == 'APPROVE' || key == 'REJECT') {
+      try {
+        final route = action.payload?['route'];
+        if (route == null || route.isEmpty) {
+          print('📋 [DECISION] No route in payload, skipping');
+          return;
+        }
+
+        final notes = action.buttonKeyInput;
+        final decision = key == 'APPROVE' ? 'approved' : 'rejected';
+
+        print('📋 [DECISION] $decision for route=$route notes="$notes"');
+
+        // احذف الإشعار فوراً بعد الإرسال (لا ننتظر رد السيرفر).
+        await AwesomeNotifications().dismiss(action.id!);
+
+        final result = await NotificationActionService.executeDecision(
+          route: route,
+          decision: decision,
+          notes: notes,
+        );
+
+        print('📋 [DECISION RESULT] success=${result.success} msg=${result.message}');
+
+        if (!result.success) {
+          // ❌ فشل — إشعار خطأ.
+          await AwesomeNotifications().createNotification(
+            content: NotificationContent(
+              id: DateTime.now().millisecondsSinceEpoch.remainder(100000),
+              channelKey: AwesomeNotificationService.channelKey,
+              title: 'فشل الإجراء ⚠️ قم باتخاذ القرار من التطبيق',
+              body: result.message ?? 'حدث خطأ غير متوقع',
+              notificationLayout: NotificationLayout.Default,
+            ),
+          );
+        }
+      } catch (e, s) {
+        print('📋 [DECISION ERROR] $e');
+        print('📋 [DECISION STACK] $s');
+        // Show error notification.
+        await AwesomeNotifications().createNotification(
+          content: NotificationContent(
+            id: DateTime.now().millisecondsSinceEpoch.remainder(100000),
+            channelKey: AwesomeNotificationService.channelKey,
+            title: 'فشل الإجراء ⚠️ قم باتخاذ القرار من التطبيق',
+            body: '$e',
+            notificationLayout: NotificationLayout.Default,
+          ),
+        );
+      }
+      return;
+    }
+
+    // ── Share ──
     if (key == 'SHARE') {
       final title = (action.title ?? '').trim();
       final body = (action.body ?? '').trim();
@@ -239,15 +298,14 @@ class AwesomeNotificationController {
       return;
     }
 
+    // ── Body tap or OPEN ──
     if (isBodyTap || key == 'OPEN') {
       final route = action.payload?['route'];
       if (route != null && route.isNotEmpty) {
         final ctx = rootNavigatorKey.currentContext;
-
         if (ctx != null && ctx.mounted) {
           ctx.go(route);
         } else {
-          // App not fully ready (terminated launch) — defer to router redirect.
           pendingDeepLink = route;
         }
       }
@@ -259,7 +317,6 @@ class AwesomeNotificationController {
     ReceivedAction action,
   ) async {
     print('❌ [DISMISSED] id=${action.id}');
-    print('🧩 [DISMISSED payload] ${action.payload}');
     await AwesomeNotifications().setGlobalBadgeCounter(0);
   }
 }

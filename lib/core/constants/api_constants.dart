@@ -88,4 +88,10 @@ class ApiConstants {
   static String managerLeaveDetail(int id) => '$_v1/approvals/leaves/$id';
   static String managerLeaveDecide(int id) =>
       '$_v1/approvals/leaves/$id/decide';
+
+  // ── Booked Days (calendar overlap prevention) ─────────────────────
+  static const String bookedDays = '$_v1/leave-requests/booked-days';
+
+  // ── Holidays ──────────────────────────────────────────────────────
+  static const String holidays = '$_v1/holidays';
 }

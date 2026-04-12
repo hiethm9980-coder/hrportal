@@ -10,6 +10,7 @@ import 'features/payroll/data/repositories/payroll_repository.dart';
 import 'features/profile/data/repositories/profile_repository.dart';
 import 'features/requests/data/repositories/request_repository.dart';
 import 'features/manager_requests/data/repositories/manager_request_repository.dart';
+import 'features/holidays/data/repositories/holiday_repository.dart';
 import 'features/manager_requests/data/repositories/manager_leave_repository.dart';
 
 final sl = GetIt.instance;
@@ -85,5 +86,10 @@ Future<void> initDependencies() async {
   // ── Feature: Manager Leaves (Approvals) ─────────────────────────
   sl.registerLazySingleton<ManagerLeaveRepository>(
     () => ManagerLeaveRepository(client: sl<ApiClient>()),
+  );
+
+  // ── Feature: Holidays ──────────────────────────────────────────────
+  sl.registerLazySingleton<HolidayRepository>(
+    () => HolidayRepository(client: sl<ApiClient>()),
   );
 }

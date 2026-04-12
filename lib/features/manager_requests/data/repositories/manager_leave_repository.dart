@@ -72,7 +72,7 @@ class ManagerLeaveRepository {
       data: {
         'status': status,
         if (rejectionReason != null && rejectionReason.isNotEmpty)
-          'rejection_reason': rejectionReason,
+          'notes': rejectionReason,
       },
     );
   }

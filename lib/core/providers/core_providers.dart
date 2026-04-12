@@ -20,6 +20,7 @@ import '../../core/services/attachment_service.dart';
 import '../../features/payroll/data/repositories/payroll_repository.dart';
 import '../../features/requests/data/repositories/request_repository.dart';
 import '../../features/manager_requests/data/repositories/manager_request_repository.dart';
+import '../../features/holidays/data/repositories/holiday_repository.dart';
 import '../../features/manager_requests/data/repositories/manager_leave_repository.dart';
 
 // ── Core Services ────────────────────────────────────────────────────
@@ -68,4 +69,8 @@ final managerRequestRepositoryProvider =
 final managerLeaveRepositoryProvider =
     Provider<ManagerLeaveRepository>(
   (_) => sl<ManagerLeaveRepository>(),
+);
+
+final holidayRepositoryProvider = Provider<HolidayRepository>(
+  (_) => sl<HolidayRepository>(),
 );

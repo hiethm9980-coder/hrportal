@@ -283,7 +283,7 @@ class EmployeeRequest extends Equatable {
   bool get isDraft => status == 'draft';
   bool get isPending => status == 'pending';
   bool get canSubmit => isDraft;
-  bool get canDelete => isDraft || isPending;
+  bool get canDelete => isDraft;
   bool get isFinancial =>
       requestType?.isFinancial == true || amount != null;
 

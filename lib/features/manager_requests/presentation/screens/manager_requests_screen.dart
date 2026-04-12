@@ -1106,7 +1106,7 @@ class _ManagerLeaveDetailSheetState
                   hintStyle: TextStyle(fontFamily: 'Cairo',
                       fontSize: 12, color: context.appColors.textMuted),
                   errorText:
-                      decideState.fieldError('rejection_reason'),
+                      decideState.fieldError('notes') ?? decideState.fieldError('rejection_reason'),
                 ),
               ),
 
@@ -1315,6 +1315,9 @@ class _ManagerRequestTile extends ConsumerWidget {
     }
   }
 
+  String _formatAmount(double v) =>
+      v == v.truncateToDouble() ? v.toInt().toString() : v.toStringAsFixed(2);
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return GestureDetector(
@@ -1386,7 +1389,28 @@ class _ManagerRequestTile extends ConsumerWidget {
               ],
             ),
 
-            // ── Row 3: Current approver (shown when not this user's turn) ──
+            // ── Row 3: Amount + Currency (financial requests) ──
+            if (request.amount != null) ...[
+              const SizedBox(height: 6),
+              Row(
+                children: [
+                  Icon(Icons.payments_outlined,
+                      size: 14, color: AppColors.teal),
+                  const SizedBox(width: 4),
+                  Text(
+                    '${_formatAmount(request.amount!)} ${request.currency?.code ?? ''}',
+                    style: TextStyle(
+                      fontFamily: 'Cairo',
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.teal,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+
+            // ── Row 4: Current approver (shown when not this user's turn) ──
             if (!request.canDecide)
               ..._buildCurrentApproverRow(context, request.approvalHistory),
           ],
@@ -1548,6 +1572,9 @@ class _ManagerRequestDetailSheetState
     }
   }
 
+  String _formatAmount(double v) =>
+      v == v.truncateToDouble() ? v.toInt().toString() : v.toStringAsFixed(2);
+
   bool get _canDecide => widget.request.canDecide;
 
   void _handleDecide(String status) {
@@ -1680,6 +1707,12 @@ class _ManagerRequestDetailSheetState
                   ? r.createdAt.substring(0, 10)
                   : r.createdAt,
             ),
+            if (r.amount != null)
+              _InfoRow(
+                icon: '💰',
+                label: 'Amount'.tr(context),
+                value: '${_formatAmount(r.amount!)} ${r.currency?.code ?? ''}',
+              ),
             if (r.description != null && r.description!.isNotEmpty)
               _InfoRow(
                 icon: '📝',
@@ -1752,7 +1785,7 @@ class _ManagerRequestDetailSheetState
                   hintText: 'Add notes (required for rejection)'.tr(context),
                   hintStyle: TextStyle(fontFamily: 'Cairo',
                       fontSize: 12, color: context.appColors.textMuted),
-                  errorText: decideState.fieldError('response_notes'),
+                  errorText: decideState.fieldError('notes') ?? decideState.fieldError('response_notes'),
                 ),
               ),
 

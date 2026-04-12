@@ -60,6 +60,10 @@ class ManagerRequest extends Equatable {
   final bool canDecide;
   final List<ApprovalChainItem> approvalChain;
   final List<ApprovalHistoryItem> approvalHistory;
+  /// Financial fields.
+  final double? amount;
+  final int? currencyId;
+  final ManagerRequestCurrency? currency;
   /// Single attachment — backend stores at most one file per employee request.
   final String? attachmentPath;
   final String? attachmentUrl;
@@ -81,6 +85,9 @@ class ManagerRequest extends Equatable {
     this.canDecide = false,
     this.approvalChain = const [],
     this.approvalHistory = const [],
+    this.amount,
+    this.currencyId,
+    this.currency,
     this.attachmentPath,
     this.attachmentUrl,
   });
@@ -120,6 +127,12 @@ class ManagerRequest extends Equatable {
                   ApprovalHistoryItem.fromJson(e as Map<String, dynamic>))
               .toList() ??
           const [],
+      amount: (json['amount'] as num?)?.toDouble(),
+      currencyId: (json['currency_id'] as num?)?.toInt(),
+      currency: json['currency'] is Map<String, dynamic>
+          ? ManagerRequestCurrency.fromJson(
+              json['currency'] as Map<String, dynamic>)
+          : null,
       attachmentPath: json['attachment_path'] as String?,
       attachmentUrl: json['attachment_url'] as String?,
     );
@@ -149,6 +162,33 @@ class ManagerRequestsData {
           Pagination.fromJson(json['pagination'] as Map<String, dynamic>),
     );
   }
+}
+
+/// Currency info embedded in a manager request.
+class ManagerRequestCurrency extends Equatable {
+  final int id;
+  final String code;
+  final String name;
+  final String? symbol;
+
+  const ManagerRequestCurrency({
+    required this.id,
+    required this.code,
+    required this.name,
+    this.symbol,
+  });
+
+  factory ManagerRequestCurrency.fromJson(Map<String, dynamic> json) {
+    return ManagerRequestCurrency(
+      id: (json['id'] as num).toInt(),
+      code: (json['code'] as String?) ?? '',
+      name: (json['name'] as String?) ?? '',
+      symbol: json['symbol'] as String?,
+    );
+  }
+
+  @override
+  List<Object?> get props => [id];
 }
 
 /// Detail alias — the list item already carries everything.

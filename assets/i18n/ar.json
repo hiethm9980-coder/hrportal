@@ -237,6 +237,8 @@
   "Select leave type": "اختر نوع الإجازة",
   "available of": "متاح من",
   "Leave period": "فترة الإجازة",
+  "Leave days": "عدد أيام الإجازة",
+  "Leave date conflict": "لا يمكن تحديد هذه الفترة، يوجد طلب إجازة سابق (معتمد أو معلق) يتداخل مع التواريخ المحددة. يرجى اختيار فترة أخرى.",
   "Select leave period": "حدد فترة الإجازة",
   "Enter reason (optional)": "أدخل السبب (اختياري)",
   "Attachment": "المرفق",
@@ -268,5 +270,11 @@
   "This item may have been deleted or is no longer available.": "ربما تم حذف هذا العنصر أو لم يعد متاحاً.",
   "Failed to load details": "فشل في تحميل التفاصيل",
   "Awaiting your approval": "في انتظار موافقتك",
-  "Awaiting": "في انتظار"
+  "Awaiting": "في انتظار",
+  "Confirm": "تأكيد",
+  "Select end date": "حدد تاريخ النهاية",
+  "End date": "تاريخ النهاية",
+  "Day off": "يوم إجازة",
+  "Holiday": "عطلة رسمية",
+  "Selected": "محدد"
 }

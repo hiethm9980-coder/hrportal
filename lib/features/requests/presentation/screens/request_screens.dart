@@ -21,6 +21,7 @@ import '../../../../core/utils/app_funs.dart';
 import '../../../../shared/controllers/global_error_handler.dart';
 import '../../../../shared/widgets/approval_timeline.dart';
 import '../../../../shared/widgets/shared_widgets.dart';
+import '../../../auth/presentation/providers/auth_providers.dart';
 import '../../data/models/request_models.dart';
 import '../providers/request_providers.dart';
 
@@ -1291,7 +1292,6 @@ class _CreateRequestScreenState extends ConsumerState<CreateRequestScreen> {
     super.initState();
     Future.microtask(() {
       ref.read(requestTypesProvider.notifier).load();
-      ref.read(currenciesProvider.notifier).load();
     });
   }
 
@@ -1300,11 +1300,10 @@ class _CreateRequestScreenState extends ConsumerState<CreateRequestScreen> {
     final form = ref.watch(createRequestFormProvider);
     final notifier = ref.read(createRequestFormProvider.notifier);
     final typesState = ref.watch(requestTypesProvider);
-    final currenciesState = ref.watch(currenciesProvider);
     final selectedType = ref.watch(selectedRequestTypeProvider);
 
-    final isLoadingRefs = typesState.isLoading || currenciesState.isLoading;
-    final refsError = typesState.error ?? currenciesState.error;
+    final isLoadingRefs = typesState.isLoading;
+    final refsError = typesState.error;
 
     ref.listen<CreateRequestFormState>(createRequestFormProvider,
         (prev, next) {
@@ -1376,8 +1375,7 @@ class _CreateRequestScreenState extends ConsumerState<CreateRequestScreen> {
                                     const SizedBox(width: 12),
                                     Expanded(
                                       flex: 3,
-                                      child: _buildCurrencyDropdown(context,
-                                          form, notifier, currenciesState),
+                                      child: _buildContractCurrency(context, ref),
                                     ),
                                   ],
                                 ),
@@ -1606,19 +1604,17 @@ class _CreateRequestScreenState extends ConsumerState<CreateRequestScreen> {
     );
   }
 
-  // ── Currency ──────────────────────────────────────────────────────
+  // ── Currency (fixed from employee contract) ────────────────────
 
-  Widget _buildCurrencyDropdown(
-    BuildContext context,
-    CreateRequestFormState form,
-    CreateRequestFormController notifier,
-    CurrenciesState currenciesState,
-  ) {
-    final isAr = Localizations.localeOf(context).languageCode == 'ar';
+  Widget _buildContractCurrency(BuildContext context, WidgetRef ref) {
+    final currency = ref.watch(authProvider).employee?.contract?.currency;
+    final label = currency != null
+        ? '${currency.name} (${currency.code})'
+        : '—';
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('${'Currency'.tr(context)} *',
+        Text('Currency'.tr(context),
             style: TextStyle(
               fontFamily: 'Cairo',
               fontSize: 12,
@@ -1626,51 +1622,18 @@ class _CreateRequestScreenState extends ConsumerState<CreateRequestScreen> {
               color: context.appColors.textSecondary,
             )),
         const SizedBox(height: 6),
-        DropdownButtonFormField<int>(
-          initialValue: form.currencyId,
-          isExpanded: true,
-          decoration: InputDecoration(
-            contentPadding:
-                const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            errorText: form.fieldError('currency_id')?.tr(context),
-            border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12)),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+          decoration: BoxDecoration(
+            color: context.appColors.inputFill,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: context.appColors.inputBorder),
           ),
-          hint: Text(
-            'Select currency'.tr(context),
-            style: TextStyle(
-              fontFamily: 'Cairo',
-              fontSize: 13,
-              color: context.appColors.textMuted,
-            ),
+          child: Text(
+            label,
+            style: const TextStyle(fontFamily: 'Cairo', fontSize: 13),
           ),
-          validator: (v) =>
-              v == null ? 'This field is required'.tr(context) : null,
-          selectedItemBuilder: (context) => currenciesState.currencies
-              .map((c) => Align(
-                    alignment: AlignmentDirectional.centerStart,
-                    child: Text(
-                      c.code,
-                      style: const TextStyle(
-                          fontFamily: 'Cairo', fontSize: 13),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ))
-              .toList(),
-          items: currenciesState.currencies
-              .map((c) => DropdownMenuItem<int>(
-                    value: c.id,
-                    child: Text(
-                      '${isAr ? (c.nameAr ?? c.name) : (c.nameEn ?? c.name)} — ${c.code}',
-                      style: const TextStyle(
-                          fontFamily: 'Cairo', fontSize: 13),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ))
-              .toList(),
-          onChanged: (v) {
-            if (v != null) notifier.setCurrency(v);
-          },
         ),
       ],
     );

@@ -5,7 +5,6 @@ import '../../../../core/errors/exceptions.dart';
 import '../../../../core/providers/core_providers.dart';
 import '../../../../shared/controllers/global_error_handler.dart';
 import '../../../auth/presentation/providers/auth_providers.dart';
-import '../../../settings/presentation/providers/default_currency_provider.dart';
 import '../../data/models/request_models.dart';
 
 // ═══════════════════════════════════════════════════════════════════
@@ -274,30 +273,7 @@ class CreateRequestFormController
       requestTypeId: id,
       clearErrors: true,
       clearAmount: true,
-      clearCurrency: true,
     );
-
-    // If the new type is financial and the user has set a default currency,
-    // pre-fill the currency field with it (user can still change it).
-    final types = _ref.read(requestTypesProvider).types;
-    RequestType? type;
-    for (final t in types) {
-      if (t.id == id) {
-        type = t;
-        break;
-      }
-    }
-    if (type?.isFinancial == true) {
-      // Prefer the currency attached to the employee's contract (returned by
-      // /auth/login & /auth/me). Fall back to the user's saved default.
-      final contractCurrencyId =
-          _ref.read(authProvider).employee?.contract?.currency?.id;
-      final defaultId =
-          contractCurrencyId ?? _ref.read(defaultCurrencyProvider);
-      if (defaultId != null) {
-        state = state.copyWith(currencyId: defaultId);
-      }
-    }
   }
 
   void setSubject(String v) =>
@@ -312,9 +288,6 @@ class CreateRequestFormController
   void setAmount(double? v) =>
       state = state.copyWith(amount: v, clearErrors: true);
 
-  void setCurrency(int v) =>
-      state = state.copyWith(currencyId: v, clearErrors: true);
-
   void setAttachment(String path, String name) =>
       state = state.copyWith(
         attachmentPath: path,
@@ -328,7 +301,16 @@ class CreateRequestFormController
   Future<void> submit({required String action}) async {
     if (state.isLoading) return;
 
-    final type = _ref.read(selectedRequestTypeProvider);
+    // Resolve the selected type directly to avoid circular dependency
+    // with selectedRequestTypeProvider (which watches this form provider).
+    final types = _ref.read(requestTypesProvider).types;
+    RequestType? type;
+    for (final t in types) {
+      if (t.id == state.requestTypeId) {
+        type = t;
+        break;
+      }
+    }
 
     // ── Client-side validation ──
     final errors = <String, List<String>>{};
@@ -338,11 +320,15 @@ class CreateRequestFormController
     if (state.subject.trim().isEmpty) {
       errors['subject'] = ['This field is required'];
     }
+    // Resolve contract currency for financial requests.
+    final contractCurrencyId =
+        _ref.read(authProvider).employee?.contract?.currency?.id;
+
     if (type?.isFinancial == true) {
       if (state.amount == null || state.amount! <= 0) {
         errors['amount'] = ['Enter a valid positive number'];
       }
-      if (state.currencyId == null) {
+      if (contractCurrencyId == null) {
         errors['currency_id'] = ['This field is required'];
       }
     }
@@ -369,7 +355,7 @@ class CreateRequestFormController
         requestDate:
             state.requestDate.isNotEmpty ? state.requestDate : null,
         amount: state.amount,
-        currencyId: state.currencyId,
+        currencyId: contractCurrencyId,
         attachmentPath: state.attachmentPath,
       );
       final msg = action == 'draft'

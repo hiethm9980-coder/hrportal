@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 
 import '../../../../core/constants/api_constants.dart';
 import '../../../../core/network/api_client.dart';
+import '../models/booked_day_models.dart';
 import '../models/leave_models.dart';
 
 class LeaveRepository {
@@ -111,5 +112,18 @@ class LeaveRepository {
   /// Delete a leave request (draft or pending only).
   Future<void> deleteLeave(int id) async {
     await _client.delete<void>(ApiConstants.leaveRequestDelete(id));
+  }
+
+  /// Fetch booked days for a given month to prevent overlap.
+  ///
+  /// [month] format: YYYYMM (e.g. '202604').
+  Future<BookedDaysData> getBookedDays({required String month}) async {
+    final response = await _client.get<BookedDaysData>(
+      ApiConstants.bookedDays,
+      queryParameters: {'month': month},
+      fromJson: (json) =>
+          BookedDaysData.fromJson(json as Map<String, dynamic>),
+    );
+    return response.data!;
   }
 }

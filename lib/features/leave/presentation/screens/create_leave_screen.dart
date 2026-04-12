@@ -13,7 +13,10 @@ import 'package:hr_portal/shared/widgets/common_widgets.dart';
 import '../../../../core/utils/app_funs.dart';
 import '../../../../shared/controllers/global_error_handler.dart';
 import '../../../../shared/widgets/shared_widgets.dart';
+import '../../../auth/presentation/providers/auth_providers.dart';
+import '../../../holidays/presentation/providers/holiday_providers.dart';
 import '../providers/leave_providers.dart';
+import 'leave_calendar_picker.dart';
 
 const _allowedExtensions = ['pdf', 'jpg', 'jpeg', 'png', 'zip'];
 const _maxFileSizeMb = 10;
@@ -95,6 +98,11 @@ class _CreateLeaveScreenState extends ConsumerState<CreateLeaveScreen> {
 
                               // ── Date Range ──
                               _buildDateRangeField(context, form, notifier),
+
+                              // ── Days count helper ──
+                              if (_dateRange != null)
+                                _buildDaysCount(context),
+
                               const SizedBox(height: 18),
 
                               // ── Reason (optional) ──
@@ -381,27 +389,72 @@ class _CreateLeaveScreenState extends ConsumerState<CreateLeaveScreen> {
     );
   }
 
-  Future<void> _pickDateRange(CreateLeaveFormController notifier) async {
-    final now = DateTime.now();
-    final picked = await showDateRangePicker(
-      context: context,
-      firstDate: DateTime(now.year - 1),
-      lastDate: DateTime(now.year + 2),
-      initialDateRange: _dateRange,
-      locale: Localizations.localeOf(context),
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: ColorScheme.light(
-              primary: AppColors.primaryMid,
-              onPrimary: Colors.white,
-              surface: context.appColors.bgCard,
-              onSurface: context.appColors.textPrimary,
+  /// Calculate leave days excluding weekly days off and holidays.
+  int _calcLeaveDays() {
+    if (_dateRange == null) return 0;
+
+    // Weekly days off from work schedule.
+    const weekdayKeys = {1: 'mon', 2: 'tue', 3: 'wed', 4: 'thu', 5: 'fri', 6: 'sat', 7: 'sun'};
+    final workDays = ref.read(authProvider).employee?.contract?.workSchedule?.workDays;
+    final disabledWeekdays = <int>{};
+    if (workDays != null) {
+      for (final e in weekdayKeys.entries) {
+        if (workDays[e.value] == false) disabledWeekdays.add(e.key);
+      }
+    }
+
+    // Holiday dates.
+    final holidays = ref.read(holidaysProvider).holidays;
+    final holidayDates = <DateTime>{};
+    for (final h in holidays) {
+      final start = DateTime.tryParse(h.startDate);
+      final end = DateTime.tryParse(h.endDate);
+      if (start == null) continue;
+      final endDate = end ?? start;
+      for (var d = start; !d.isAfter(endDate); d = d.add(const Duration(days: 1))) {
+        holidayDates.add(DateTime(d.year, d.month, d.day));
+      }
+    }
+
+    int count = 0;
+    var d = _dateRange!.start;
+    while (!d.isAfter(_dateRange!.end)) {
+      final norm = DateTime(d.year, d.month, d.day);
+      if (!disabledWeekdays.contains(d.weekday) && !holidayDates.contains(norm)) {
+        count++;
+      }
+      d = d.add(const Duration(days: 1));
+    }
+    return count;
+  }
+
+  Widget _buildDaysCount(BuildContext context) {
+    final days = _calcLeaveDays();
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Row(
+        children: [
+          Icon(Icons.info_outline, size: 16, color: AppColors.primaryMid),
+          const SizedBox(width: 6),
+          Text(
+            '${'Leave days'.tr(context)}: $days',
+            style: TextStyle(
+              fontFamily: 'Cairo',
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: AppColors.primaryMid,
             ),
           ),
-          child: child!,
-        );
-      },
+        ],
+      ),
+    );
+  }
+
+  Future<void> _pickDateRange(CreateLeaveFormController notifier) async {
+    final picked = await Navigator.of(context).push<DateTimeRange>(
+      MaterialPageRoute(
+        builder: (_) => LeaveCalendarPicker(initialRange: _dateRange),
+      ),
     );
     if (picked != null) {
       setState(() => _dateRange = picked);

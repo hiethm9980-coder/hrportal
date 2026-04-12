@@ -101,7 +101,7 @@ class RequestRepository {
     String? attachmentPath,
   }) async {
     final fields = <String, dynamic>{
-      'employee_request_type_id': requestTypeId,
+      'request_type_id': requestTypeId,
       'subject': subject,
       'action': action,
       if (description != null && description.isNotEmpty)

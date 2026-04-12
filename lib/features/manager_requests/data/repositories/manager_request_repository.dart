@@ -79,7 +79,7 @@ class ManagerRequestRepository {
       url,
       data: {
         if (responseNotes != null && responseNotes.isNotEmpty)
-          'response_notes': responseNotes,
+          'notes': responseNotes,
       },
     );
   }

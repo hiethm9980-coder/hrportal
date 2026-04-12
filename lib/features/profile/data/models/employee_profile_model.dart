@@ -285,6 +285,7 @@ class ProfileContract extends Equatable {
   final String? endDate;    // Y-m-d
   final String status;
   final ContractCurrency? currency;
+  final WorkSchedule? workSchedule;
 
   const ProfileContract({
     required this.id,
@@ -293,6 +294,7 @@ class ProfileContract extends Equatable {
     this.endDate,
     required this.status,
     this.currency,
+    this.workSchedule,
   });
 
   factory ProfileContract.fromJson(Map<String, dynamic> json) {
@@ -305,6 +307,9 @@ class ProfileContract extends Equatable {
       currency: json['currency'] is Map<String, dynamic>
           ? ContractCurrency.fromJson(json['currency'] as Map<String, dynamic>)
           : null,
+      workSchedule: json['work_schedule'] is Map<String, dynamic>
+          ? WorkSchedule.fromJson(json['work_schedule'] as Map<String, dynamic>)
+          : null,
     );
   }
 
@@ -315,10 +320,11 @@ class ProfileContract extends Equatable {
         'end_date': endDate,
         'status': status,
         if (currency != null) 'currency': currency!.toJson(),
+        if (workSchedule != null) 'work_schedule': workSchedule!.toJson(),
       };
 
   @override
-  List<Object?> get props => [id, currency];
+  List<Object?> get props => [id, currency, workSchedule];
 }
 
 /// `{id: int, code: string, name: string, symbol: string?}` (e.g. YER / ر.ي)
@@ -350,6 +356,100 @@ class ContractCurrency extends Equatable {
         'name': name,
         'symbol': symbol,
       };
+
+  @override
+  List<Object?> get props => [id];
+}
+
+/// Work schedule data from `hr_work_schedules` table.
+///
+/// `work_days` is a map like `{"sat":"1","sun":"1",...,"fri":"0"}`
+/// where `"1"` = working day and `"0"` = day off.
+class WorkSchedule extends Equatable {
+  final int id;
+  final String name;
+  final String? nameEn;
+  final Map<String, bool> workDays;
+  final String? startTime;
+  final String? endTime;
+  final int? breakMinutes;
+  final double? dailyHours;
+  final double? weeklyHours;
+  final double? overtimeRate;
+  final int? maxOvertimeMinutes;
+  final bool isFlexible;
+
+  const WorkSchedule({
+    required this.id,
+    required this.name,
+    this.nameEn,
+    required this.workDays,
+    this.startTime,
+    this.endTime,
+    this.breakMinutes,
+    this.dailyHours,
+    this.weeklyHours,
+    this.overtimeRate,
+    this.maxOvertimeMinutes,
+    this.isFlexible = false,
+  });
+
+  /// Parse `work_days` from backend format `{"sat":"1","sun":"1",...}`
+  /// into `Map<String, bool>` where `true` = working day.
+  static Map<String, bool> _parseWorkDays(dynamic raw) {
+    if (raw is Map<String, dynamic>) {
+      return raw.map((key, value) => MapEntry(key, value.toString() == '1'));
+    }
+    return {};
+  }
+
+  factory WorkSchedule.fromJson(Map<String, dynamic> json) {
+    return WorkSchedule(
+      id: (json['id'] as num).toInt(),
+      name: (json['name'] as String?) ?? '',
+      nameEn: json['name_en'] as String?,
+      workDays: _parseWorkDays(json['work_days']),
+      startTime: json['start_time'] as String?,
+      endTime: json['end_time'] as String?,
+      breakMinutes: (json['break_minutes'] as num?)?.toInt(),
+      dailyHours: (json['daily_hours'] as num?)?.toDouble(),
+      weeklyHours: (json['weekly_hours'] as num?)?.toDouble(),
+      overtimeRate: (json['overtime_rate'] as num?)?.toDouble(),
+      maxOvertimeMinutes: (json['max_overtime_minutes'] as num?)?.toInt(),
+      isFlexible: json['is_flexible'] == true ||
+          json['is_flexible'] == 1 ||
+          json['is_flexible'] == '1',
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'name': name,
+        'name_en': nameEn,
+        'work_days': workDays.map((k, v) => MapEntry(k, v ? '1' : '0')),
+        'start_time': startTime,
+        'end_time': endTime,
+        'break_minutes': breakMinutes,
+        'daily_hours': dailyHours,
+        'weekly_hours': weeklyHours,
+        'overtime_rate': overtimeRate,
+        'max_overtime_minutes': maxOvertimeMinutes,
+        'is_flexible': isFlexible ? 1 : 0,
+      };
+
+  /// List of working day names (e.g. ['sat', 'sun', 'mon', ...]).
+  List<String> get workingDays =>
+      workDays.entries.where((e) => e.value).map((e) => e.key).toList();
+
+  /// List of day-off names (e.g. ['fri']).
+  List<String> get daysOff =>
+      workDays.entries.where((e) => !e.value).map((e) => e.key).toList();
+
+  /// Number of working days per week.
+  int get workingDaysCount => workDays.values.where((v) => v).length;
+
+  /// Check if a specific day is a working day.
+  bool isWorkingDay(String day) => workDays[day.toLowerCase()] ?? false;
 
   @override
   List<Object?> get props => [id];

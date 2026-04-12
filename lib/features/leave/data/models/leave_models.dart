@@ -255,7 +255,7 @@ class LeaveRequest extends Equatable {
 
   bool get isDraft => status == 'draft';
   bool get isPending => status == 'pending';
-  bool get canDelete => isDraft || isPending;
+  bool get canDelete => isDraft;
   bool get canSubmit => isDraft;
 
   @override
