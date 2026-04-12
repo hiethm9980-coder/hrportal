@@ -235,6 +235,8 @@
   "Select leave type": "Select leave type",
   "available of": "available of",
   "Leave period": "Leave period",
+  "Leave days": "Leave days",
+  "Leave date conflict": "Cannot select this period. There is an existing leave request (approved or pending) that overlaps with the selected dates. Please choose a different period.",
   "Select leave period": "Select leave period",
   "Enter reason (optional)": "Enter reason (optional)",
   "Attachment": "Attachment",
@@ -266,5 +268,11 @@
   "This item may have been deleted or is no longer available.": "This item may have been deleted or is no longer available.",
   "Failed to load details": "Failed to load details",
   "Awaiting your approval": "Awaiting your approval",
-  "Awaiting": "Awaiting"
+  "Awaiting": "Awaiting",
+  "Confirm": "Confirm",
+  "Select end date": "Select end date",
+  "End date": "End date",
+  "Day off": "Day off",
+  "Holiday": "Holiday",
+  "Selected": "Selected"
 }
