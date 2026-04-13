@@ -217,7 +217,8 @@ class _LeaveCalendarPickerState extends ConsumerState<LeaveCalendarPicker> {
         final msg = isAr
             ? 'لا يمكن تحديد هذه الفترة، يوجد طلب إجازة سابق (معتمد أو معلق) يتداخل مع التواريخ المحددة.\nيرجى اختيار فترة أخرى.'
             : 'Cannot select this period. There is an existing leave request (approved or pending) that overlaps with the selected dates.\nPlease choose a different period.';
-        ScaffoldMessenger.of(context).showSnackBar(
+        final messenger = ScaffoldMessenger.of(context);
+        messenger.showSnackBar(
           SnackBar(
             content: Row(
               children: [
@@ -236,9 +237,7 @@ class _LeaveCalendarPickerState extends ConsumerState<LeaveCalendarPicker> {
                 ),
                 const SizedBox(width: 8),
                 GestureDetector(
-                  onTap: () {
-                    ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                  },
+                  onTap: () => messenger.hideCurrentSnackBar(),
                   child: const Icon(Icons.close,
                       color: Colors.white, size: 20),
                 ),

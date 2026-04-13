@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 
+import 'package:hr_portal/core/constants/api_constants.dart';
 import 'package:hr_portal/core/constants/app_colors.dart';
 import 'package:hr_portal/core/constants/app_shadows.dart';
 import 'package:hr_portal/core/localization/app_localizations.dart';
@@ -9,12 +11,11 @@ import 'package:hr_portal/core/localization/locale_provider.dart';
 import 'package:hr_portal/core/providers/core_providers.dart';
 import 'package:hr_portal/core/theme/theme_mode_provider.dart';
 import 'package:hr_portal/shared/widgets/common_widgets.dart';
-import 'package:hr_portal/shared/widgets/shared_widgets.dart';
 import 'package:hr_portal/shared/controllers/global_error_handler.dart';
 import '../../../auth/presentation/providers/auth_providers.dart';
-import '../../../requests/data/models/request_models.dart' show Currency;
-import '../../../requests/presentation/providers/request_providers.dart';
-import '../providers/default_currency_provider.dart';
+// import '../../../requests/data/models/request_models.dart' show Currency;
+// import '../../../requests/presentation/providers/request_providers.dart';
+// import '../providers/default_currency_provider.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -25,26 +26,9 @@ class SettingsScreen extends ConsumerStatefulWidget {
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   @override
-  void initState() {
-    super.initState();
-    Future.microtask(() {
-      if (!mounted) return;
-      // Load currency options if not loaded yet (so the radio list has data).
-      final state = ref.read(currenciesProvider);
-      if (state.currencies.isEmpty && !state.isLoading) {
-        ref.read(currenciesProvider.notifier).load();
-      }
-    });
-  }
-
-  @override
   Widget build(BuildContext context) {
     final themeMode = ref.watch(themeModeProvider);
     final localeMode = ref.watch(localeModeProvider);
-    final currenciesState = ref.watch(currenciesProvider);
-    final defaultCurrencyId = ref.watch(defaultCurrencyProvider);
-    final isAr = Localizations.localeOf(context).languageCode == 'ar';
-
     return Scaffold(
       backgroundColor: context.appColors.bg,
       body: Column(
@@ -140,85 +124,52 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
                 const SizedBox(height: 24),
 
-                // ══════════ Default Currency Section ══════════
+                // ══════════ Website Section ══════════
                 _SectionHeader(
-                  icon: Icons.attach_money,
-                  title: 'Default currency'.tr(context),
+                  icon: Icons.language_outlined,
+                  title: 'Website'.tr(context),
                 ),
                 const SizedBox(height: 8),
-                if (currenciesState.isLoading &&
-                    currenciesState.currencies.isEmpty)
-                  _OptionCard(
-                    children: const [
-                      Padding(
-                        padding: EdgeInsets.symmetric(vertical: 18),
-                        child: Center(child: LoadingIndicator()),
-                      ),
-                    ],
-                  )
-                else if (currenciesState.error != null &&
-                    currenciesState.currencies.isEmpty)
-                  _OptionCard(
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
-                          children: [
-                            Text(
-                              currenciesState.error!.message.tr(context),
-                              style: const TextStyle(
-                                  fontFamily: 'Cairo', fontSize: 13),
-                              textAlign: TextAlign.center,
-                            ),
-                            const SizedBox(height: 8),
-                            TextButton(
-                              onPressed: () => ref
-                                  .read(currenciesProvider.notifier)
-                                  .load(),
-                              child: Text(
-                                'Retry'.tr(context),
-                                style: const TextStyle(fontFamily: 'Cairo'),
+                _OptionCard(
+                  children: [
+                    Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(16),
+                        onTap: () async {
+                          final url = Uri.parse(ApiConstants.baseUrl);
+                          if (await canLaunchUrl(url)) {
+                            await launchUrl(url,
+                                mode: LaunchMode.externalApplication);
+                          }
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 14),
+                          child: Row(
+                            children: [
+                              Icon(Icons.open_in_new,
+                                  size: 20,
+                                  color: AppColors.primaryMid),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  ApiConstants.baseUrl,
+                                  style: TextStyle(
+                                    fontFamily: 'Cairo',
+                                    fontSize: 13,
+                                    color: AppColors.primaryMid,
+                                    decoration: TextDecoration.underline,
+                                  ),
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
-                    ],
-                  )
-                else
-                  _OptionCard(
-                    children: [
-                      _RadioOption<int?>(
-                        label: 'Not set'.tr(context),
-                        icon: Icons.do_not_disturb_alt_outlined,
-                        value: null,
-                        groupValue: defaultCurrencyId,
-                        onChanged: (v) => ref
-                            .read(defaultCurrencyProvider.notifier)
-                            .setCurrency(v),
-                      ),
-                      for (var i = 0;
-                          i < currenciesState.currencies.length;
-                          i++) ...[
-                        _divider(context),
-                        _RadioOption<int?>(
-                          label: _currencyLabel(
-                              currenciesState.currencies[i], isAr),
-                          icon: null,
-                          flagText:
-                              currenciesState.currencies[i].code.isNotEmpty
-                                  ? currenciesState.currencies[i].code
-                                      .toUpperCase()
-                                  : null,
-                          value: currenciesState.currencies[i].id,
-                          groupValue: defaultCurrencyId,
-                          onChanged: (v) => ref
-                              .read(defaultCurrencyProvider.notifier)
-                              .setCurrency(v),
-                        ),
-                      ],
-                    ],
-                  ),
+                    ),
+                  ],
+                ),
 
                 const SizedBox(height: 32),
               ],
@@ -297,13 +248,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         ],
       ),
     );
-  }
-
-  static String _currencyLabel(Currency c, bool isAr) {
-    final localized = isAr
-        ? (c.nameAr?.isNotEmpty == true ? c.nameAr! : c.name)
-        : (c.nameEn?.isNotEmpty == true ? c.nameEn! : c.name);
-    return localized.isNotEmpty ? localized : c.code;
   }
 
   static Widget _divider(BuildContext context) => Divider(

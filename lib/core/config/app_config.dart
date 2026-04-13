@@ -2,13 +2,24 @@
 
 import 'package:firebase_remote_config/firebase_remote_config.dart';
 
-/// Centralized app configuration — relies on Firebase Remote Config only.
+/// Centralized app configuration.
 ///
-/// - base_url is fetched from Firebase Remote Config at login time.
-/// - If offline at login: base_url stays empty, user sees error.
-/// - Once fetched, base_url stays in memory for the app session.
+/// - Reads FLAVOR from --dart-define (defaults to 'dev').
+/// - dev  → uses local dev URL directly, no Firebase needed.
+/// - prod → fetches base_url from Firebase Remote Config.
 class AppConfig {
-  /// API base URL — fetched from Firebase Remote Config.
+  /// The current flavor: 'dev' or 'prod'.
+  /// Set at compile time via: --dart-define=FLAVOR=prod
+  static const String flavor =
+      String.fromEnvironment('FLAVOR', defaultValue: 'dev');
+
+  /// Local dev server URL.
+  static const String _devBaseUrl = 'http://192.168.1.41:8000';
+
+  /// Whether we are running in production mode.
+  static bool get isProduction => flavor == 'prod';
+
+  /// API base URL.
   String baseUrl = '';
 
   /// Whether debug features are enabled.
@@ -29,9 +40,20 @@ class AppConfig {
   /// Whether base_url has been loaded successfully.
   bool get isReady => baseUrl.isNotEmpty;
 
-  /// Fetch base_url from Firebase Remote Config.
-  /// If offline, baseUrl stays empty.
+  /// Load base_url based on the current flavor.
+  ///
+  /// - dev  → sets baseUrl to the local dev URL immediately.
+  /// - prod → fetches from Firebase Remote Config.
   Future<void> loadRemoteConfig() async {
+    if (!isProduction) {
+      // Dev mode: use local URL directly.
+      baseUrl = _devBaseUrl;
+      // ignore: avoid_print
+      print('[AppConfig] FLAVOR=dev → using local URL: $baseUrl');
+      return;
+    }
+
+    // Production mode: fetch from Firebase Remote Config.
     try {
       final remoteConfig = FirebaseRemoteConfig.instance;
 
@@ -68,5 +90,6 @@ class AppConfig {
   }
 
   @override
-  String toString() => 'AppConfig(baseUrl: $baseUrl)';
+  String toString() =>
+      'AppConfig(flavor: $flavor, baseUrl: $baseUrl)';
 }
