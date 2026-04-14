@@ -12,6 +12,8 @@ import 'features/requests/data/repositories/request_repository.dart';
 import 'features/manager_requests/data/repositories/manager_request_repository.dart';
 import 'features/holidays/data/repositories/holiday_repository.dart';
 import 'features/manager_requests/data/repositories/manager_leave_repository.dart';
+import 'features/tasks/data/repositories/project_repository.dart';
+import 'features/tasks/data/repositories/task_repository.dart';
 
 final sl = GetIt.instance;
 
@@ -91,5 +93,15 @@ Future<void> initDependencies() async {
   // ── Feature: Holidays ──────────────────────────────────────────────
   sl.registerLazySingleton<HolidayRepository>(
     () => HolidayRepository(client: sl<ApiClient>()),
+  );
+
+  // ── Feature: Tasks ─────────────────────────────────────────────────
+  sl.registerLazySingleton<TaskRepository>(
+    () => TaskRepository(client: sl<ApiClient>()),
+  );
+
+  // ── Feature: Projects (brief list for task filters) ──────────────
+  sl.registerLazySingleton<ProjectRepository>(
+    () => ProjectRepository(client: sl<ApiClient>()),
   );
 }

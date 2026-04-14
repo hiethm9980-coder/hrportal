@@ -22,6 +22,8 @@ import '../../features/requests/data/repositories/request_repository.dart';
 import '../../features/manager_requests/data/repositories/manager_request_repository.dart';
 import '../../features/holidays/data/repositories/holiday_repository.dart';
 import '../../features/manager_requests/data/repositories/manager_leave_repository.dart';
+import '../../features/tasks/data/repositories/project_repository.dart';
+import '../../features/tasks/data/repositories/task_repository.dart';
 
 // ── Core Services ────────────────────────────────────────────────────
 final sessionManagerProvider = Provider<SessionManager>(
@@ -73,4 +75,12 @@ final managerLeaveRepositoryProvider =
 
 final holidayRepositoryProvider = Provider<HolidayRepository>(
   (_) => sl<HolidayRepository>(),
+);
+
+final taskRepositoryProvider = Provider<TaskRepository>(
+  (_) => sl<TaskRepository>(),
+);
+
+final projectRepositoryProvider = Provider<ProjectRepository>(
+  (_) => sl<ProjectRepository>(),
 );

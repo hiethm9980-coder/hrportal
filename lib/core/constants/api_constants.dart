@@ -94,4 +94,32 @@ class ApiConstants {
 
   // ── Holidays ──────────────────────────────────────────────────────
   static const String holidays = '$_v1/holidays';
+
+  // ── Projects (employee) ───────────────────────────────────────────
+  static const String projects = '$_v1/projects';
+  static String projectDetail(int id) => '$_v1/projects/$id';
+  static String projectTasks(int id) => '$_v1/projects/$id/tasks';
+  static String projectTeam(int id) => '$_v1/projects/$id/team';
+  static String projectMilestones(int id) => '$_v1/projects/$id/milestones';
+  static String projectBudget(int id) => '$_v1/projects/$id/budget';
+  static String projectDocuments(int id) => '$_v1/projects/$id/documents';
+  static String projectActivity(int id) => '$_v1/projects/$id/activity';
+  static String projectComments(int id) => '$_v1/projects/$id/comments';
+
+  // ── Tasks (employee) ──────────────────────────────────────────────
+  static const String tasks = '$_v1/tasks';
+  static const String taskStatuses = '$_v1/tasks/statuses';
+  static String taskDetail(int id) => '$_v1/tasks/$id';
+  static String taskStatus(int id) => '$_v1/tasks/$id/status';
+  static String taskProgress(int id) => '$_v1/tasks/$id/progress';
+  static String taskSubtasks(int id) => '$_v1/tasks/$id/subtasks';
+  static String taskComments(int id) => '$_v1/tasks/$id/comments';
+  static String taskCommentDelete(int taskId, int commentId) =>
+      '$_v1/tasks/$taskId/comments/$commentId';
+  static String taskMentionCandidates(int id) =>
+      '$_v1/tasks/$id/mention-candidates';
+  static String taskAttachments(int id) => '$_v1/tasks/$id/attachments';
+  static String taskTimeLogs(int id) => '$_v1/tasks/$id/time-logs';
+  static String taskActivity(int id) => '$_v1/tasks/$id/activity';
+  static String taskStatusHistory(int id) => '$_v1/tasks/$id/status-history';
 }

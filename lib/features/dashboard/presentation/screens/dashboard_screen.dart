@@ -310,6 +310,7 @@ class _QuickActionsGrid extends ConsumerWidget {
     {'label': 'Leaves', 'icon': '🌴', 'route': '/leaves', 'color': AppColors.teal},
     {'label': 'Payroll', 'icon': '💰', 'route': '/payroll', 'color': AppColors.gold},
     {'label': 'Requests', 'icon': '📝', 'route': '/requests', 'color': AppColors.success},
+    {'label': 'My Tasks', 'icon': '📋', 'route': '/my-tasks', 'color': AppColors.primaryLight},
   ];
 
   static const _approvalAction = {

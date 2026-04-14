@@ -20,6 +20,7 @@ import '../features/payroll/presentation/screens/payroll_screens.dart';
 import '../features/requests/presentation/screens/request_screens.dart';
 import '../features/manager_requests/presentation/screens/manager_requests_screen.dart';
 import '../features/profile/presentation/screens/profile_screen.dart';
+import '../features/tasks/presentation/screens/my_tasks_screen.dart';
 
 /// Global navigator key for SessionManager callback.
 final rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -166,6 +167,11 @@ final routerProvider = Provider<GoRouter>((ref) {
                 },
               ),
             ],
+          ),
+
+          GoRoute(
+            path: '/my-tasks',
+            builder: (_, _) => const MyTasksScreen(),
           ),
 
           GoRoute(
