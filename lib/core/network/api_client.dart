@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/material.dart';
 
 import '../constants/api_constants.dart';
 import '../errors/exception_mapper.dart';
@@ -60,35 +61,35 @@ class ApiClient {
     _dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) {
-          print('┌── REQUEST ──────────────────────────────────');
-          print('│ ${options.method} ${options.baseUrl}${options.path}');
+          debugPrint('┌── REQUEST ──────────────────────────────────');
+          debugPrint('│ ${options.method} ${options.baseUrl}${options.path}');
           if (options.queryParameters.isNotEmpty) {
-            print('│ Query: ${options.queryParameters}');
+            debugPrint('│ Query: ${options.queryParameters}');
           }
           if (options.data != null) {
-            print('│ Body: ${options.data}');
+            debugPrint('│ Body: ${options.data}');
           }
-          print('│ Headers: ${options.headers}');
-          print('└─────────────────────────────────────────────');
+          debugPrint('│ Headers: ${options.headers}');
+          debugPrint('└─────────────────────────────────────────────');
           handler.next(options);
         },
         onResponse: (response, handler) {
-          print('┌── RESPONSE ─────────────────────────────────');
-          print('│ ${response.statusCode} ${response.requestOptions.method} ${response.requestOptions.path}');
-          print('│ Data: ${response.data}');
-          print('└─────────────────────────────────────────────');
+          debugPrint('┌── RESPONSE ─────────────────────────────────');
+          debugPrint('│ ${response.statusCode} ${response.requestOptions.method} ${response.requestOptions.path}');
+          debugPrint('│ Data: ${response.data}');
+          debugPrint('└─────────────────────────────────────────────');
           handler.next(response);
         },
         onError: (error, handler) {
-          print('┌── ERROR ────────────────────────────────────');
-          print('│ ${error.requestOptions.method} ${error.requestOptions.path}');
-          print('│ Type: ${error.type}');
-          print('│ Message: ${error.message}');
+          debugPrint('┌── ERROR ────────────────────────────────────');
+          debugPrint('│ ${error.requestOptions.method} ${error.requestOptions.path}');
+          debugPrint('│ Type: ${error.type}');
+          debugPrint('│ Message: ${error.message}');
           if (error.response != null) {
-            print('│ Status: ${error.response?.statusCode}');
-            print('│ Data: ${error.response?.data}');
+            debugPrint('│ Status: ${error.response?.statusCode}');
+            debugPrint('│ Data: ${error.response?.data}');
           }
-          print('└─────────────────────────────────────────────');
+          debugPrint('└─────────────────────────────────────────────');
           handler.next(error);
         },
       ),

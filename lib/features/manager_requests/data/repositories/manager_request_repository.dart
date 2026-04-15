@@ -36,9 +36,9 @@ class ManagerRequestRepository {
         if (filter != null && filter.isNotEmpty) 'filter': filter,
         if (requestType != null && requestType.isNotEmpty)
           'request_type': requestType,
-        if (employeeId != null) 'employee_id': employeeId,
-        if (companyId != null) 'company_id': companyId,
-        if (isCurrent != null) 'is_current': isCurrent,
+        'employee_id': ?employeeId,
+        'company_id': ?companyId,
+        'is_current': ?isCurrent,
       },
       fromJson: (json) =>
           ManagerRequestsData.fromJson(json as Map<String, dynamic>),

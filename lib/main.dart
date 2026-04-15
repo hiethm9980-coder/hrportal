@@ -114,13 +114,13 @@ void main() async {
   }
   await AwesomeNotificationService.init();
   final fcmService = NotificationFCMService();
-  print('main: before initFCM');
+  debugPrint('main: before initFCM');
   try {
     await fcmService.initFCM().timeout(const Duration(seconds: 15));
   } catch (e) {
-    print('main: initFCM timed out or failed: $e');
+    debugPrint('main: initFCM timed out or failed: $e');
   }
-  print('main: after initFCM');
+  debugPrint('main: after initFCM');
 
   // ── 1. Initialize AppConfig (base_url will be fetched at login) ──
   appConfig = AppConfig(enableDebugLogs: true);

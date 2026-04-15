@@ -120,6 +120,8 @@ class ApiConstants {
       '$_v1/tasks/$id/mention-candidates';
   static String taskAttachments(int id) => '$_v1/tasks/$id/attachments';
   static String taskTimeLogs(int id) => '$_v1/tasks/$id/time-logs';
+  static String taskTimeLogDelete(int taskId, int logId) =>
+      '$_v1/tasks/$taskId/time-logs/$logId';
   static String taskActivity(int id) => '$_v1/tasks/$id/activity';
   static String taskStatusHistory(int id) => '$_v1/tasks/$id/status-history';
 }

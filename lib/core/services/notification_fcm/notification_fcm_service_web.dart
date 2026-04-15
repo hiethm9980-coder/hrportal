@@ -21,7 +21,7 @@ class NotificationFCMService {
   bool _inited = false;
 
   Future<void> initFCM() async {
-    print('initFCM(web)');
+    debugPrint('initFCM(web)');
     if (_inited) return;
     _inited = true;
 
@@ -44,11 +44,11 @@ class NotificationFCMService {
         final token = await FirebaseMessaging.instance.getToken(
           vapidKey: _webVapidKey,
         );
-        print('web fcmToken: $token');
+        debugPrint('web fcmToken: $token');
       }
 
       FirebaseMessaging.instance.onTokenRefresh.listen((token) {
-        print('web fcmToken refreshed: $token');
+        debugPrint('web fcmToken refreshed: $token');
       });
 
       _initialMessage = await FirebaseMessaging.instance.getInitialMessage();

@@ -406,7 +406,7 @@ class _Header extends StatelessWidget {
                       ),
                       child: ValueListenableBuilder<TextEditingValue>(
                         valueListenable: searchController,
-                        builder: (_, value, __) {
+                        builder: (_, value, _) {
                           final hasText = value.text.isNotEmpty;
                           return TextFormField(
                             controller: searchController,
@@ -698,7 +698,10 @@ class _Body extends StatelessWidget {
             },
             onProgressChange: onChangeProgress,
             onTap: () {
-              // TODO: Navigate to task detail screen (next feature).
+              // Open the task detail shell. Pass the title via `extra` so
+              // the detail header renders something immediately instead of
+              // flashing an empty subtitle while the parent loads.
+              context.push('/tasks/${task.id}', extra: task.title);
             },
           );
         },

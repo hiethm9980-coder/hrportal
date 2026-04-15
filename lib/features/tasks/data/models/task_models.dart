@@ -80,7 +80,59 @@ class TaskAssigneeRef {
   }
 }
 
+/// Per-task permission flags returned by the backend.
+///
+/// Decides whether the current user can perform mutating actions on this
+/// task. Server is always authoritative — these flags exist purely so the
+/// UI can hide/disable controls instead of letting the user tap through to
+/// an `ACCESS_DENIED` response.
+///
+/// The full detail endpoint (`GET /api/v1/tasks/{id}`) populates every
+/// field; the list endpoint (`GET /api/v1/tasks`) may or may not include
+/// the object. Treat `permissions == null` as "permissive" — i.e. fall back
+/// to the legacy behavior (allow) so the server is the only enforcement
+/// point. The list-screen card will then react correctly the moment the
+/// list endpoint adopts the field.
+class TaskPermissions {
+  final bool canUpdateStatus;
+  final bool canUpdateProgress;
+  final bool canComment;
+  final bool canLogTime;
+  final bool canManage;
+
+  const TaskPermissions({
+    this.canUpdateStatus = false,
+    this.canUpdateProgress = false,
+    this.canComment = false,
+    this.canLogTime = false,
+    this.canManage = false,
+  });
+
+  factory TaskPermissions.fromJson(Map<String, dynamic> json) {
+    return TaskPermissions(
+      canUpdateStatus: json['can_update_status'] as bool? ?? false,
+      canUpdateProgress: json['can_update_progress'] as bool? ?? false,
+      canComment: json['can_comment'] as bool? ?? false,
+      canLogTime: json['can_log_time'] as bool? ?? false,
+      canManage: json['can_manage'] as bool? ?? false,
+    );
+  }
+
+  static TaskPermissions? tryFromJson(Object? raw) {
+    if (raw is Map) {
+      return TaskPermissions.fromJson(Map<String, dynamic>.from(raw));
+    }
+    return null;
+  }
+}
+
 /// A task as returned by GET /api/v1/tasks (list item).
+///
+/// As of the "flat list" backend update, [GET /api/v1/tasks] returns BOTH
+/// root tasks and subtasks at any depth in a single flat list. The five
+/// breadcrumb fields ([path], [pathLabel], [isSubtask], [parentId], [depth])
+/// describe each task's position in the hierarchy so the card can render the
+/// "Project / Parent / …" trail above the title for non-root items.
 class Task {
   final int id;
   final String? code;      // TSK-001 etc.
@@ -104,6 +156,26 @@ class Task {
   final double? timeLogsHours;
   final String? updatedAt;
 
+  // ── Hierarchy breadcrumb (flat-list payload) ────────────────────────
+  /// Titles from root to (and including) this task. Empty for legacy
+  /// payloads that don't include the breadcrumb.
+  final List<String> path;
+  /// Pre-formatted breadcrumb, e.g. `"Finance / Stock / Products"`.
+  /// The server renders this for us so we never assemble it client-side.
+  final String? pathLabel;
+  /// `true` when this task has a parent (i.e. depth > 0).
+  final bool isSubtask;
+  /// Parent task id, or `null` when this is a root task.
+  final int? parentId;
+  /// Depth in the hierarchy: 0 = root, 1 = direct child, 2 = grandchild, …
+  final int depth;
+
+  // ── Per-task permission flags ───────────────────────────────────────
+  /// Server-decided permission flags. `null` means the endpoint did not
+  /// include the object (e.g. older list payloads) — callers should treat
+  /// that as "permissive" and rely on the server to enforce.
+  final TaskPermissions? permissions;
+
   const Task({
     required this.id,
     required this.title,
@@ -123,7 +195,35 @@ class Task {
     this.timeLogsCount,
     this.timeLogsHours,
     this.updatedAt,
+    this.path = const [],
+    this.pathLabel,
+    this.isSubtask = false,
+    this.parentId,
+    this.depth = 0,
+    this.permissions,
   });
+
+  /// Convenience: can the current user change this task's status?
+  /// Defaults to `true` when the server didn't ship a [permissions] block
+  /// (legacy list payloads) so we don't break the existing UX.
+  bool get canEditStatus => permissions?.canUpdateStatus ?? true;
+
+  /// Convenience: can the current user drag this task's progress slider?
+  bool get canEditProgress => permissions?.canUpdateProgress ?? true;
+
+  /// The breadcrumb *without* the trailing task title — handy as a small
+  /// gray subtitle above the title. Returns null when the task is a root
+  /// (or the server didn't send a breadcrumb).
+  ///
+  /// Example: pathLabel "Finance / Stock / Products" → "Finance / Stock".
+  String? get parentPathLabel {
+    if (!isSubtask) return null;
+    final label = pathLabel;
+    if (label == null || label.isEmpty) return null;
+    final sep = label.lastIndexOf(' / ');
+    if (sep <= 0) return null;
+    return label.substring(0, sep);
+  }
 
   /// Progress percentage (0..100) for display.
   ///
@@ -142,6 +242,10 @@ class Task {
   }
 
   factory Task.fromJson(Map<String, dynamic> json) {
+    final pathRaw = json['path'];
+    final pathList = pathRaw is List
+        ? pathRaw.map((e) => e?.toString() ?? '').toList()
+        : const <String>[];
     return Task(
       id: (json['id'] as num?)?.toInt() ?? 0,
       code: json['code']?.toString(),
@@ -172,6 +276,17 @@ class Task {
       timeLogsCount: (json['time_logs_count'] as num?)?.toInt(),
       timeLogsHours: (json['time_logs_hours'] as num?)?.toDouble(),
       updatedAt: json['updated_at']?.toString(),
+      // ── Hierarchy breadcrumb (flat-list payload) ──────────────────
+      path: pathList,
+      pathLabel: json['path_label']?.toString(),
+      // Defensive: derive `is_subtask` from `parent_id`/`depth` when the
+      // server didn't include the explicit flag (older endpoints).
+      isSubtask: json['is_subtask'] as bool? ??
+          (json['parent_id'] != null) ||
+          (((json['depth'] as num?)?.toInt() ?? 0) > 0),
+      parentId: (json['parent_id'] as num?)?.toInt(),
+      depth: (json['depth'] as num?)?.toInt() ?? 0,
+      permissions: TaskPermissions.tryFromJson(json['permissions']),
     );
   }
 
@@ -197,6 +312,12 @@ class Task {
       timeLogsCount: timeLogsCount,
       timeLogsHours: timeLogsHours,
       updatedAt: updatedAt,
+      path: path,
+      pathLabel: pathLabel,
+      isSubtask: isSubtask,
+      parentId: parentId,
+      depth: depth,
+      permissions: permissions,
     );
   }
 }

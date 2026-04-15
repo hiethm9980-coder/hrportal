@@ -122,7 +122,7 @@ class _ProjectPickerSheet extends ConsumerWidget {
                     return ListView.separated(
                       controller: scrollController,
                       itemCount: total,
-                      separatorBuilder: (_, __) =>
+                      separatorBuilder: (_, _) =>
                           Divider(height: 1, color: colors.divider),
                       itemBuilder: (_, i) {
                         if (i == 0) {

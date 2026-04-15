@@ -36,7 +36,7 @@ class LeaveRepository {
     final response = await _client.get<LeaveBalancesData>(
       ApiConstants.leaveBalances,
       queryParameters: {
-        if (year != null) 'year': year,
+        'year': ?year,
       },
       fromJson: (json) => LeaveBalancesData.fromJson(json as Map<String, dynamic>),
     );

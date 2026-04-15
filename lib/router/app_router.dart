@@ -21,6 +21,7 @@ import '../features/requests/presentation/screens/request_screens.dart';
 import '../features/manager_requests/presentation/screens/manager_requests_screen.dart';
 import '../features/profile/presentation/screens/profile_screen.dart';
 import '../features/tasks/presentation/screens/my_tasks_screen.dart';
+import '../features/tasks/presentation/screens/task_detail/task_detail_shell.dart';
 
 /// Global navigator key for SessionManager callback.
 final rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -76,6 +77,21 @@ final routerProvider = Provider<GoRouter>((ref) {
       // ── Auth ──
       GoRoute(path: '/splash', builder: (_, _) => const SplashScreen()),
       GoRoute(path: '/login', builder: (_, _) => const LoginScreen()),
+
+      // ── Task detail (full-screen, outside main shell) ──
+      // Has its own custom header + bottom nav for tab switching so it must
+      // NOT nest inside `_MainShell` (that would stack two bottom navs).
+      GoRoute(
+        path: '/tasks/:id',
+        builder: (_, state) {
+          final raw = state.pathParameters['id'] ?? '0';
+          final id = int.tryParse(raw) ?? 0;
+          // Callers may pass the task title as `extra` so the header can show
+          // it immediately while the full payload loads.
+          final title = state.extra is String ? state.extra as String : null;
+          return TaskDetailShell(taskId: id, initialTitle: title);
+        },
+      ),
 
       // ── Main App (with bottom nav shell) ──
       ShellRoute(

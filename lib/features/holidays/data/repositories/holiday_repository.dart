@@ -14,7 +14,7 @@ class HolidayRepository {
     final response = await _client.get<HolidaysData>(
       ApiConstants.holidays,
       queryParameters: {
-        if (year != null) 'year': year,
+        'year': ?year,
       },
       fromJson: (json) => HolidaysData.fromJson(json as Map<String, dynamic>),
     );

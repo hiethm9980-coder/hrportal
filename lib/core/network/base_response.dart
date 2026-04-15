@@ -15,7 +15,7 @@
 ///   (data) => EmployeeProfile.fromJson(data as Map<String, dynamic>),
 /// );
 /// if (response.isSuccess) {
-///   print(response.data!.name);
+///   debugPrint(response.data!.name);
 /// }
 /// ```
 class BaseResponse<T> {

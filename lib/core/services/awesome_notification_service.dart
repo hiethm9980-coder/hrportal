@@ -196,14 +196,14 @@ class AwesomeNotificationController {
   static Future<void> onNotificationCreatedMethod(
     ReceivedNotification received,
   ) async {
-    print('🛠 [CREATED] id=${received.id} title=${received.title}');
+    debugPrint('🛠 [CREATED] id=${received.id} title=${received.title}');
   }
 
   @pragma('vm:entry-point')
   static Future<void> onNotificationDisplayedMethod(
     ReceivedNotification received,
   ) async {
-    print('👀 [DISPLAYED] id=${received.id} body=${received.body}');
+    debugPrint('👀 [DISPLAYED] id=${received.id} body=${received.body}');
   }
 
   @pragma('vm:entry-point')
@@ -214,7 +214,7 @@ class AwesomeNotificationController {
     final String key = action.buttonKeyPressed;
     final bool isBodyTap = key.isEmpty || key == 'DEFAULT';
 
-    print(
+    debugPrint(
       '🖱️ [ACTION] key=${key.isEmpty ? '(body)' : key} type=${action.actionType}',
     );
 
@@ -223,14 +223,14 @@ class AwesomeNotificationController {
       try {
         final route = action.payload?['route'];
         if (route == null || route.isEmpty) {
-          print('📋 [DECISION] No route in payload, skipping');
+          debugPrint('📋 [DECISION] No route in payload, skipping');
           return;
         }
 
         final notes = action.buttonKeyInput;
         final decision = key == 'APPROVE' ? 'approved' : 'rejected';
 
-        print('📋 [DECISION] $decision for route=$route notes="$notes"');
+        debugPrint('📋 [DECISION] $decision for route=$route notes="$notes"');
 
         // احذف الإشعار فوراً بعد الإرسال (لا ننتظر رد السيرفر).
         await AwesomeNotifications().dismiss(action.id!);
@@ -241,7 +241,7 @@ class AwesomeNotificationController {
           notes: notes,
         );
 
-        print('📋 [DECISION RESULT] success=${result.success} msg=${result.message}');
+        debugPrint('📋 [DECISION RESULT] success=${result.success} msg=${result.message}');
 
         if (!result.success) {
           // ❌ فشل — إشعار خطأ.
@@ -256,8 +256,8 @@ class AwesomeNotificationController {
           );
         }
       } catch (e, s) {
-        print('📋 [DECISION ERROR] $e');
-        print('📋 [DECISION STACK] $s');
+        debugPrint('📋 [DECISION ERROR] $e');
+        debugPrint('📋 [DECISION STACK] $s');
         // Show error notification.
         await AwesomeNotifications().createNotification(
           content: NotificationContent(
@@ -316,7 +316,7 @@ class AwesomeNotificationController {
   static Future<void> onDismissedActionReceivedMethod(
     ReceivedAction action,
   ) async {
-    print('❌ [DISMISSED] id=${action.id}');
+    debugPrint('❌ [DISMISSED] id=${action.id}');
     await AwesomeNotifications().setGlobalBadgeCounter(0);
   }
 }

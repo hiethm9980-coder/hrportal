@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:googleapis_auth/auth_io.dart' as auth;
 import 'package:http/http.dart' as http;
@@ -54,9 +55,9 @@ class SendNotificationFCMService {
   }) async {
     final String accessToken = await getAccessToken();
 
-    print("accessToken start ==================================");
-    print("accessToken: $accessToken");
-    print("accessToken end ==================================");
+    debugPrint("accessToken start ==================================");
+    debugPrint("accessToken: $accessToken");
+    debugPrint("accessToken end ==================================");
 
     // ✅ مشروعك الصحيح
     final String fcmUrl =
@@ -117,10 +118,10 @@ class SendNotificationFCMService {
     );
 
     if (response.statusCode == 200) {
-      print('✅ FCM sent');
+      debugPrint('✅ FCM sent');
     } else {
-      print('❌ FCM failed: ${response.statusCode}');
-      print('Response: ${response.body}');
+      debugPrint('❌ FCM failed: ${response.statusCode}');
+      debugPrint('Response: ${response.body}');
     }
   }
 }

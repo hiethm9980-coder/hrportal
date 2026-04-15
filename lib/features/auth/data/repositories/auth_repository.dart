@@ -2,6 +2,8 @@
 
 import 'dart:convert';
 
+import 'package:flutter/material.dart';
+
 import '../../../../core/constants/api_constants.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../core/network/session_manager.dart';
@@ -37,7 +39,7 @@ class AuthRepository {
     required String password,
     String? fcmToken,
   }) async {
-    print('Login request: ${ApiConstants.login}');
+    debugPrint('Login request: ${ApiConstants.login}');
     final data = <String, dynamic>{
       'username': username,
       'password': password,

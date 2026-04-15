@@ -6,6 +6,7 @@
 
 import 'dart:io';
 
+import 'package:flutter/material.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:path_provider/path_provider.dart';
 
@@ -36,13 +37,13 @@ Future<String> downloadToFile({
   void Function(int received, int total)? onProgress,
 }) async {
   // ignore: avoid_print
-  print('┌── DOWNLOAD ─────────────────────────────────');
+  debugPrint('┌── DOWNLOAD ─────────────────────────────────');
   // ignore: avoid_print
-  print('│ URL       : $url');
+  debugPrint('│ URL       : $url');
   // ignore: avoid_print
-  print('│ Save path : $savePath');
+  debugPrint('│ Save path : $savePath');
   // ignore: avoid_print
-  print('└─────────────────────────────────────────────');
+  debugPrint('└─────────────────────────────────────────────');
 
   final httpClient = HttpClient()
     ..connectionTimeout = const Duration(seconds: 30)
@@ -63,9 +64,9 @@ Future<String> downloadToFile({
 
     final res = await req.close();
     // ignore: avoid_print
-    print('│ Status     : ${res.statusCode}');
+    debugPrint('│ Status     : ${res.statusCode}');
     // ignore: avoid_print
-    print('│ Resp head  : ${res.headers}');
+    debugPrint('│ Resp head  : ${res.headers}');
     expectedContentLength = res.contentLength > 0 ? res.contentLength : null;
     final total = res.contentLength;
 
@@ -82,10 +83,10 @@ Future<String> downloadToFile({
       if (total > 0) {
         final pct = ((received / total) * 100).toStringAsFixed(1);
         // ignore: avoid_print
-        print('│ progress: $received / $total bytes ($pct%)');
+        debugPrint('│ progress: $received / $total bytes ($pct%)');
       } else {
         // ignore: avoid_print
-        print('│ progress: $received bytes');
+        debugPrint('│ progress: $received bytes');
       }
       onProgress?.call(received, total);
     }
@@ -96,15 +97,15 @@ Future<String> downloadToFile({
 
     final fileSize = f.existsSync() ? f.lengthSync() : 0;
     // ignore: avoid_print
-    print('┌── DOWNLOAD DONE ────────────────────────────');
+    debugPrint('┌── DOWNLOAD DONE ────────────────────────────');
     // ignore: avoid_print
-    print('│ Received  : $received bytes');
+    debugPrint('│ Received  : $received bytes');
     // ignore: avoid_print
-    print('│ File size : $fileSize bytes');
+    debugPrint('│ File size : $fileSize bytes');
     // ignore: avoid_print
-    print('│ Expected  : ${expectedContentLength ?? "(unknown)"}');
+    debugPrint('│ Expected  : ${expectedContentLength ?? "(unknown)"}');
     // ignore: avoid_print
-    print('└─────────────────────────────────────────────');
+    debugPrint('└─────────────────────────────────────────────');
     return savePath;
   } catch (err, st) {
     try {
@@ -123,32 +124,32 @@ Future<String> downloadToFile({
 
     if (fileSize > 0 && closeEnough) {
       // ignore: avoid_print
-      print('┌── DOWNLOAD RECOVERED ───────────────────────');
+      debugPrint('┌── DOWNLOAD RECOVERED ───────────────────────');
       // ignore: avoid_print
-      print('│ Note      : Connection error after data received');
+      debugPrint('│ Note      : Connection error after data received');
       // ignore: avoid_print
-      print('│ Error     : $err');
+      debugPrint('│ Error     : $err');
       // ignore: avoid_print
-      print('│ File size : $fileSize bytes');
+      debugPrint('│ File size : $fileSize bytes');
       // ignore: avoid_print
-      print('│ Expected  : ${expectedContentLength ?? "(unknown)"}');
+      debugPrint('│ Expected  : ${expectedContentLength ?? "(unknown)"}');
       // ignore: avoid_print
-      print('└─────────────────────────────────────────────');
+      debugPrint('└─────────────────────────────────────────────');
       return savePath;
     }
 
     // ignore: avoid_print
-    print('┌── DOWNLOAD ERROR ───────────────────────────');
+    debugPrint('┌── DOWNLOAD ERROR ───────────────────────────');
     // ignore: avoid_print
-    print('│ err download $url: $err');
+    debugPrint('│ err download $url: $err');
     // ignore: avoid_print
-    print('│ File size : $fileSize bytes');
+    debugPrint('│ File size : $fileSize bytes');
     // ignore: avoid_print
-    print('│ Expected  : ${expectedContentLength ?? "(unknown)"}');
+    debugPrint('│ Expected  : ${expectedContentLength ?? "(unknown)"}');
     // ignore: avoid_print
-    print('│ Stack     :\n$st');
+    debugPrint('│ Stack     :\n$st');
     // ignore: avoid_print
-    print('└─────────────────────────────────────────────');
+    debugPrint('└─────────────────────────────────────────────');
     try {
       if (f.existsSync()) f.deleteSync();
     } catch (_) {}

@@ -35,8 +35,8 @@ class ManagerLeaveRepository {
         'page': page,
         'per_page': perPage,
         if (filter != null && filter.isNotEmpty) 'filter': filter,
-        if (companyId != null) 'company_id': companyId,
-        if (isCurrent != null) 'is_current': isCurrent,
+        'company_id': ?companyId,
+        'is_current': ?isCurrent,
       },
       fromJson: (json) =>
           ManagerLeavesData.fromJson(json as Map<String, dynamic>),

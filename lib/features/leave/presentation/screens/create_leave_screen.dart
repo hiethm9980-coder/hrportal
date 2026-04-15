@@ -221,7 +221,7 @@ class _CreateLeaveScreenState extends ConsumerState<CreateLeaveScreen> {
         ),
         const SizedBox(height: 6),
         DropdownButtonFormField<int>(
-          value: form.leaveTypeId,
+          initialValue: form.leaveTypeId,
           isExpanded: true,
           decoration: InputDecoration(
             contentPadding:

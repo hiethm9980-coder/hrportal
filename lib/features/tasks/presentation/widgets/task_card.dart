@@ -27,14 +27,21 @@ class TaskCard extends StatelessWidget {
   final Task task;
   final List<TaskStatus> allStatuses;
   final VoidCallback? onTap;
-  final ValueChanged<TaskStatus> onStatusChange;
+
+  /// Status-change callback. May be null — when the caller doesn't pass it,
+  /// or when [Task.canEditStatus] is false (server permissions block it),
+  /// the chip row falls back to a non-interactive read-only display.
+  final ValueChanged<TaskStatus>? onStatusChange;
+
+  /// Progress-change callback. Same null-vs-permission rule as
+  /// [onStatusChange] — see [Task.canEditProgress].
   final ProgressCommit? onProgressChange;
 
   const TaskCard({
     super.key,
     required this.task,
     required this.allStatuses,
-    required this.onStatusChange,
+    this.onStatusChange,
     this.onTap,
     this.onProgressChange,
   });
@@ -43,6 +50,16 @@ class TaskCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.appColors;
     final currentStatusCode = task.status?.code;
+
+    // Resolve interactivity once: a caller's callback only counts if the
+    // server-side permissions also allow the action. Anything else collapses
+    // to read-only — no GestureDetector, no ripple, no API call.
+    final ValueChanged<TaskStatus>? effectiveStatusChange =
+        (onStatusChange != null && task.canEditStatus) ? onStatusChange : null;
+    final ProgressCommit? effectiveProgressChange =
+        (onProgressChange != null && task.canEditProgress)
+            ? onProgressChange
+            : null;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -78,6 +95,38 @@ class TaskCard extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: 10),
+                    // Breadcrumb above the title for subtasks. The backend
+                    // sends `path_label` pre-rendered ("A / B / C") — we strip
+                    // the trailing leaf (the title itself) so it doesn't get
+                    // duplicated under the bigger title text below.
+                    if (task.isSubtask && task.parentPathLabel != null) ...[
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.account_tree_rounded,
+                            size: 12,
+                            color: colors.textMuted,
+                          ),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              task.parentPathLabel!,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontFamily: 'Cairo',
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: colors.textMuted,
+                                height: 1.2,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 3),
+                    ],
                     Text(
                       task.title,
                       maxLines: 2,
@@ -117,13 +166,13 @@ class TaskCard extends StatelessWidget {
           ),
           // ── Progress slider: independent tap target (dragging or tapping
           // here must NEVER open the task details screen). ───────────────
-          if (task.progressPercent != null && onProgressChange != null)
+          if (task.progressPercent != null && effectiveProgressChange != null)
             Padding(
               padding: const EdgeInsets.fromLTRB(14, 0, 14, 10),
               child: _ProgressSlider(
                 taskId: task.id,
                 initialPercent: task.progressPercent!,
-                onCommit: onProgressChange!,
+                onCommit: effectiveProgressChange,
               ),
             )
           else if (task.progressPercent != null)
@@ -139,7 +188,7 @@ class TaskCard extends StatelessWidget {
               child: _StatusRow(
                 statuses: allStatuses,
                 currentCode: currentStatusCode,
-                onTap: onStatusChange,
+                onTap: effectiveStatusChange,
               ),
             ),
           ],
@@ -281,7 +330,10 @@ class _AssigneeRow extends StatelessWidget {
 class _StatusRow extends StatelessWidget {
   final List<TaskStatus> statuses;
   final String? currentCode;
-  final ValueChanged<TaskStatus> onTap;
+  /// Null when the user lacks permission to change the status — chips are
+  /// then rendered as a passive read-only badge row (no GestureDetector,
+  /// no tap feedback).
+  final ValueChanged<TaskStatus>? onTap;
 
   const _StatusRow({
     required this.statuses,
@@ -291,19 +343,20 @@ class _StatusRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tap = onTap;
     return SizedBox(
       height: 30,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         physics: const BouncingScrollPhysics(),
         itemCount: statuses.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 6),
+        separatorBuilder: (_, _) => const SizedBox(width: 6),
         itemBuilder: (_, i) {
           final s = statuses[i];
           final isActive = s.code == currentCode;
           final color = _parseHex(s.color);
           return GestureDetector(
-            onTap: () => onTap(s),
+            onTap: tap == null ? null : () => tap(s),
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 160),
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -731,7 +784,7 @@ class _CountersRow extends StatelessWidget {
         children: [
           ...items.expand((w) => [w, const SizedBox(width: 10)]),
           const Spacer(),
-          if (dueWidget != null) dueWidget,
+          ?dueWidget,
         ],
       ),
     );

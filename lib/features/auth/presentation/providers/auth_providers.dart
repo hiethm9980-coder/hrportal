@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:pwa_install/pwa_install.dart';
@@ -363,7 +364,7 @@ class LoginFormController extends StateNotifier<LoginFormState> {
       // Fetch base_url from Firebase Remote Config before login
       await appConfig.loadRemoteConfig();
       ApiConstants.configure(appConfig);
-      print("base_url: ${appConfig.baseUrl}");
+      debugPrint("base_url: ${appConfig.baseUrl}");
 
       if (appConfig.baseUrl.isEmpty) {
         state = state.copyWith(

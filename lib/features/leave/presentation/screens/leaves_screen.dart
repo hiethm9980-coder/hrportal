@@ -20,6 +20,8 @@ import '../../../../shared/widgets/shared_widgets.dart';
 import '../../data/models/leave_models.dart';
 import '../providers/leave_providers.dart';
 
+
+
 /// Public helper to show the employee leave detail bottomsheet from any screen.
 void showEmployeeLeaveDetailSheet(BuildContext context, LeaveRequest request,
     {VoidCallback? onChanged}) {
@@ -513,8 +515,8 @@ class _LeaveRequestCardState extends ConsumerState<_LeaveRequestCard> {
     } catch (e, st) {
       // Detailed log so backend / network issues are easy to diagnose.
       final url = svc.buildUrl(r.attachmentPath!);
-      print('err download $url: $e');
-      print(st);
+      debugPrint('err download $url: $e');
+      debugPrint(st.toString());
       if (!mounted) return;
       setState(() => _downloading = false);
       ScaffoldMessenger.of(context).showSnackBar(
@@ -856,8 +858,8 @@ class _LeaveDetailSheetState extends ConsumerState<_LeaveDetailSheet> {
       }
     } catch (e, st) {
       final url = svc.buildUrl(r.attachmentPath!);
-      print('err download $url: $e');
-      print(st);
+      debugPrint('err download $url: $e');
+      debugPrint(st.toString());
       if (!mounted) return;
       setState(() => _downloading = false);
       ScaffoldMessenger.of(context).showSnackBar(

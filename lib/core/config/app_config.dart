@@ -1,6 +1,7 @@
 // ⚠️ BETA LAUNCH CONFIG — No feature changes. Only build/env configuration.
 
 import 'package:firebase_remote_config/firebase_remote_config.dart';
+import 'package:flutter/material.dart';
 
 /// Centralized app configuration.
 ///
@@ -49,7 +50,7 @@ class AppConfig {
       // Dev mode: use local URL directly.
       baseUrl = _devBaseUrl;
       // ignore: avoid_print
-      print('[AppConfig] FLAVOR=dev → using local URL: $baseUrl');
+      debugPrint('[AppConfig] FLAVOR=dev → using local URL: $baseUrl');
       return;
     }
 
@@ -68,24 +69,24 @@ class AppConfig {
 
       final activated = await remoteConfig.fetchAndActivate();
       // ignore: avoid_print
-      print('[RemoteConfig] fetchAndActivate => $activated');
+      debugPrint('[RemoteConfig] fetchAndActivate => $activated');
       // ignore: avoid_print
-      print('[RemoteConfig] lastFetchStatus => ${remoteConfig.lastFetchStatus}');
+      debugPrint('[RemoteConfig] lastFetchStatus => ${remoteConfig.lastFetchStatus}');
       // ignore: avoid_print
-      print('[RemoteConfig] lastFetchTime => ${remoteConfig.lastFetchTime}');
+      debugPrint('[RemoteConfig] lastFetchTime => ${remoteConfig.lastFetchTime}');
 
       final remoteUrl = remoteConfig.getString('base_url');
       // ignore: avoid_print
-      print('[RemoteConfig] base_url value => "$remoteUrl"');
+      debugPrint('[RemoteConfig] base_url value => "$remoteUrl"');
 
       if (remoteUrl.isNotEmpty) {
         baseUrl = remoteUrl;
       }
     } catch (e, st) {
       // ignore: avoid_print
-      print('[RemoteConfig] ERROR: $e');
+      debugPrint('[RemoteConfig] ERROR: $e');
       // ignore: avoid_print
-      print('[RemoteConfig] STACK: $st');
+      debugPrint('[RemoteConfig] STACK: $st');
     }
   }
 

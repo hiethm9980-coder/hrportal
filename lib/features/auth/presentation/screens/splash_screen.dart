@@ -48,7 +48,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
     // Fetch base_url from Firebase Remote Config
     await appConfig.loadRemoteConfig();
-    print("base_url: ${appConfig.baseUrl}");
+    debugPrint("base_url: ${appConfig.baseUrl}");
 
     if (appConfig.baseUrl.isEmpty) {
       // No internet — show retry screen
@@ -65,7 +65,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     // Check if base_url changed → clear session and force re-login
     final urlChanged = await clearIfBaseUrlChanged(appConfig.baseUrl);
     if (urlChanged) {
-      print("base_url changed — session cleared, redirecting to login");
+      debugPrint("base_url changed — session cleared, redirecting to login");
       ref.read(authProvider.notifier).onLogout();
       return;
     }
