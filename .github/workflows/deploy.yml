@@ -23,8 +23,10 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Build web (PROD)
-        run: flutter build web --release --base-href "/hrportal/"
+      # PROD: FLAVOR=prod enables AppConfig.isProduction so the app fetches
+      # API base_url from Firebase Remote Config at runtime (see lib/core/config/app_config.dart).
+      - name: Build web (production — Remote Config base_url)
+        run: flutter build web --release --base-href "/hrportal/" --dart-define=FLAVOR=prod
 
       # مهم جدًا لـ GoRouter على GitHub Pages:
       - name: Add 404.html for SPA routing
