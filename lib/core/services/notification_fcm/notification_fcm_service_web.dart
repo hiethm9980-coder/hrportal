@@ -6,16 +6,12 @@ import 'package:flutter/widgets.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hr_portal/core/services/awesome_notification_service.dart';
 import 'package:hr_portal/core/services/db/db_helper.dart';
+import 'package:hr_portal/core/services/notification_fcm/fcm_token_helper.dart';
 import 'package:hr_portal/core/services/notifications_bus.dart';
 import 'package:hr_portal/router/app_router.dart';
 
 class NotificationFCMService {
   static const String _tableNotifications = 'notifications';
-
-  // مرره عند التشغيل:
-  // flutter run -d chrome --dart-define=FCM_WEB_VAPID_KEY=YOUR_PUBLIC_VAPID_KEY
-  // static const String _webVapidKey = String.fromEnvironment('FCM_WEB_VAPID_KEY');
-  static const String _webVapidKey = "BFG4aiBB8_NC4TEFZzm_d9_zC1XNLqw6mJaEiVpYAC93yCzR3sQ1-g0IkjgEEDIiV8QLxj1DOXAiGhp8kAUMkS0";
 
   RemoteMessage? _initialMessage;
   bool _inited = false;
@@ -35,14 +31,14 @@ class NotificationFCMService {
 
       log('web notification permission: ${settings.authorizationStatus}');
 
-      if (_webVapidKey.isEmpty) {
+      if (kFcmWebVapidKey.isEmpty) {
         log(
           'FCM_WEB_VAPID_KEY is missing. Run with '
           '--dart-define=FCM_WEB_VAPID_KEY=YOUR_PUBLIC_VAPID_KEY',
         );
       } else {
         final token = await FirebaseMessaging.instance.getToken(
-          vapidKey: _webVapidKey,
+          vapidKey: kFcmWebVapidKey,
         );
         debugPrint('web fcmToken: $token');
       }

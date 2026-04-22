@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:pwa_install/pwa_install.dart';
-import 'package:firebase_messaging/firebase_messaging.dart';
 import 'dart:async';
 import 'dart:convert';
 
 import '../../../../core/errors/exceptions.dart';
 import '../../../../core/constants/api_constants.dart';
+import '../../../../core/services/notification_fcm/fcm_token_helper.dart';
 import '../../../../core/providers/core_providers.dart';
 import '../../../../main.dart';
 import '../../../profile/data/models/employee_profile_model.dart';
@@ -393,13 +393,8 @@ class LoginFormController extends StateNotifier<LoginFormState> {
         return;
       }
 
-      // Get FCM token (non-blocking, nullable)
-      String? fcmToken;
-      try {
-        fcmToken = await FirebaseMessaging.instance
-            .getToken()
-            .timeout(const Duration(seconds: 5), onTimeout: () => null);
-      } catch (_) {}
+      // FCM token for API; web requires VAPID (see [getFcmTokenForApi]).
+      final fcmToken = await getFcmTokenForApi();
 
       final auth = _ref.read(authRepositoryProvider);
       final result = await auth.login(
