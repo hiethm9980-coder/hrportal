@@ -11,13 +11,17 @@ class ExceptionMapper {
 
   /// Create the correct [ApiException] from an API error.
   ///
-  /// [details] is passed-through (e.g. `{errors: {...}}` for validation).
+  /// [details] is passed-through (e.g. `{fields: [...]}` for validation).
+  /// [copyText] is the backend-rendered "copy to clipboard" blob — preserved
+  /// verbatim on the exception so the UI can surface a copy button with
+  /// zero extra client-side formatting.
   /// [statusCode] is used only for unknown codes.
   static ApiException fromResponse({
     required String code,
     required String message,
     String? traceId,
     Map<String, dynamic>? details,
+    String? copyText,
     int? statusCode,
   }) {
     switch (code) {
@@ -27,6 +31,7 @@ class ExceptionMapper {
           message: message,
           traceId: traceId,
           details: details,
+          copyText: copyText,
         );
 
       case ApiErrorCodes.tokenExpired:
@@ -34,6 +39,7 @@ class ExceptionMapper {
           message: message,
           traceId: traceId,
           details: details,
+          copyText: copyText,
         );
 
       case ApiErrorCodes.tokenInvalid:
@@ -41,6 +47,7 @@ class ExceptionMapper {
           message: message,
           traceId: traceId,
           details: details,
+          copyText: copyText,
         );
 
       // ── 403 Authorization ───────────────────────────────────────
@@ -49,6 +56,7 @@ class ExceptionMapper {
           message: message,
           traceId: traceId,
           details: details,
+          copyText: copyText,
         );
 
       case ApiErrorCodes.insufficientPermissions:
@@ -56,6 +64,7 @@ class ExceptionMapper {
           message: message,
           traceId: traceId,
           details: details,
+          copyText: copyText,
         );
 
       // ── 422 Validation / Business ────────────────────────────────
@@ -64,6 +73,7 @@ class ExceptionMapper {
           message: message,
           traceId: traceId,
           details: details,
+          copyText: copyText,
         );
 
       case ApiErrorCodes.businessRuleViolation:
@@ -71,6 +81,7 @@ class ExceptionMapper {
           message: message,
           traceId: traceId,
           details: details,
+          copyText: copyText,
         );
 
       // ── 404 Resource ─────────────────────────────────────────────
@@ -79,6 +90,7 @@ class ExceptionMapper {
           message: message,
           traceId: traceId,
           details: details,
+          copyText: copyText,
         );
 
       // ── 409 Conflict ─────────────────────────────────────────────
@@ -87,6 +99,7 @@ class ExceptionMapper {
           message: message,
           traceId: traceId,
           details: details,
+          copyText: copyText,
         );
 
       // ── 429 Rate Limit ───────────────────────────────────────────
@@ -95,6 +108,7 @@ class ExceptionMapper {
           message: message,
           traceId: traceId,
           details: details,
+          copyText: copyText,
         );
 
       // ── 500 / 503 Server ─────────────────────────────────────────
@@ -103,6 +117,7 @@ class ExceptionMapper {
           message: message,
           traceId: traceId,
           details: details,
+          copyText: copyText,
         );
 
       case ApiErrorCodes.serviceUnavailable:
@@ -110,6 +125,7 @@ class ExceptionMapper {
           message: message,
           traceId: traceId,
           details: details,
+          copyText: copyText,
         );
 
       // ── Unknown / future codes ───────────────────────────────────
@@ -119,6 +135,7 @@ class ExceptionMapper {
           message: message,
           traceId: traceId,
           details: details,
+          copyText: copyText,
           statusCode: statusCode,
         );
     }

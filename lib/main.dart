@@ -5,6 +5,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hr_portal/core/services/awesome_notification_service.dart';
 import 'package:hr_portal/core/services/db/db_helper.dart';
@@ -108,6 +109,17 @@ late final AppConfig appConfig;
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // Every in-app header uses `AppColors.navyGradient` at the very top, so
+  // the status bar (clock / signal / wifi / battery) always sits on a
+  // dark surface. Force the system icons to render white + keep the bar
+  // transparent so the gradient shows through. AppBarTheme already does
+  // this for screens that use AppBar — this covers everything else.
+  SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+    statusBarColor: Colors.transparent,
+    statusBarIconBrightness: Brightness.light, // Android
+    statusBarBrightness: Brightness.dark,       // iOS
+  ));
+
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   if (!kIsWeb) {
     FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
@@ -122,8 +134,9 @@ void main() async {
   }
   debugPrint('main: after initFCM');
 
-  // ── 1. Initialize AppConfig (base_url will be fetched at login) ──
+  // ── 1. Initialize AppConfig (base_url: dev = fixed; prod = Remote Config) ──
   appConfig = AppConfig(enableDebugLogs: true);
+  AppConfig.logPlayStoreBuildHintIfNeeded();
 
   // ── 2. Initialize logging ──
   AppLogger.init(appConfig);

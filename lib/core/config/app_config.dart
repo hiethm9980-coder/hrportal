@@ -1,24 +1,34 @@
 // ⚠️ BETA LAUNCH CONFIG — No feature changes. Only build/env configuration.
 
 import 'package:firebase_remote_config/firebase_remote_config.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 
 /// Centralized app configuration.
 ///
-/// - Reads FLAVOR from --dart-define (defaults to 'dev').
-/// - dev  → uses local dev URL directly, no Firebase needed.
-/// - prod → fetches base_url from Firebase Remote Config.
+/// **Default (no `--dart-define`):** always **dev** — uses the fixed local
+/// [_devBaseUrl]. Debug, profile, and release builds behave the same unless
+/// you pass `FLAVOR`.
+///
+/// **Production API:** only when you build/run with:
+/// `--dart-define=FLAVOR=prod` → then [loadRemoteConfig] reads `base_url` from
+/// Firebase Remote Config.
+///
+/// **Google Play:** store uploads must use `FLAVOR=prod` or the app will keep
+/// calling the dev server. See [logPlayStoreBuildHintIfNeeded].
 class AppConfig {
-  /// The current flavor: 'dev' or 'prod'.
-  /// Set at compile time via: --dart-define=FLAVOR=prod
-  static const String flavor =
-      String.fromEnvironment('FLAVOR', defaultValue: 'dev');
+  /// Raw compile-time value; empty means “use default dev behavior”.
+  static const String _flavorDefine =
+      String.fromEnvironment('FLAVOR', defaultValue: '');
 
-  /// Local dev server URL.
-  static const String _devBaseUrl = 'http://192.168.1.41:8000';
+  /// `prod` only when explicitly requested; otherwise `dev` (including unknown
+  /// values — they fall back to dev).
+  static String get flavor => isProduction ? 'prod' : 'dev';
 
-  /// Whether we are running in production mode.
-  static bool get isProduction => flavor == 'prod';
+  /// Local dev server URL (fixed; used whenever not in production mode).
+  static const String _devBaseUrl = 'http://172.16.0.66:8000';
+
+  /// True only with `--dart-define=FLAVOR=prod`.
+  static bool get isProduction => _flavorDefine == 'prod';
 
   /// API base URL.
   String baseUrl = '';
@@ -41,20 +51,32 @@ class AppConfig {
   /// Whether base_url has been loaded successfully.
   bool get isReady => baseUrl.isNotEmpty;
 
-  /// Load base_url based on the current flavor.
+  /// Logs a loud reminder when a **release** binary is built without
+  /// `FLAVOR=prod` (e.g. before uploading a mistaken build to Google Play).
+  static void logPlayStoreBuildHintIfNeeded() {
+    if (!kReleaseMode) return;
+    if (_flavorDefine == 'prod') return;
+    debugPrint('');
+    debugPrint('══════════════════════════════════════════════════════════════');
+    debugPrint('HR Portal: RELEASE build without --dart-define=FLAVOR=prod');
+    debugPrint('→ Using DEV fixed base URL ($_devBaseUrl).');
+    debugPrint('For Google Play, build with:');
+    debugPrint('  flutter build appbundle --release --dart-define=FLAVOR=prod');
+    debugPrint('══════════════════════════════════════════════════════════════');
+    debugPrint('');
+  }
+
+  /// Load base_url based on [isProduction].
   ///
-  /// - dev  → sets baseUrl to the local dev URL immediately.
-  /// - prod → fetches from Firebase Remote Config.
+  /// - **dev** (default) → sets [baseUrl] to [_devBaseUrl] immediately.
+  /// - **prod** → fetches `base_url` from Firebase Remote Config.
   Future<void> loadRemoteConfig() async {
     if (!isProduction) {
-      // Dev mode: use local URL directly.
       baseUrl = _devBaseUrl;
-      // ignore: avoid_print
-      debugPrint('[AppConfig] FLAVOR=dev → using local URL: $baseUrl');
+      debugPrint('[AppConfig] flavor=dev (define: "$_flavorDefine") → $baseUrl');
       return;
     }
 
-    // Production mode: fetch from Firebase Remote Config.
     try {
       final remoteConfig = FirebaseRemoteConfig.instance;
 
@@ -68,29 +90,24 @@ class AppConfig {
       });
 
       final activated = await remoteConfig.fetchAndActivate();
-      // ignore: avoid_print
       debugPrint('[RemoteConfig] fetchAndActivate => $activated');
-      // ignore: avoid_print
       debugPrint('[RemoteConfig] lastFetchStatus => ${remoteConfig.lastFetchStatus}');
-      // ignore: avoid_print
       debugPrint('[RemoteConfig] lastFetchTime => ${remoteConfig.lastFetchTime}');
 
       final remoteUrl = remoteConfig.getString('base_url');
-      // ignore: avoid_print
       debugPrint('[RemoteConfig] base_url value => "$remoteUrl"');
 
       if (remoteUrl.isNotEmpty) {
         baseUrl = remoteUrl;
       }
+      debugPrint('[AppConfig] flavor=prod → baseUrl loaded: ${baseUrl.isNotEmpty}');
     } catch (e, st) {
-      // ignore: avoid_print
       debugPrint('[RemoteConfig] ERROR: $e');
-      // ignore: avoid_print
       debugPrint('[RemoteConfig] STACK: $st');
     }
   }
 
   @override
   String toString() =>
-      'AppConfig(flavor: $flavor, baseUrl: $baseUrl)';
+      'AppConfig(flavor: $flavor (define: "$_flavorDefine"), baseUrl: $baseUrl)';
 }

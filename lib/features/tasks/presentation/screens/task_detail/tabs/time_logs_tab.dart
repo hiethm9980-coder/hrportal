@@ -4,10 +4,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:hr_portal/core/constants/app_colors.dart';
+import 'package:hr_portal/core/errors/exceptions.dart';
 import 'package:hr_portal/core/localization/app_localizations.dart';
 import 'package:hr_portal/shared/controllers/global_error_handler.dart';
 import '../../../../data/models/time_log_models.dart';
+import '../../../../../auth/presentation/providers/auth_providers.dart';
+import '../../../providers/task_details_provider.dart';
 import '../../../providers/time_logs_provider.dart';
+import '../../../utils/time_log_description_edit_policy.dart';
 import 'time_log_add_sheet.dart';
 
 /// "Time" tab of the task detail screen.
@@ -47,6 +51,7 @@ class _TimeLogsTabState extends ConsumerState<TimeLogsTab> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(timeLogsProvider(widget.taskId).notifier).load();
+      ref.read(taskDetailsProvider(widget.taskId).notifier).load();
     });
   }
 
@@ -96,20 +101,23 @@ class _TimeLogsTabState extends ConsumerState<TimeLogsTab> {
   }
 
   void _handleSheetCreated() {
+    if (!mounted) return;
     FocusScope.of(context).unfocus();
     setState(() => _showAddSheet = false);
-    // The controller already reloaded the list inside createLog() — just
-    // confirm the save to the user.
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'Time log created successfully'.tr(context),
-          style: const TextStyle(fontFamily: 'Cairo'),
+    // Snackbar after the next frame so it appears above the dismissed overlay.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Time log created successfully'.tr(context),
+            style: const TextStyle(fontFamily: 'Cairo'),
+          ),
+          backgroundColor: AppColors.success,
+          duration: const Duration(seconds: 2),
         ),
-        backgroundColor: AppColors.success,
-        duration: const Duration(seconds: 2),
-      ),
-    );
+      );
+    });
   }
 
   Future<void> _confirmDelete(TimeLog log) async {
@@ -163,110 +171,197 @@ class _TimeLogsTabState extends ConsumerState<TimeLogsTab> {
     }
   }
 
+  Future<void> _submitDescriptionEdit(TimeLog log, String? description) async {
+    try {
+      await ref
+          .read(timeLogsProvider(widget.taskId).notifier)
+          .updateLogDescription(log.id, description);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Time log description updated'.tr(context),
+            style: const TextStyle(fontFamily: 'Cairo'),
+          ),
+          backgroundColor: AppColors.success,
+        ),
+      );
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      if (e.statusCode == 403) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Only assignee, project manager, or company manager can edit the time log description.'
+                  .tr(context),
+              style: const TextStyle(fontFamily: 'Cairo'),
+            ),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      } else {
+        GlobalErrorHandler.show(context, GlobalErrorHandler.handle(e));
+      }
+    } catch (e) {
+      if (!mounted) return;
+      GlobalErrorHandler.show(context, GlobalErrorHandler.handle(e));
+    }
+  }
+
+  void _openEditDescriptionSheet(TimeLog log) {
+    FocusScope.of(context).unfocus();
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(ctx).bottom),
+        child: _EditTimeLogDescriptionSheet(
+          initialDescription: log.description,
+          onSubmit: (desc) => _submitDescriptionEdit(log, desc),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(timeLogsProvider(widget.taskId));
+    final detailsState = ref.watch(taskDetailsProvider(widget.taskId));
+    final auth = ref.watch(authProvider);
+    final canEditDescription = canEditTimeLogDescription(
+      details: detailsState.details,
+      auth: auth,
+    );
+    final canAdd = state.summary.canAddTimeLog;
 
-    return Stack(
-      children: [
-        Column(
-          children: [
-            _TimeLogsHeader(
-              parentTitle: widget.initialTitle ?? '',
-              searchActive: state.filter.q.trim().isNotEmpty,
-              showSearch: _showSearch,
-              searchController: _searchController,
-              breakdown: state.statusBreakdown,
-              selectedCode: state.filter.statusCode,
-              totalHours: state.summary.totalHours,
-              onBack: () => Navigator.of(context).maybePop(),
-              onToggleSearch: _toggleSearch,
-              onClearSearch: _clearSearch,
-              onSearchChanged: _onSearchChanged,
-              onRefresh: _refresh,
-              onStatusChipTap: (code) => ref
-                  .read(timeLogsProvider(widget.taskId).notifier)
-                  .setStatus(code),
-            ),
-            Expanded(
-              child: _Body(
-                state: state,
-                onRefresh: () =>
-                    ref.read(timeLogsProvider(widget.taskId).notifier).load(),
-                onDelete: _confirmDelete,
-              ),
-            ),
-          ],
-        ),
-        if (state.isMutating)
-          Positioned.fill(
-            child: Container(
-              color: Colors.black54,
-              child: const Center(
-                child: CircularProgressIndicator(
-                    color: Colors.white, strokeWidth: 3),
-              ),
-            ),
-          ),
-        if (state.summary.canAddTimeLog)
-          Positioned(
-            right: 18,
-            bottom: 18,
-            child: FloatingActionButton(
+    // Inner `Scaffold` with a transparent background — gives us standard
+    // bottom-right FAB positioning while the real shell Scaffold (with the
+    // task detail bottom nav) remains the outer one.
+    //
+    // `PopScope` intercepts the Android hardware/gesture back button: when
+    // the add-time overlay is open we swallow the system pop so it only
+    // closes the overlay (instead of popping the task detail route and
+    // jumping back to My Tasks).
+    return PopScope(
+      canPop: !_showAddSheet,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop && _showAddSheet) _closeAddSheet();
+      },
+      child: Scaffold(
+      backgroundColor: Colors.transparent,
+      floatingActionButton: canAdd && !_showAddSheet
+          ? FloatingActionButton.extended(
               heroTag: 'time-log-fab-${widget.taskId}',
               backgroundColor: AppColors.primaryMid,
               foregroundColor: Colors.white,
               onPressed: _openAddSheet,
-              child: const Icon(Icons.add_rounded),
-            ),
+              icon: const Icon(Icons.add_rounded),
+              label: Text(
+                'Add time'.tr(context),
+                style: const TextStyle(
+                  fontFamily: 'Cairo',
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            )
+          : null,
+      body: Stack(
+        children: [
+          Column(
+            children: [
+              _TimeLogsHeader(
+                parentTitle: widget.initialTitle ?? '',
+                searchActive: state.filter.q.trim().isNotEmpty,
+                showSearch: _showSearch,
+                searchController: _searchController,
+                breakdown: state.statusBreakdown,
+                selectedCode: state.filter.statusCode,
+                totalHours: state.summary.totalHours,
+                onBack: () => Navigator.of(context).maybePop(),
+                onToggleSearch: _toggleSearch,
+                onClearSearch: _clearSearch,
+                onSearchChanged: _onSearchChanged,
+                onRefresh: _refresh,
+                onStatusChipTap: (code) => ref
+                    .read(timeLogsProvider(widget.taskId).notifier)
+                    .setStatus(code),
+              ),
+              Expanded(
+                child: _Body(
+                  state: state,
+                  canEditDescription: canEditDescription,
+                  onRefresh: () =>
+                      ref.read(timeLogsProvider(widget.taskId).notifier).load(),
+                  onDelete: _confirmDelete,
+                  onEditDescription: _openEditDescriptionSheet,
+                ),
+              ),
+            ],
           ),
-
-        // ── Add-time-log overlay ────────────────────────────────────
-        // Built INSIDE this tab's Stack (not via `showModalBottomSheet`)
-        // so it stays above the tab body but below the shell's bottom
-        // navigation bar, which remains visible while the sheet is open.
-        if (state.summary.canAddTimeLog)
-          Positioned.fill(
-            child: IgnorePointer(
-              ignoring: !_showAddSheet,
-              child: Stack(
-                children: [
-                  // Dimmed backdrop — tap to dismiss.
-                  Positioned.fill(
-                    child: AnimatedOpacity(
-                      duration: const Duration(milliseconds: 200),
-                      opacity: _showAddSheet ? 1 : 0,
-                      child: GestureDetector(
-                        onTap: _closeAddSheet,
-                        behavior: HitTestBehavior.opaque,
-                        child: const ColoredBox(color: Colors.black54),
+          // ── Add-time-log overlay ────────────────────────────────────
+          // Full-tab-height slide-in that lives INSIDE this tab's Stack so
+          // the task detail shell's bottom nav remains visible beneath it.
+          // Using `Positioned.fill` (not a bottom-anchored slider) gives us
+          // a proper "صفحة متكاملة" feel — the sheet owns the whole tab
+          // body while open.
+          // Keep the sheet mounted while it is open even if the refreshed
+          // summary sets `can_add_time_log` to false — otherwise the subtree
+          // is disposed mid-await, `TimeLogAddSheet` becomes unmounted before
+          // `onCreated` runs and the user stays stuck on an invisible "open" sheet.
+          if (canAdd || _showAddSheet)
+            Positioned.fill(
+              child: IgnorePointer(
+                ignoring: !_showAddSheet,
+                child: Stack(
+                  children: [
+                    // Dimmed backdrop — tap to dismiss.
+                    Positioned.fill(
+                      child: AnimatedOpacity(
+                        duration: const Duration(milliseconds: 200),
+                        opacity: _showAddSheet ? 1 : 0,
+                        child: GestureDetector(
+                          onTap: _closeAddSheet,
+                          behavior: HitTestBehavior.opaque,
+                          child: const ColoredBox(color: Colors.black54),
+                        ),
                       ),
                     ),
-                  ),
-                  // Sheet — slides up from the bottom of this tab's body.
-                  Positioned(
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    child: AnimatedSlide(
-                      duration: const Duration(milliseconds: 240),
-                      curve: Curves.easeOutCubic,
-                      offset: _showAddSheet
-                          ? Offset.zero
-                          : const Offset(0, 1),
-                      child: TimeLogAddSheet(
-                        key: ValueKey(_sheetOpenCount),
-                        taskId: widget.taskId,
-                        onClose: _closeAddSheet,
-                        onCreated: _handleSheetCreated,
+                    // Slide-in form — fills the full tab height.
+                    Positioned.fill(
+                      child: AnimatedSlide(
+                        duration: const Duration(milliseconds: 240),
+                        curve: Curves.easeOutCubic,
+                        offset: _showAddSheet
+                            ? Offset.zero
+                            : const Offset(0, 1),
+                        child: TimeLogAddSheet(
+                          key: ValueKey(_sheetOpenCount),
+                          taskId: widget.taskId,
+                          onClose: _closeAddSheet,
+                          onCreated: _handleSheetCreated,
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
-          ),
-      ],
+          // Mutation loading must paint *above* the add form so the spinner is
+          // always visible during POST + reload (the form used to cover it).
+          if (state.isMutating)
+            Positioned.fill(
+              child: Container(
+                color: Colors.black54,
+                child: const Center(
+                  child: CircularProgressIndicator(
+                      color: Colors.white, strokeWidth: 3),
+                ),
+              ),
+            ),
+        ],
+      ),
+      ),
     );
   }
 }
@@ -582,13 +677,17 @@ class _TotalHoursRow extends StatelessWidget {
 
 class _Body extends StatelessWidget {
   final TimeLogsState state;
+  final bool canEditDescription;
   final Future<void> Function() onRefresh;
   final void Function(TimeLog log) onDelete;
+  final void Function(TimeLog log) onEditDescription;
 
   const _Body({
     required this.state,
+    required this.canEditDescription,
     required this.onRefresh,
     required this.onDelete,
+    required this.onEditDescription,
   });
 
   @override
@@ -615,7 +714,12 @@ class _Body extends StatelessWidget {
         separatorBuilder: (_, _) => const SizedBox(height: 10),
         itemBuilder: (_, i) {
           final log = state.logs[i];
-          return _TimeLogCard(log: log, onDelete: () => onDelete(log));
+          return _TimeLogCard(
+            log: log,
+            canEditDescription: canEditDescription,
+            onEditDescription: () => onEditDescription(log),
+            onDelete: () => onDelete(log),
+          );
         },
       ),
     );
@@ -634,9 +738,16 @@ class _Body extends StatelessWidget {
 
 class _TimeLogCard extends StatelessWidget {
   final TimeLog log;
+  final bool canEditDescription;
+  final VoidCallback onEditDescription;
   final VoidCallback onDelete;
 
-  const _TimeLogCard({required this.log, required this.onDelete});
+  const _TimeLogCard({
+    required this.log,
+    required this.canEditDescription,
+    required this.onEditDescription,
+    required this.onDelete,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -671,6 +782,14 @@ class _TimeLogCard extends StatelessWidget {
               else
                 const SizedBox.shrink(),
               const Spacer(),
+              if (canEditDescription)
+                IconButton(
+                  visualDensity: VisualDensity.compact,
+                  onPressed: onEditDescription,
+                  icon: Icon(Icons.edit_outlined,
+                      color: colors.textSecondary, size: 20),
+                  tooltip: 'Edit time log description'.tr(context),
+                ),
               if (log.canDelete)
                 IconButton(
                   visualDensity: VisualDensity.compact,
@@ -1027,6 +1146,195 @@ class _ErrorView extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// Edit description — modal bottom sheet (PATCH description only)
+// ═══════════════════════════════════════════════════════════════════
+
+const int _kTimeLogDescriptionMaxLength = 255;
+
+class _EditTimeLogDescriptionSheet extends StatefulWidget {
+  final String? initialDescription;
+  final Future<void> Function(String? description) onSubmit;
+
+  const _EditTimeLogDescriptionSheet({
+    required this.initialDescription,
+    required this.onSubmit,
+  });
+
+  @override
+  State<_EditTimeLogDescriptionSheet> createState() =>
+      _EditTimeLogDescriptionSheetState();
+}
+
+class _EditTimeLogDescriptionSheetState
+    extends State<_EditTimeLogDescriptionSheet> {
+  late final TextEditingController _controller;
+  bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.initialDescription ?? '');
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    final trimmed = _controller.text.trim();
+    final payload = trimmed.isEmpty ? null : trimmed;
+    setState(() => _saving = true);
+    try {
+      await widget.onSubmit(payload);
+      if (mounted) Navigator.of(context).pop();
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  Future<void> _clear() async {
+    setState(() => _saving = true);
+    try {
+      await widget.onSubmit(null);
+      if (mounted) Navigator.of(context).pop();
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Center(
+            child: Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: colors.gray200,
+                borderRadius: BorderRadius.circular(999),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Edit time log description'.tr(context),
+            style: TextStyle(
+              fontFamily: 'Cairo',
+              fontSize: 17,
+              fontWeight: FontWeight.w800,
+              color: colors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 12),
+          ValueListenableBuilder<TextEditingValue>(
+            valueListenable: _controller,
+            builder: (_, value, _) {
+              final n = value.text.length;
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  TextField(
+                    controller: _controller,
+                    maxLength: _kTimeLogDescriptionMaxLength,
+                    maxLines: 5,
+                    minLines: 3,
+                    textInputAction: TextInputAction.newline,
+                    style: TextStyle(
+                      fontFamily: 'Cairo',
+                      fontSize: 14,
+                      color: colors.textPrimary,
+                    ),
+                    decoration: InputDecoration(
+                      counterText: '$n / $_kTimeLogDescriptionMaxLength',
+                      hintText: 'Describe the work...'.tr(context),
+                      hintStyle: TextStyle(
+                        fontFamily: 'Cairo',
+                        color: colors.textMuted,
+                      ),
+                      filled: true,
+                      fillColor: colors.gray50,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: colors.gray100),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: colors.gray100),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide:
+                            const BorderSide(color: AppColors.primaryMid, width: 1.5),
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: _saving ? null : () => Navigator.of(context).pop(),
+                  child: Text(
+                    'Cancel'.tr(context),
+                    style: const TextStyle(fontFamily: 'Cairo'),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: _saving ? null : _clear,
+                  child: Text(
+                    'Clear description'.tr(context),
+                    style: const TextStyle(fontFamily: 'Cairo'),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          FilledButton(
+            onPressed: _saving ? null : _save,
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.primaryMid,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+            ),
+            child: _saving
+                ? const SizedBox(
+                    height: 22,
+                    width: 22,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
+                : Text(
+                    'Save'.tr(context),
+                    style: const TextStyle(
+                      fontFamily: 'Cairo',
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+          ),
+        ],
       ),
     );
   }

@@ -253,13 +253,13 @@ class _RecordTile extends StatelessWidget {
               _AttendanceDetailRow(
                 icon: '▶',
                 label: 'Check in'.tr(context),
-                value: AppFuns.formatApiDateTime(record.checkInTime!, withSeconds: true, isAr: Localizations.localeOf(context).languageCode == 'ar'),
+                value: AppFuns.formatApiDateTime(record.checkInTime!, withSeconds: true),
               ),
             if (record.checkOutTime != null)
               _AttendanceDetailRow(
                 icon: '⏹',
                 label: 'Check out'.tr(context),
-                value: AppFuns.formatApiDateTime(record.checkOutTime!, withSeconds: true, isAr: Localizations.localeOf(context).languageCode == 'ar'),
+                value: AppFuns.formatApiDateTime(record.checkOutTime!, withSeconds: true),
               ),
             _AttendanceDetailRow(
               icon: '⏱',

@@ -10,9 +10,10 @@ import '../providers/auth_providers.dart';
 
 /// Splash screen shown while restoring the session.
 ///
-/// 1. Fetches base_url from Firebase Remote Config.
-/// 2. If offline → shows "No internet" screen with retry button.
-/// 3. If base_url loaded → checks session and navigates.
+/// 1. Loads API base URL: **dev** (default) uses fixed local URL; **prod**
+///    (`--dart-define=FLAVOR=prod`) uses Firebase Remote Config `base_url`.
+/// 2. If prod and Remote Config fails / empty → shows "No internet" retry.
+/// 3. If base_url ready → checks session and navigates.
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
 
@@ -46,7 +47,6 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
       _noInternet = false;
     });
 
-    // Fetch base_url from Firebase Remote Config
     await appConfig.loadRemoteConfig();
     debugPrint("base_url: ${appConfig.baseUrl}");
 

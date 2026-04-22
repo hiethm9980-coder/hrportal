@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/legacy.dart';
 
 import '../../../../core/providers/core_providers.dart';
 import '../../data/models/task_models.dart';
+import 'company_list_scope_provider.dart';
 
 /// Filter snapshot for the subtasks list. Mirrors the My Tasks filter but
 /// deliberately omits `projectId` (subtasks always inherit the parent's
@@ -66,6 +67,8 @@ const _sentinel = Object();
 class SubtasksState {
   final SubtasksFilter filter;
   final Task? parent;
+  /// From [GET /tasks/{id}/subtasks] root `permissions.can_create_subtask` (not only `parent.permissions`).
+  final bool canCreateSubtask;
   final List<Task> items;
   final TaskStats stats;
   final StatusBreakdown statusBreakdown;
@@ -78,6 +81,7 @@ class SubtasksState {
   const SubtasksState({
     this.filter = const SubtasksFilter(),
     this.parent,
+    this.canCreateSubtask = false,
     this.items = const [],
     this.stats = const TaskStats(),
     this.statusBreakdown = const StatusBreakdown(),
@@ -93,6 +97,7 @@ class SubtasksState {
   SubtasksState copyWith({
     SubtasksFilter? filter,
     Task? parent,
+    bool? canCreateSubtask,
     List<Task>? items,
     TaskStats? stats,
     StatusBreakdown? statusBreakdown,
@@ -105,6 +110,7 @@ class SubtasksState {
     return SubtasksState(
       filter: filter ?? this.filter,
       parent: parent ?? this.parent,
+      canCreateSubtask: canCreateSubtask ?? this.canCreateSubtask,
       items: items ?? this.items,
       stats: stats ?? this.stats,
       statusBreakdown: statusBreakdown ?? this.statusBreakdown,
@@ -177,10 +183,15 @@ class SubtasksController extends StateNotifier<SubtasksState> {
   // ── Data loading ────────────────────────────────────────────────────
 
   Future<void> load({bool reset = true}) async {
+    // autoDispose guard: the controller may have been disposed while the
+    // HTTP request was in flight (fast tab switching). Touching `state`
+    // after disposal throws a Bad-state crash.
+    if (!mounted) return;
     state = state.copyWith(isLoading: true, error: null);
     try {
       final repo = _ref.read(taskRepositoryProvider);
       final filter = state.filter;
+      final companyId = _ref.read(companyListScopeIdProvider);
       final data = await repo.listSubtasks(
         parentTaskId,
         q: filter.q,
@@ -189,9 +200,11 @@ class SubtasksController extends StateNotifier<SubtasksState> {
         overdue: filter.overdueOnly,
         dueFrom: filter.dueFrom,
         dueTo: filter.dueTo,
+        companyId: companyId,
         page: 1,
         perPage: _perPage,
       );
+      if (!mounted) return;
 
       var items = data.subtasks;
       if (filter.openOnly) {
@@ -200,8 +213,13 @@ class SubtasksController extends StateNotifier<SubtasksState> {
             .toList();
       }
 
+      final allowSub =
+          data.permissions.canCreateSubtask ||
+              (data.parent.permissions?.canCreateSubtask == true);
+
       state = state.copyWith(
         parent: data.parent,
+        canCreateSubtask: allowSub,
         items: items,
         stats: data.stats,
         statusBreakdown: data.statusBreakdown,
@@ -210,6 +228,7 @@ class SubtasksController extends StateNotifier<SubtasksState> {
         error: null,
       );
     } catch (e) {
+      if (!mounted) return;
       state = state.copyWith(
         isLoading: false,
         error: e.toString(),
@@ -222,11 +241,13 @@ class SubtasksController extends StateNotifier<SubtasksState> {
     if (state.isLoading || state.isLoadingMore) return;
     if (!state.pagination.hasMore) return;
 
+    if (!mounted) return;
     state = state.copyWith(isLoadingMore: true);
     try {
       final repo = _ref.read(taskRepositoryProvider);
       final filter = state.filter;
       final nextPage = state.pagination.currentPage + 1;
+      final companyId = _ref.read(companyListScopeIdProvider);
       final data = await repo.listSubtasks(
         parentTaskId,
         q: filter.q,
@@ -235,9 +256,11 @@ class SubtasksController extends StateNotifier<SubtasksState> {
         overdue: filter.overdueOnly,
         dueFrom: filter.dueFrom,
         dueTo: filter.dueTo,
+        companyId: companyId,
         page: nextPage,
         perPage: _perPage,
       );
+      if (!mounted) return;
 
       var newItems = data.subtasks;
       if (filter.openOnly) {
@@ -254,6 +277,7 @@ class SubtasksController extends StateNotifier<SubtasksState> {
         isLoadingMore: false,
       );
     } catch (e) {
+      if (!mounted) return;
       state = state.copyWith(isLoadingMore: false, error: e.toString());
     }
   }
@@ -268,17 +292,22 @@ class SubtasksController extends StateNotifier<SubtasksState> {
     required int taskId,
     required String statusCode,
   }) async {
+    if (!mounted) return;
     state = state.copyWith(isMutating: true, error: null);
     try {
       final repo = _ref.read(taskRepositoryProvider);
       await repo.updateStatus(taskId, statusCode);
+      if (!mounted) return;
       // The cheapest way to reconcile parent + list + counts after a status
       // change is a single reload — statuses move tasks between columns
       // and also bump breakdown counts.
       await load(reset: true);
+      if (!mounted) return;
       state = state.copyWith(isMutating: false);
     } catch (e) {
-      state = state.copyWith(isMutating: false, error: e.toString());
+      if (mounted) {
+        state = state.copyWith(isMutating: false, error: e.toString());
+      }
       rethrow;
     }
   }
@@ -289,6 +318,17 @@ class SubtasksController extends StateNotifier<SubtasksState> {
     required int percent,
     required int previousPercent,
   }) async {
+    if (!mounted) {
+      // Still need to return *something* — callers await us. Synthesize a
+      // neutral result so the await resolves without touching `state`.
+      return TaskProgressResult(
+        taskId: taskId,
+        progressPercent: percent,
+        newStatus: null,
+        isCompleted: percent >= 100,
+        statusChanged: false,
+      );
+    }
     final isParent = state.parent?.id == taskId;
 
     // 1. Optimistic local patch.
@@ -305,6 +345,7 @@ class SubtasksController extends StateNotifier<SubtasksState> {
     try {
       final repo = _ref.read(taskRepositoryProvider);
       final result = await repo.updateProgress(taskId, percent);
+      if (!mounted) return result;
 
       // 2. Reconcile with server payload.
       state = state.copyWith(
@@ -327,7 +368,9 @@ class SubtasksController extends StateNotifier<SubtasksState> {
       );
       return result;
     } catch (e) {
-      // 3. Rollback.
+      // 3. Rollback — only if we're still mounted; otherwise just surface
+      // the error.
+      if (!mounted) rethrow;
       state = state.copyWith(
         parent: isParent
             ? state.parent?.copyWith(progress: previousPercent)

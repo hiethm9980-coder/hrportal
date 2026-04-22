@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:hr_portal/core/constants/app_colors.dart';
 import 'package:hr_portal/core/localization/app_localizations.dart';
+import 'package:hr_portal/core/utils/app_funs.dart';
+import 'package:hr_portal/features/auth/presentation/providers/auth_providers.dart';
 import 'package:hr_portal/shared/controllers/global_error_handler.dart';
 import '../../../../data/models/comment_models.dart';
 import '../../../providers/comments_provider.dart';
@@ -234,12 +236,16 @@ class _CommentsTabState extends ConsumerState<CommentsTab> {
   // ── Delete ────────────────────────────────────────────────────────
 
   Future<void> _confirmDelete(Comment c) async {
+    // Styled to match the Attachments tab's delete confirmation exactly —
+    // same AlertDialog shape, same Cairo typography, same destructive-as-
+    // red TextButton (no filled button). Keeps the two destructive flows
+    // feeling like siblings instead of cousins.
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text(
           'Delete comment'.tr(ctx),
-          style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w800),
+          style: const TextStyle(fontFamily: 'Cairo'),
         ),
         content: Text(
           'Are you sure you want to delete this comment?'.tr(ctx),
@@ -247,15 +253,19 @@ class _CommentsTabState extends ConsumerState<CommentsTab> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
+            onPressed: () => Navigator.of(ctx).pop(false),
             child: Text('Cancel'.tr(ctx),
                 style: const TextStyle(fontFamily: 'Cairo')),
           ),
-          FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: AppColors.error),
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text('Delete'.tr(ctx),
-                style: const TextStyle(fontFamily: 'Cairo')),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text(
+              'Delete'.tr(ctx),
+              style: const TextStyle(
+                fontFamily: 'Cairo',
+                color: AppColors.error,
+              ),
+            ),
           ),
         ],
       ),
@@ -317,6 +327,11 @@ class _CommentsTabState extends ConsumerState<CommentsTab> {
                       state: state,
                       items: items,
                       scrollController: _listScroll,
+                      // Needed by each bubble to decide "mine" vs "theirs"
+                      // now that `canDelete` is no longer a proxy for
+                      // authorship (PMs can delete any comment).
+                      currentEmployeeId:
+                          ref.watch(authProvider).employee?.id,
                       onDelete: _confirmDelete,
                       onRetry: () => ref
                           .read(commentsProvider(widget.taskId).notifier)
@@ -333,6 +348,18 @@ class _CommentsTabState extends ConsumerState<CommentsTab> {
                           onClose: _hideMentionPopup,
                         ),
                       ),
+                    if (state.isMutating)
+                      Positioned.fill(
+                        child: Container(
+                          color: Colors.black54,
+                          child: const Center(
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 3,
+                            ),
+                          ),
+                        ),
+                      ),
                   ],
                 ),
               ),
@@ -340,7 +367,7 @@ class _CommentsTabState extends ConsumerState<CommentsTab> {
                 _Composer(
                   controller: _composerController,
                   focusNode: _composerFocus,
-                  isSending: state.isSending,
+                  isSending: state.isSending || state.isMutating,
                   onSend: _send,
                 )
               else
@@ -495,6 +522,7 @@ class _MessagesArea extends StatelessWidget {
   final CommentsState state;
   final List<_ChatItem> items;
   final ScrollController scrollController;
+  final int? currentEmployeeId;
   final void Function(Comment) onDelete;
   final Future<void> Function() onRetry;
 
@@ -502,6 +530,7 @@ class _MessagesArea extends StatelessWidget {
     required this.state,
     required this.items,
     required this.scrollController,
+    required this.currentEmployeeId,
     required this.onDelete,
     required this.onRetry,
   });
@@ -539,6 +568,7 @@ class _MessagesArea extends StatelessWidget {
             return _MessageBubble(
               comment: item.comment,
               onDelete: () => onDelete(item.comment),
+              currentEmployeeId: currentEmployeeId,
             );
           }
           return const SizedBox.shrink();
@@ -598,12 +628,29 @@ class _MessageBubble extends StatelessWidget {
   final Comment comment;
   final VoidCallback onDelete;
 
-  const _MessageBubble({required this.comment, required this.onDelete});
+  /// Employee id of the currently-logged-in user. Used purely to decide
+  /// whether this bubble is "mine" (right-aligned, blue) or theirs.
+  ///
+  /// We used to derive `isMine` from `comment.canDelete` — that was fine
+  /// when the backend only let the author delete. After the policy change
+  /// that lets project managers also delete any comment, `canDelete` no
+  /// longer implies authorship, so bubble placement needs a different
+  /// source of truth: the author id.
+  final int? currentEmployeeId;
+
+  const _MessageBubble({
+    required this.comment,
+    required this.onDelete,
+    required this.currentEmployeeId,
+  });
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    final isMine = comment.canDelete; // backend = author-only delete
+    final authorId = comment.author?.id;
+    final isMine = currentEmployeeId != null &&
+        authorId != null &&
+        authorId == currentEmployeeId;
     final bgColor =
         isMine ? AppColors.primaryMid.withOpacity(0.92) : colors.bgCard;
     final fgColor = isMine ? Colors.white : colors.textPrimary;
@@ -640,19 +687,32 @@ class _MessageBubble extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Author name (for theirs) — skip on own bubbles, like WhatsApp
-          // 1-to-1 chats where you don't see your own name.
+          // Author name + role badge (for theirs) — skip on own bubbles,
+          // like WhatsApp 1-to-1 chats where you don't see your own name.
           if (!isMine && comment.author != null)
             Padding(
               padding: const EdgeInsets.only(bottom: 2),
-              child: Text(
-                comment.author!.name,
-                style: TextStyle(
-                  fontFamily: 'Cairo',
-                  fontSize: 11,
-                  fontWeight: FontWeight.w800,
-                  color: authorColor,
-                ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Flexible(
+                    child: Text(
+                      comment.author!.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontFamily: 'Cairo',
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                        color: authorColor,
+                      ),
+                    ),
+                  ),
+                  if (comment.authorRole != null) ...[
+                    const SizedBox(width: 6),
+                    _RoleBadge(role: comment.authorRole!),
+                  ],
+                ],
               ),
             ),
           _RichBody(
@@ -701,8 +761,12 @@ class _MessageBubble extends StatelessWidget {
             isMine ? MainAxisAlignment.end : MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          if (isMine)
-            // Long-press delete keeps the chrome out of the way until needed.
+          // Long-press to delete — gated by `canDelete` from the server,
+          // which is now computed as (author || project manager). That's
+          // broader than "isMine", so PMs can long-press any bubble to
+          // delete it while regular members only get the affordance on
+          // their own messages.
+          if (comment.canDelete)
             GestureDetector(
               onLongPress: onDelete,
               child: bubble,
@@ -842,22 +906,33 @@ class _Composer extends StatelessWidget {
       child: SafeArea(
         top: false,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(10, 8, 8, 8),
+          // Balanced padding — the old 10/8/8/8 was lopsided and crammed
+          // the input against one side in RTL layouts. 12/8/12/8 gives the
+          // row symmetric breathing room.
+          padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
           child: Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
+            // `end` was for multi-line (pin Send to the bottom), but made
+            // single-line composers look off-balance. `center` keeps the
+            // Send button vertically centered with whatever height the
+            // input currently has — feels right in both states.
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Expanded(
+                // No border / frame around the input — just a filled pill
+                // that reads as a soft surface to type on. The
+                // InputDecoration explicitly disables `border`,
+                // `enabledBorder`, `focusedBorder`, `errorBorder` etc. so
+                // the app-wide `InputDecorationTheme` doesn't paint a
+                // rectangle on top of our rounded pill.
                 child: Container(
-                  constraints: const BoxConstraints(
-                    minHeight: 44,
-                    maxHeight: 140,
-                  ),
                   decoration: BoxDecoration(
                     color: colors.bg,
-                    borderRadius: BorderRadius.circular(22),
-                    border: Border.all(color: colors.gray200),
+                    borderRadius: BorderRadius.circular(21),
                   ),
-                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 4,
+                  ),
                   child: TextField(
                     controller: controller,
                     focusNode: focusNode,
@@ -867,6 +942,7 @@ class _Composer extends StatelessWidget {
                     style: TextStyle(
                       fontFamily: 'Cairo',
                       fontSize: 14,
+                      height: 1.3,
                       color: colors.textPrimary,
                     ),
                     decoration: InputDecoration(
@@ -876,15 +952,25 @@ class _Composer extends StatelessWidget {
                         fontSize: 13,
                         color: colors.textDisabled,
                       ),
+                      // Kill every border state so nothing paints on top of
+                      // the pill, regardless of focus/error/disabled state.
                       border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      disabledBorder: InputBorder.none,
+                      errorBorder: InputBorder.none,
+                      focusedErrorBorder: InputBorder.none,
+                      filled: false,
                       isDense: true,
                       contentPadding:
-                          const EdgeInsets.symmetric(vertical: 12),
+                          const EdgeInsets.symmetric(vertical: 8),
                     ),
                   ),
                 ),
               ),
-              const SizedBox(width: 6),
+              // Breathing room between the input pill and the send button —
+              // the old 6 px made them read as one cramped unit.
+              const SizedBox(width: 8),
               _SendButton(
                 isSending: isSending,
                 onTap: onSend,
@@ -905,28 +991,34 @@ class _SendButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: isSending ? null : onTap,
-      child: Container(
-        width: 44,
-        height: 44,
-        decoration: const BoxDecoration(
-          color: AppColors.primaryMid,
-          shape: BoxShape.circle,
-        ),
-        child: isSending
-            ? const Padding(
-                padding: EdgeInsets.all(12),
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
+    return Material(
+      color: AppColors.primaryMid,
+      shape: const CircleBorder(),
+      clipBehavior: Clip.antiAlias,
+      // Subtle elevation lifts the button off the composer surface so it
+      // reads as the primary action, not just another pill.
+      elevation: 1.5,
+      child: InkWell(
+        onTap: isSending ? null : onTap,
+        // Same side length as the input (42 px) so the two widgets align
+        // perfectly in the row — no floating half-pixel gap above/below.
+        child: SizedBox(
+          width: 42,
+          height: 42,
+          child: isSending
+              ? const Padding(
+                  padding: EdgeInsets.all(11),
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                )
+              : const Icon(
+                  Icons.send_rounded,
                   color: Colors.white,
+                  size: 18,
                 ),
-              )
-            : const Icon(
-                Icons.send_rounded,
-                color: Colors.white,
-                size: 20,
-              ),
+        ),
       ),
     );
   }
@@ -1463,19 +1555,55 @@ class _MessageItem extends _ChatItem {
 bool _isWhitespace(String ch) =>
     ch == ' ' || ch == '\t' || ch == '\n' || ch == '\r';
 
+/// Small colored pill showing the comment author's current role in the task
+/// (e.g. "مدير المشروع", "مسؤول المهمة", "عضو في المهمة", "ليس عضو").
+class _RoleBadge extends StatelessWidget {
+  final CommentAuthorRole role;
+  const _RoleBadge({required this.role});
+
+  @override
+  Widget build(BuildContext context) {
+    final color = _parseHex(role.color);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.15),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Text(
+        role.label,
+        style: TextStyle(
+          fontFamily: 'Cairo',
+          fontSize: 9,
+          fontWeight: FontWeight.w700,
+          color: color,
+        ),
+      ),
+    );
+  }
+}
+
 Color _parseHex(String hex) {
   final cleaned = hex.replaceAll('#', '').trim();
   final withAlpha = cleaned.length == 6 ? 'FF$cleaned' : cleaned;
   return Color(int.parse(withAlpha, radix: 16));
 }
 
-/// "10:42" — 24-hour clock, neutral across locales.
+/// "10:23 م" — 12-hour clock with AM/PM in the current app language,
+/// rendered in the user's *device* timezone.
+///
+/// The server ships `created_at` as an ISO-8601 string with a UTC offset
+/// (e.g. `…+03:00`). Dart's `DateTime.parse` keeps the offset but still
+/// exposes UTC on its internal clock; `.toLocal()` converts to whatever
+/// the device is set to. `AppFuns.formatTime` then:
+///   - produces `h:mm a` via Jiffy (locale-aware — "م" / "ص" in Arabic,
+///     "AM" / "PM" in English),
+///   - swaps any Arabic-Indic digits (`٠-٩`) to Western (`0-9`) so the
+///     whole app stays consistent with the "English digits everywhere"
+///     convention in MEMORY.md.
 String _formatTime(DateTime? d) {
   if (d == null) return '';
-  final local = d.toLocal();
-  final h = local.hour.toString().padLeft(2, '0');
-  final m = local.minute.toString().padLeft(2, '0');
-  return '$h:$m';
+  return AppFuns.formatTime(d.toLocal());
 }
 
 // Localized day-of-week + month names so we don't need to call

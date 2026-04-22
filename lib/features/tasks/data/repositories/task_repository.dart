@@ -1,7 +1,14 @@
+import 'package:dio/dio.dart';
+
 import '../../../../core/constants/api_constants.dart';
 import '../../../../core/network/api_client.dart';
+import '../models/activity_models.dart';
+import '../models/attachment_models.dart';
 import '../models/comment_models.dart';
+import '../models/create_task_request.dart';
+import '../models/project_team_models.dart';
 import '../models/subtasks_data.dart';
+import '../models/task_details_model.dart';
 import '../models/task_models.dart';
 import '../models/task_status_model.dart';
 import '../models/time_log_models.dart';
@@ -26,18 +33,23 @@ class TaskRepository {
     return response.data ?? const TaskStatusesData(statuses: []);
   }
 
-  /// List tasks assigned to the current user, with optional filters.
+  /// List tasks visible to the current user (assignee, task member, PM, … —
+  /// server rules), with optional filters.
   ///
-  /// - [assigneeId] defaults to `'me'` so the caller gets their own tasks.
+  /// - Omit [assigneeId] (or pass null) for the default «everything relevant»
+  ///   list. Pass `'me'` only when the user explicitly filters to assignee-only
+  ///   (`assignee_id=me` restricts to tasks where the current user is the
+  ///   assignee).
   /// - [status] is a status *code* (e.g. `DONE`) — NOT an id.
   /// - [priority] is a priority *code* (e.g. `HIGH`).
   /// - [q] matches against title + description + code.
   Future<TasksListData> listTasks({
     String? q,
     int? projectId,
+    int? companyId,
     String? status,
     String? priority,
-    String? assigneeId = 'me',
+    String? assigneeId,
     bool overdue = false,
     String? dueFrom,
     String? dueTo,
@@ -48,7 +60,8 @@ class TaskRepository {
       ApiConstants.tasks,
       queryParameters: {
         if (q != null && q.trim().isNotEmpty) 'q': q.trim(),
-        'project_id': ?projectId,
+        if (projectId != null) 'project_id': projectId,
+        if (companyId != null) 'company_id': companyId,
         if (status != null && status.isNotEmpty) 'status': status,
         if (priority != null && priority.isNotEmpty) 'priority': priority,
         if (assigneeId != null && assigneeId.isNotEmpty)
@@ -96,6 +109,7 @@ class TaskRepository {
     bool overdue = false,
     String? dueFrom,
     String? dueTo,
+    int? companyId,
     int page = 1,
     int perPage = 50,
   }) async {
@@ -110,6 +124,7 @@ class TaskRepository {
         if (overdue) 'overdue': 1,
         if (dueFrom != null && dueFrom.isNotEmpty) 'due_from': dueFrom,
         if (dueTo != null && dueTo.isNotEmpty) 'due_to': dueTo,
+        if (companyId != null) 'company_id': companyId,
         'page': page,
         'per_page': perPage,
       },
@@ -230,6 +245,22 @@ class TaskRepository {
     await _client.delete<void>(ApiConstants.taskTimeLogDelete(taskId, logId));
   }
 
+  /// PATCH description only. [description] may be `null` to clear (server may
+  /// store null). Empty string is also accepted by the API.
+  Future<TimeLog> patchTimeLogDescription(
+    int taskId,
+    int logId, {
+    required String? description,
+  }) async {
+    final response = await _client.patch<TimeLog>(
+      ApiConstants.taskTimeLogPatch(taskId, logId),
+      data: {'description': description},
+      fromJson: (json) => TimeLog.fromJson(json as Map<String, dynamic>),
+    );
+    return response.data ??
+        TimeLog(id: logId, rangeLabel: '', hoursSpent: 0, description: description);
+  }
+
   // ═══════════════════════════════════════════════════════════════════
   // Comments + @-mentions
   // ═══════════════════════════════════════════════════════════════════
@@ -294,5 +325,188 @@ class TaskRepository {
           MentionCandidatesData.fromJson(json as Map<String, dynamic>),
     );
     return response.data ?? const MentionCandidatesData();
+  }
+
+  // ═══════════════════════════════════════════════════════════════════
+  // Project team (used by the Add-Task screen)
+  // ═══════════════════════════════════════════════════════════════════
+
+  /// Fetch the full team of a project — manager + all members. Used by the
+  /// Add Task screen to populate both the assignee dropdown (manager-only)
+  /// and the multi-select members chip list.
+  Future<ProjectTeamData> listProjectTeam(int projectId) async {
+    final response = await _client.get<ProjectTeamData>(
+      ApiConstants.projectTeam(projectId),
+      fromJson: (json) =>
+          ProjectTeamData.fromJson(json as Map<String, dynamic>),
+    );
+    return response.data ?? const ProjectTeamData();
+  }
+
+  // ═══════════════════════════════════════════════════════════════════
+  // Create task / subtask
+  // ═══════════════════════════════════════════════════════════════════
+
+  /// Create a root task inside [projectId].
+  ///
+  /// The server enforces:
+  /// - Only project members (including the manager) may call this endpoint.
+  /// - [CreateTaskRequest.assigneeEmployeeId] is silently ignored when the
+  ///   caller is not the project manager — the assignee becomes the creator.
+  /// - Every id in [CreateTaskRequest.members] must be an active project
+  ///   member, otherwise `VALIDATION_FAILED` is returned.
+  ///
+  /// Returns the freshly-created task so the UI can splice it into the list
+  /// without a separate GET.
+  Future<Task> createRootTask(
+    int projectId,
+    CreateTaskRequest body,
+  ) async {
+    final response = await _client.post<Task>(
+      ApiConstants.projectTasks(projectId),
+      data: body.toJson(),
+      fromJson: (json) {
+        final map = json as Map<String, dynamic>;
+        // Server wraps the created task under `task` (canonical) but a plain
+        // task payload at the top level is accepted as a defensive fallback.
+        final taskJson = map['task'] is Map
+            ? Map<String, dynamic>.from(map['task'] as Map)
+            : map;
+        return Task.fromJson(taskJson);
+      },
+    );
+    return response.data ?? Task(id: 0, title: body.title);
+  }
+
+  /// Create a subtask under [parentTaskId]. Same fields as [createRootTask];
+  /// the `parent_id` relation is implicit from the URL.
+  ///
+  /// Permission rules on the server: the project manager, the parent task's
+  /// assignee, or a member of the parent task's team can all create subtasks.
+  Future<Task> createSubtask(
+    int parentTaskId,
+    CreateTaskRequest body,
+  ) async {
+    final response = await _client.post<Task>(
+      ApiConstants.taskSubtasks(parentTaskId),
+      data: body.toJson(includeExplicitNullStatus: true),
+      fromJson: (json) {
+        final map = json as Map<String, dynamic>;
+        final taskJson = map['task'] is Map
+            ? Map<String, dynamic>.from(map['task'] as Map)
+            : map;
+        return Task.fromJson(taskJson);
+      },
+    );
+    return response.data ?? Task(id: 0, title: body.title);
+  }
+
+  // ═══════════════════════════════════════════════════════════════════
+  // Attachments
+  // ═══════════════════════════════════════════════════════════════════
+
+  /// List a task's attachments (newest first).
+  ///
+  /// The summary payload tells the UI whether the current user is allowed
+  /// to upload new files (`can_upload`), which drives the FAB visibility.
+  Future<AttachmentsData> listAttachments(int taskId) async {
+    final response = await _client.get<AttachmentsData>(
+      ApiConstants.taskAttachments(taskId),
+      fromJson: (json) =>
+          AttachmentsData.fromJson(json as Map<String, dynamic>),
+    );
+    return response.data ?? const AttachmentsData();
+  }
+
+  /// Upload a single file as an attachment. The server enforces:
+  /// - Max size 10 MB (422 otherwise).
+  /// - Allowed extensions: pdf / webp / jpg / jpeg / png / zip.
+  /// - Permission to upload (same rule as posting a comment).
+  ///
+  /// We build a `multipart/form-data` body ourselves because the generic
+  /// `ApiClient.post` accepts arbitrary `data` — we pass Dio's `FormData`
+  /// which transparently triggers multipart.
+  Future<TaskAttachment> uploadAttachment(
+    int taskId, {
+    required String filePath,
+    String? filename,
+  }) async {
+    final form = FormData.fromMap({
+      'file': await MultipartFile.fromFile(filePath, filename: filename),
+    });
+    final response = await _client.post<TaskAttachment>(
+      ApiConstants.taskAttachments(taskId),
+      data: form,
+      fromJson: (json) =>
+          TaskAttachment.fromJson(json as Map<String, dynamic>),
+    );
+    return response.data ??
+        const TaskAttachment(id: 0, name: '');
+  }
+
+  /// Delete a single attachment. Server enforces that only the uploader
+  /// (or roles with broader permission) can delete — the UI guards this
+  /// with [TaskAttachment.canDelete] but the server is authoritative.
+  Future<void> deleteAttachment(int taskId, int attachmentId) async {
+    await _client.delete<void>(
+      ApiConstants.taskAttachmentDelete(taskId, attachmentId),
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════════════
+  // Activity
+  // ═══════════════════════════════════════════════════════════════════
+
+  /// Unified activity feed: status-change events + audit-log entries
+  /// (comments, attachments, time logs, subtasks, …) in one sorted list.
+  /// Items come newest-first from the server; UI does not need to re-sort.
+  Future<ActivityData> listActivity(int taskId) async {
+    final response = await _client.get<ActivityData>(
+      ApiConstants.taskActivity(taskId),
+      fromJson: (json) => ActivityData.fromJson(json as Map<String, dynamic>),
+    );
+    return response.data ?? const ActivityData();
+  }
+
+  // ═══════════════════════════════════════════════════════════════════
+  // Task details (full payload + edit + delete)
+  // ═══════════════════════════════════════════════════════════════════
+
+  /// Full task detail including path / project / team / counts /
+  /// audit info, plus a fine-grained `permissions` block that drives
+  /// which edit controls the UI renders.
+  Future<TaskDetails> getTaskDetails(int taskId) async {
+    final response = await _client.get<TaskDetails>(
+      ApiConstants.taskDetail(taskId),
+      fromJson: (json) => TaskDetails.fromJson(json as Map<String, dynamic>),
+    );
+    return response.data ??
+        const TaskDetails(id: 0, title: '');
+  }
+
+  /// Partially update a task. Only include keys you want to change —
+  /// unset keys are left untouched on the server. Returns the *full*
+  /// post-update [TaskDetails] so the UI can refresh in one round-trip.
+  ///
+  /// Accepted keys (all optional):
+  ///   title, description, priority, status, progress_percent, due_date,
+  ///   assignee_employee_id, members (List&lt;int&gt;)
+  Future<TaskDetails> patchTaskDetails(
+    int taskId,
+    Map<String, dynamic> changes,
+  ) async {
+    final response = await _client.patch<TaskDetails>(
+      ApiConstants.taskDetail(taskId),
+      data: changes,
+      fromJson: (json) => TaskDetails.fromJson(json as Map<String, dynamic>),
+    );
+    return response.data ??
+        const TaskDetails(id: 0, title: '');
+  }
+
+  /// Soft-delete a task. Server returns 200 on success, 403 if the
+  /// caller isn't the project manager.
+  Future<void> deleteTask(int taskId) async {
+    await _client.delete<void>(ApiConstants.taskDetail(taskId));
   }
 }

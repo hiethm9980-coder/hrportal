@@ -7,12 +7,16 @@ import 'package:go_router/go_router.dart';
 import 'package:hr_portal/core/constants/app_colors.dart';
 import 'package:hr_portal/core/localization/app_localizations.dart';
 import 'package:hr_portal/shared/controllers/global_error_handler.dart';
+import '../../../../../auth/presentation/providers/auth_providers.dart';
+import '../../../../data/models/task_models.dart';
 import '../../../../data/models/task_status_model.dart';
 import '../../../providers/my_tasks_provider.dart' show TaskFilter;
+import '../../../providers/task_navigation_highlight_provider.dart';
 import '../../../providers/subtasks_provider.dart';
 import '../../../providers/task_statuses_provider.dart';
 import '../../../widgets/advanced_filter_sheet.dart';
 import '../../../widgets/task_card.dart';
+import '../../add_task_screen.dart';
 import 'subtasks_parent_header.dart';
 
 /// "Subtasks" tab of the task detail screen.
@@ -39,6 +43,28 @@ class _SubtasksTabState extends ConsumerState<SubtasksTab> {
   final _searchController = TextEditingController();
   Timer? _searchDebounce;
   bool _showSearch = false;
+
+  // ── Add-subtask overlay state ────────────────────────────────────
+  // We render [AddTaskScreen] as an in-tree Stack overlay rather than a
+  // Navigator push so the task detail shell's bottom navigation bar stays
+  // visible beneath it. `_sheetOpenCount` bumps on every open so a fresh
+  // widget instance (with a reset form) is created each time.
+  bool _showAddSheet = false;
+  int _sheetOpenCount = 0;
+
+  void _openAddSheet() {
+    setState(() {
+      _sheetOpenCount++;
+      _showAddSheet = true;
+    });
+  }
+
+  void _closeAddSheet() => setState(() => _showAddSheet = false);
+
+  void _handleSubtaskCreated() {
+    setState(() => _showAddSheet = false);
+    ref.read(subtasksProvider(widget.taskId).notifier).load(reset: true);
+  }
 
   @override
   void initState() {
@@ -175,15 +201,50 @@ class _SubtasksTabState extends ConsumerState<SubtasksTab> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(subtasksProvider(widget.taskId));
+    final highlightTaskId = ref.watch(lastReturnedFromTaskDetailIdProvider);
     final statusesAsync = ref.watch(taskStatusesProvider);
     final allStatuses = statusesAsync.asData?.value ?? const <TaskStatus>[];
     final parentTitle = state.parent?.title ?? widget.initialTitle ?? '';
+    final canCreate = state.canCreateSubtask;
+    final parentProjectId = state.parent?.project?.id;
 
-    return Stack(
-      children: [
-        Column(
-          children: [
-            SubtasksParentHeader(
+    // We wrap the body in an inner `Scaffold` purely to get the standard
+    // bottom-right FAB positioning used by My Tasks. The outer task detail
+    // shell already owns the real `Scaffold` (with the bottom nav), so this
+    // inner one uses a transparent background and no bottom bar of its own.
+    //
+    // `PopScope` intercepts the Android hardware/gesture back button: while
+    // the add-subtask overlay is open we *swallow* the system pop so it
+    // only closes the overlay (instead of popping the task detail route
+    // and jumping all the way back to My Tasks).
+    return PopScope(
+      canPop: !_showAddSheet,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop && _showAddSheet) _closeAddSheet();
+      },
+      child: Scaffold(
+      backgroundColor: Colors.transparent,
+      floatingActionButton: canCreate && !_showAddSheet && parentProjectId != null
+          ? FloatingActionButton.extended(
+              heroTag: 'add-subtask-fab-${widget.taskId}',
+              backgroundColor: AppColors.primaryMid,
+              foregroundColor: Colors.white,
+              onPressed: _openAddSheet,
+              icon: const Icon(Icons.add_task_rounded),
+              label: Text(
+                'Add task'.tr(context),
+                style: const TextStyle(
+                  fontFamily: 'Cairo',
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            )
+          : null,
+      body: Stack(
+        children: [
+          Column(
+            children: [
+              SubtasksParentHeader(
               parentTitle: parentTitle,
               parent: state.parent,
               allStatuses: allStatuses,
@@ -193,6 +254,8 @@ class _SubtasksTabState extends ConsumerState<SubtasksTab> {
               searchActive: state.filter.q.trim().isNotEmpty,
               showSearch: _showSearch,
               searchController: _searchController,
+              canEditStatus: state.parent?.canEditStatus ?? false,
+              canEditProgress: state.parent?.canEditProgress ?? false,
               onBack: () =>
                   context.canPop() ? context.pop() : context.go('/my-tasks'),
               onRefresh: _refresh,
@@ -223,6 +286,9 @@ class _SubtasksTabState extends ConsumerState<SubtasksTab> {
             Expanded(
               child: _Body(
                 state: state,
+                highlightTaskId: highlightTaskId,
+                showTaskCompanyName:
+                    ref.watch(authProvider).canFilterTasksByCompany,
                 allStatuses: allStatuses,
                 scrollController: _scrollController,
                 onRefresh: () => ref
@@ -230,6 +296,13 @@ class _SubtasksTabState extends ConsumerState<SubtasksTab> {
                     .load(reset: true),
                 onChangeStatus: _changeStatus,
                 onChangeProgress: _changeProgress,
+                onOpenTask: (task) async {
+                  await context.push('/tasks/${task.id}', extra: task.title);
+                  if (!context.mounted) return;
+                  ref
+                      .read(lastReturnedFromTaskDetailIdProvider.notifier)
+                      .state = task.id;
+                },
               ),
             ),
           ],
@@ -261,7 +334,55 @@ class _SubtasksTabState extends ConsumerState<SubtasksTab> {
               ),
             ),
           ),
-      ],
+        // ── Add-subtask overlay ───────────────────────────────────────
+        // In-tree slide-up that reveals [AddTaskScreen] in embedded mode.
+        // Because the overlay lives inside this tab's Stack (not pushed to
+        // the Navigator), the task detail shell's bottom nav stays visible
+        // beneath it — matching the time-log sheet's behavior.
+        if (canCreate && parentProjectId != null)
+          Positioned.fill(
+            child: IgnorePointer(
+              ignoring: !_showAddSheet,
+              child: Stack(
+                children: [
+                  // Dimmed backdrop — tap to dismiss.
+                  Positioned.fill(
+                    child: AnimatedOpacity(
+                      duration: const Duration(milliseconds: 200),
+                      opacity: _showAddSheet ? 1 : 0,
+                      child: GestureDetector(
+                        onTap: _closeAddSheet,
+                        behavior: HitTestBehavior.opaque,
+                        child: const ColoredBox(color: Colors.black54),
+                      ),
+                    ),
+                  ),
+                  // Slide-in form — full-tab-height.
+                  Positioned.fill(
+                    child: AnimatedSlide(
+                      duration: const Duration(milliseconds: 240),
+                      curve: Curves.easeOutCubic,
+                      offset: _showAddSheet ? Offset.zero : const Offset(0, 1),
+                      child: AddTaskScreen(
+                        key: ValueKey(_sheetOpenCount),
+                        mode: AddTaskMode.subtask,
+                        projectId: parentProjectId,
+                        parentTaskId: widget.taskId,
+                        parentTaskTitle:
+                            state.parent?.title ?? parentTitle,
+                        parentAssigneeId: state.parent?.assignee?.id,
+                        onClose: _closeAddSheet,
+                        onCreated: _handleSubtaskCreated,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+      ),
     );
   }
 }
@@ -272,6 +393,8 @@ class _SubtasksTabState extends ConsumerState<SubtasksTab> {
 
 class _Body extends StatelessWidget {
   final SubtasksState state;
+  final int? highlightTaskId;
+  final bool showTaskCompanyName;
   final List<TaskStatus> allStatuses;
   final ScrollController scrollController;
   final Future<void> Function() onRefresh;
@@ -282,14 +405,18 @@ class _Body extends StatelessWidget {
     required int percent,
     required int previousPercent,
   }) onChangeProgress;
+  final Future<void> Function(Task task) onOpenTask;
 
   const _Body({
     required this.state,
+    this.highlightTaskId,
+    this.showTaskCompanyName = false,
     required this.allStatuses,
     required this.scrollController,
     required this.onRefresh,
     required this.onChangeStatus,
     required this.onChangeProgress,
+    required this.onOpenTask,
   });
 
   @override
@@ -333,17 +460,14 @@ class _Body extends StatelessWidget {
           return TaskCard(
             task: task,
             allStatuses: allStatuses,
+            showCompanyName: showTaskCompanyName,
+            highlightAfterReturn: highlightTaskId == task.id,
             onStatusChange: (newStatus) {
               if (task.status?.code == newStatus.code) return;
               onChangeStatus(taskId: task.id, newStatus: newStatus);
             },
             onProgressChange: onChangeProgress,
-            onTap: () {
-              // Lazy Loading tree: open a nested detail screen for this
-              // subtask via go_router, so back navigation works and deep
-              // links stay intact.
-              context.push('/tasks/${task.id}', extra: task.title);
-            },
+            onTap: () => onOpenTask(task),
           );
         },
       ),

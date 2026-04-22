@@ -7,21 +7,27 @@ import 'package:go_router/go_router.dart';
 import 'package:hr_portal/core/constants/app_colors.dart';
 import 'package:hr_portal/core/localization/app_localizations.dart';
 import 'package:hr_portal/shared/controllers/global_error_handler.dart';
+import '../../../auth/presentation/providers/auth_providers.dart';
 import '../../data/models/project_brief_model.dart';
+import '../../data/models/task_models.dart';
 import '../../data/models/task_status_model.dart';
+import '../providers/company_list_scope_provider.dart';
 import '../providers/my_tasks_provider.dart';
+import '../providers/task_navigation_highlight_provider.dart';
 import '../providers/projects_brief_provider.dart';
 import '../providers/task_statuses_provider.dart';
 import '../widgets/advanced_filter_sheet.dart';
 import '../widgets/project_picker_sheet.dart';
 import '../widgets/status_chips_row.dart';
 import '../widgets/task_card.dart';
+import 'add_task_screen.dart';
 
 /// The "My Tasks" screen.
 ///
-/// Shows only tasks assigned to the current user (`assignee_id=me`), with a
-/// rich header (search, status chips, project picker, advanced filters) and
-/// an infinite-scroll list body.
+/// Default: [GET /api/v1/tasks] without `assignee_id` — tasks the server
+/// returns for this user (assignee, task member, PM visibility, …). Optional
+/// scope chip narrows to `assignee_id=me` only. Header: search, status chips,
+/// project picker, advanced filters; infinite-scroll list body.
 class MyTasksScreen extends ConsumerStatefulWidget {
   const MyTasksScreen({super.key});
 
@@ -39,8 +45,33 @@ class _MyTasksScreenState extends ConsumerState<MyTasksScreen> {
   void initState() {
     super.initState();
 
-    // Kick off the initial fetch — we use a microtask so Riverpod is ready.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    // [Riverpod] may still hold the last [TaskFilter.q] after the user
+    // navigates away, but a fresh [TextEditingController] starts empty.
+    // Rehydrate the search field from the provider so the visible string
+    // matches the list that is still filtered.
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      final q = ref.read(myTasksProvider).filter.q;
+      if (q.isNotEmpty) {
+        _searchController.value = TextEditingValue(
+          text: q,
+          selection: TextSelection.collapsed(offset: q.length),
+        );
+        if (!_showSearch) {
+          setState(() => _showSearch = true);
+        }
+      }
+      final auth = ref.read(authProvider);
+      if (auth.canFilterTasksByCompany) {
+        final allowed = <int>{
+          for (final c in auth.managedCompanies) c.id,
+          if (auth.employee?.company != null) auth.employee!.company!.id,
+        };
+        await ref
+            .read(companyListScopeIdProvider.notifier)
+            .restoreIfAllowed(allowed);
+      }
+      if (!mounted) return;
       ref.read(myTasksProvider.notifier).load(reset: true);
     });
 
@@ -106,15 +137,7 @@ class _MyTasksScreenState extends ConsumerState<MyTasksScreen> {
     if (result == null || !mounted) return;
 
     if (result.openDetails && result.project != null) {
-      // TODO: navigate to project details screen once implemented.
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            '${'Project details'.tr(context)}: ${result.project!.name}',
-            style: const TextStyle(fontFamily: 'Cairo'),
-          ),
-        ),
-      );
+      context.push('/projects/${result.project!.id}/dashboard');
       return;
     }
 
@@ -131,6 +154,7 @@ class _MyTasksScreenState extends ConsumerState<MyTasksScreen> {
           openOnly: values.openOnly,
           dueFrom: values.dueFrom,
           dueTo: values.dueTo,
+          assigneeOnlyMe: values.assigneeOnlyMe,
         );
   }
 
@@ -202,6 +226,9 @@ class _MyTasksScreenState extends ConsumerState<MyTasksScreen> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(myTasksProvider);
+    final highlightTaskId = ref.watch(lastReturnedFromTaskDetailIdProvider);
+    final auth = ref.watch(authProvider);
+    final companyScope = ref.watch(companyListScopeIdProvider);
     final statusesAsync = ref.watch(taskStatusesProvider);
     final projectsAsync = ref.watch(projectsBriefProvider);
 
@@ -212,7 +239,29 @@ class _MyTasksScreenState extends ConsumerState<MyTasksScreen> {
       fallback: 'All projects'.tr(context),
     );
 
-    return Scaffold(
+    // When a project is selected, fetch its details to know whether the
+    // current user is the project manager — that's the only role allowed
+    // to create root tasks (2026-04 backend tightening). We hide the FAB
+    // for everyone else. Loading / error → no FAB either, since the
+    // server will reject the request anyway with a clear Arabic message.
+    final activeProjectId = state.filter.projectId;
+    final canCreateRootTask = activeProjectId != null &&
+        (ref
+                .watch(projectDetailsProvider(activeProjectId))
+                .asData
+                ?.value
+                .permissions
+                .canCreateTask ??
+            false);
+
+    final canPop = context.canPop();
+    return PopScope(
+      canPop: canPop,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        if (context.mounted) context.go('/');
+      },
+      child: Scaffold(
       backgroundColor: context.appColors.bg,
       body: Stack(
         children: [
@@ -227,6 +276,21 @@ class _MyTasksScreenState extends ConsumerState<MyTasksScreen> {
                 projectActive: state.filter.projectId != null,
                 filtersActive: state.filter.hasAdvancedFilters,
                 searchActive: state.filter.q.trim().isNotEmpty,
+                companyFilter: auth.canFilterTasksByCompany
+                    ? _MyTasksCompanyScopeDropdown(
+                        selectedId: companyScope,
+                        onChanged: (v) async {
+                          await ref
+                              .read(companyListScopeIdProvider.notifier)
+                              .setScope(v);
+                          if (context.mounted) {
+                            await ref
+                                .read(myTasksProvider.notifier)
+                                .load(reset: true);
+                          }
+                        },
+                      )
+                    : null,
                 onBack: () => context.canPop() ? context.pop() : context.go('/'),
                 onToggleSearch: _toggleSearch,
                 onClearSearch: _clearSearch,
@@ -240,6 +304,8 @@ class _MyTasksScreenState extends ConsumerState<MyTasksScreen> {
               Expanded(
                 child: _Body(
                   state: state,
+                  highlightTaskId: highlightTaskId,
+                  showTaskCompanyName: auth.canFilterTasksByCompany,
                   statusesAsync: statusesAsync,
                   scrollController: _scrollController,
                   onRefresh: () async {
@@ -249,6 +315,13 @@ class _MyTasksScreenState extends ConsumerState<MyTasksScreen> {
                   },
                   onChangeStatus: _changeStatus,
                   onChangeProgress: _changeProgress,
+                  onOpenTask: (task) async {
+                    await context.push('/tasks/${task.id}', extra: task.title);
+                    if (!mounted) return;
+                    ref
+                        .read(lastReturnedFromTaskDetailIdProvider.notifier)
+                        .state = task.id;
+                  },
                 ),
               ),
             ],
@@ -283,6 +356,47 @@ class _MyTasksScreenState extends ConsumerState<MyTasksScreen> {
             ),
         ],
       ),
+      // ── Add-task FAB ────────────────────────────────────────────────
+      // Visible only when:
+      //   1. the user has filtered by a specific project (otherwise the
+      //      endpoint doesn't know where to create the task), AND
+      //   2. the current user is the project manager (server enforces
+      //      this; the `permissions.can_create_task` flag from the project
+      //      detail endpoint tells us whether to surface the button).
+      // Tapping the project name chip in the header opens the picker
+      // which doubles as the "choose project first" entry point.
+      floatingActionButton: canCreateRootTask
+          ? FloatingActionButton.extended(
+              heroTag: 'my-tasks-add-fab',
+              backgroundColor: AppColors.primaryMid,
+              foregroundColor: Colors.white,
+              onPressed: () async {
+                final pid = state.filter.projectId;
+                if (pid == null) return;
+                final created = await Navigator.of(context).push<bool>(
+                  MaterialPageRoute(
+                    builder: (_) => AddTaskScreen(
+                      mode: AddTaskMode.project,
+                      projectId: pid,
+                      projectName: selectedProjectName,
+                    ),
+                  ),
+                );
+                if (created == true) {
+                  ref.read(myTasksProvider.notifier).load(reset: true);
+                }
+              },
+              icon: const Icon(Icons.add_task_rounded),
+              label: Text(
+                'Add task'.tr(context),
+                style: const TextStyle(
+                  fontFamily: 'Cairo',
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            )
+          : null,
+    ),
     );
   }
 
@@ -313,6 +427,7 @@ class _Header extends StatelessWidget {
   final bool projectActive;
   final bool filtersActive;
   final bool searchActive;
+  final Widget? companyFilter;
   final VoidCallback onBack;
   final VoidCallback onToggleSearch;
   final VoidCallback onClearSearch;
@@ -331,6 +446,7 @@ class _Header extends StatelessWidget {
     required this.projectActive,
     required this.filtersActive,
     required this.searchActive,
+    this.companyFilter,
     required this.onBack,
     required this.onToggleSearch,
     required this.onClearSearch,
@@ -478,6 +594,10 @@ class _Header extends StatelessWidget {
                   )
                 : const SizedBox.shrink(),
           ),
+          if (companyFilter != null) ...[
+            const SizedBox(height: 10),
+            companyFilter!,
+          ],
           const SizedBox(height: 12),
 
           // ── Row 2: Status chips ───────────────────────────────────
@@ -617,6 +737,8 @@ class _IconBtn extends StatelessWidget {
 
 class _Body extends StatelessWidget {
   final MyTasksState state;
+  final int? highlightTaskId;
+  final bool showTaskCompanyName;
   final AsyncValue<List<TaskStatus>> statusesAsync;
   final ScrollController scrollController;
   final Future<void> Function() onRefresh;
@@ -627,14 +749,18 @@ class _Body extends StatelessWidget {
     required int percent,
     required int previousPercent,
   }) onChangeProgress;
+  final Future<void> Function(Task task) onOpenTask;
 
   const _Body({
     required this.state,
+    this.highlightTaskId,
+    this.showTaskCompanyName = false,
     required this.statusesAsync,
     required this.scrollController,
     required this.onRefresh,
     required this.onChangeStatus,
     required this.onChangeProgress,
+    required this.onOpenTask,
   });
 
   @override
@@ -691,18 +817,15 @@ class _Body extends StatelessWidget {
           return TaskCard(
             task: task,
             allStatuses: allStatuses,
+            showCompanyName: showTaskCompanyName,
+            highlightAfterReturn: highlightTaskId == task.id,
             onStatusChange: (newStatus) {
               // Ignore if user tapped the same status.
               if (task.status?.code == newStatus.code) return;
               onChangeStatus(taskId: task.id, newStatus: newStatus);
             },
             onProgressChange: onChangeProgress,
-            onTap: () {
-              // Open the task detail shell. Pass the title via `extra` so
-              // the detail header renders something immediately instead of
-              // flashing an empty subtitle while the parent loads.
-              context.push('/tasks/${task.id}', extra: task.title);
-            },
+            onTap: () => onOpenTask(task),
           );
         },
       ),
@@ -749,6 +872,86 @@ class _EmptyView extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// [GET /tasks?company_id=] and project picker: scope for company managers.
+class _MyTasksCompanyScopeDropdown extends ConsumerWidget {
+  const _MyTasksCompanyScopeDropdown({
+    required this.selectedId,
+    required this.onChanged,
+  });
+
+  final int? selectedId;
+  final Future<void> Function(int? v) onChanged;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final auth = ref.watch(authProvider);
+    final byId = <int, String>{};
+    for (final c in auth.managedCompanies) {
+      byId.putIfAbsent(c.id, () => c.name);
+    }
+    final em = auth.employee?.company;
+    if (em != null) {
+      byId.putIfAbsent(em.id, () => em.name);
+    }
+    final ordered = <int>[];
+    for (final c in auth.managedCompanies) {
+      if (!ordered.contains(c.id)) ordered.add(c.id);
+    }
+    if (em != null && !ordered.contains(em.id)) ordered.add(em.id);
+
+    final isValid = selectedId == null ||
+        (selectedId != null && byId.containsKey(selectedId!));
+    final value = isValid ? selectedId : null;
+
+    return Material(
+      color: Colors.transparent,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 6),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+        ),
+        child: DropdownButtonHideUnderline(
+          child: DropdownButton<int?>(
+            isExpanded: true,
+            value: value,
+            isDense: true,
+            borderRadius: BorderRadius.circular(10),
+            dropdownColor: const Color(0xFF1a2a4a),
+            icon: Icon(Icons.apartment_outlined, color: Colors.white.withValues(alpha: 0.9), size: 20),
+            style: const TextStyle(
+              fontFamily: 'Cairo',
+              color: Colors.white,
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+            ),
+            items: [
+              DropdownMenuItem<int?>(
+                value: null,
+                child: Text('All my companies'.tr(context)),
+              ),
+              for (final id in ordered)
+                DropdownMenuItem<int?>(
+                  value: id,
+                  child: Text(
+                    byId[id] ?? '—',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+            ],
+            onChanged: (v) {
+              if (v == selectedId) return;
+              unawaited(onChanged(v));
+            },
+          ),
+        ),
       ),
     );
   }

@@ -73,7 +73,11 @@ class NotificationFCMService {
     final msg = _initialMessage;
     if (msg == null) return;
     _initialMessage = null;
-    await _handleOpen(msg);
+    // Cold-start (app was terminated when the notification arrived): we want
+    // the deep-link route to REPLACE the stack so pressing Back returns the
+    // user to the app's home/root instead of exiting. We signal that with
+    // `fromTerminated: true` which picks `context.go` instead of `push`.
+    await _handleOpen(msg, fromTerminated: true);
   }
 
   Future<void> _onForegroundMessage(RemoteMessage message) async {
@@ -178,7 +182,14 @@ class NotificationFCMService {
     });
   }
 
-  Future<void> _handleOpen(RemoteMessage message) async {
+  /// [fromTerminated] distinguishes a cold-start consumption (the app was
+  /// killed when the notification arrived, and we're now launching from it)
+  /// from a warm tap (foreground or background→foreground). Cold paths use
+  /// `go` so Back → home; warm paths use `push` so Back → previous screen.
+  Future<void> _handleOpen(
+    RemoteMessage message, {
+    bool fromTerminated = false,
+  }) async {
     final d = message.data;
 
     final id = d['id']?.toString();
@@ -199,9 +210,17 @@ class NotificationFCMService {
     if (route != null && route.isNotEmpty) {
       final ctx = rootNavigatorKey.currentContext;
       if (ctx != null && ctx.mounted) {
-        ctx.go(route);
+        if (fromTerminated) {
+          // Cold-start: replace the (empty) stack — Back should exit to
+          // home, not back-pop out of the app via a phantom splash.
+          ctx.go(route);
+        } else {
+          // Warm tap: push on top of whatever the user was on so Back
+          // returns to the previous screen.
+          ctx.push(route);
+        }
       } else {
-        // App not fully ready (terminated launch) — defer to router redirect.
+        // App not fully ready yet — defer to router redirect which uses go().
         pendingDeepLink = route;
       }
     } else {

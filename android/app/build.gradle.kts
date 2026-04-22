@@ -1,3 +1,7 @@
+// Google Play / production: build the Flutter app with
+//   flutter build appbundle --release --dart-define=FLAVOR=prod
+// Otherwise the app uses the fixed DEV base URL from AppConfig (not Remote Config).
+
 import java.util.Properties
 import java.io.FileInputStream
 

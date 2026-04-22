@@ -31,6 +31,14 @@ class SubtasksParentHeader extends StatelessWidget {
   final bool showSearch;
   final TextEditingController searchController;
 
+  /// Whether the current user is allowed to change the parent task's status.
+  /// When false the status dropdown renders as a read-only badge.
+  final bool canEditStatus;
+
+  /// Whether the current user is allowed to change the parent task's progress.
+  /// When false the progress input renders as a read-only label.
+  final bool canEditProgress;
+
   final VoidCallback onBack;
   final VoidCallback onRefresh;
   final VoidCallback onToggleSearch;
@@ -52,6 +60,8 @@ class SubtasksParentHeader extends StatelessWidget {
     required this.searchActive,
     required this.showSearch,
     required this.searchController,
+    this.canEditStatus = true,
+    this.canEditProgress = true,
     required this.onBack,
     required this.onRefresh,
     required this.onToggleSearch,
@@ -113,6 +123,8 @@ class SubtasksParentHeader extends StatelessWidget {
             parent: parent,
             allStatuses: allStatuses,
             filtersActive: filtersActive,
+            canEditStatus: canEditStatus,
+            canEditProgress: canEditProgress,
             onParentStatusChange: onParentStatusChange,
             onParentProgressCommit: onParentProgressCommit,
             onFilterTap: onFilterTap,
@@ -352,6 +364,8 @@ class _ParentControls extends StatelessWidget {
   final Task? parent;
   final List<TaskStatus> allStatuses;
   final bool filtersActive;
+  final bool canEditStatus;
+  final bool canEditProgress;
   final ValueChanged<TaskStatus> onParentStatusChange;
   final ProgressCommitCallback onParentProgressCommit;
   final VoidCallback onFilterTap;
@@ -360,6 +374,8 @@ class _ParentControls extends StatelessWidget {
     required this.parent,
     required this.allStatuses,
     required this.filtersActive,
+    required this.canEditStatus,
+    required this.canEditProgress,
     required this.onParentStatusChange,
     required this.onParentProgressCommit,
     required this.onFilterTap,
@@ -372,23 +388,29 @@ class _ParentControls extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Parent status dropdown.
+          // Parent status — dropdown when editable, static badge when not.
           Expanded(
             flex: 5,
-            child: _ParentStatusDropdown(
-              current: parent?.status,
-              allStatuses: allStatuses,
-              onChanged: onParentStatusChange,
-            ),
+            child: canEditStatus
+                ? _ParentStatusDropdown(
+                    current: parent?.status,
+                    allStatuses: allStatuses,
+                    onChanged: onParentStatusChange,
+                  )
+                : _ParentStatusBadge(current: parent?.status),
           ),
           const SizedBox(width: 8),
-          // Parent progress numeric input.
+          // Parent progress — editable input or read-only label.
           Expanded(
             flex: 3,
-            child: _ParentProgressInput(
-              initialPercent: parent?.progressPercent ?? 0,
-              onCommit: onParentProgressCommit,
-            ),
+            child: canEditProgress
+                ? _ParentProgressInput(
+                    initialPercent: parent?.progressPercent ?? 0,
+                    onCommit: onParentProgressCommit,
+                  )
+                : _ParentProgressReadOnly(
+                    percent: parent?.progressPercent ?? 0,
+                  ),
           ),
           const SizedBox(width: 8),
           // Filter button.
@@ -492,6 +514,57 @@ class _ParentStatusDropdown extends StatelessWidget {
                 color: Colors.white.withOpacity(0.9)),
           ],
         ),
+      ),
+    );
+  }
+}
+
+// ─────────── Parent status badge (read-only fallback) ───────────
+
+class _ParentStatusBadge extends StatelessWidget {
+  final TaskStatusRef? current;
+  const _ParentStatusBadge({required this.current});
+
+  @override
+  Widget build(BuildContext context) {
+    final color = current != null ? _parseHex(current!.color) : Colors.white;
+    final label = current?.label ?? '—';
+    return Container(
+      height: 44,
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.10),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white.withOpacity(0.18)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 10,
+            height: 10,
+            decoration: BoxDecoration(
+              color: color,
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white.withOpacity(0.6)),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontFamily: 'Cairo',
+                color: Colors.white.withOpacity(0.7),
+                fontSize: 13,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+          Icon(Icons.lock_outline_rounded,
+              size: 14, color: Colors.white.withOpacity(0.4)),
+        ],
       ),
     );
   }
@@ -653,6 +726,55 @@ class _ParentProgressInputState extends State<_ParentProgressInput> {
                 fontWeight: FontWeight.w800,
               ),
             ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─────────── Parent progress read-only ───────────
+
+class _ParentProgressReadOnly extends StatelessWidget {
+  final int percent;
+  const _ParentProgressReadOnly({required this.percent});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 44,
+      padding: const EdgeInsets.symmetric(horizontal: 10),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.10),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white.withOpacity(0.18)),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.percent_rounded, color: Colors.white54, size: 16),
+          const SizedBox(width: 4),
+          Text(
+            '$percent',
+            style: TextStyle(
+              fontFamily: 'Cairo',
+              color: Colors.white.withOpacity(0.7),
+              fontSize: 14,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(width: 2),
+          Text(
+            '%',
+            style: TextStyle(
+              fontFamily: 'Cairo',
+              color: Colors.white.withOpacity(0.5),
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(width: 4),
+          Icon(Icons.lock_outline_rounded,
+              size: 14, color: Colors.white.withOpacity(0.4)),
         ],
       ),
     );

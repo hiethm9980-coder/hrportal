@@ -1,3 +1,4 @@
+import 'inline_company_ref.dart';
 import 'task_priority_model.dart';
 
 /// A compact project representation used in the task filters dropdown and
@@ -11,6 +12,8 @@ class ProjectBrief {
   final String? statusLabel;  // Localized
   final String? statusColor;
   final TaskPriority? priority;
+  final int? companyId;
+  final InlineCompanyRef? company;
 
   const ProjectBrief({
     required this.id,
@@ -20,6 +23,8 @@ class ProjectBrief {
     this.statusLabel,
     this.statusColor,
     this.priority,
+    this.companyId,
+    this.company,
   });
 
   factory ProjectBrief.fromJson(Map<String, dynamic> json) {
@@ -45,6 +50,9 @@ class ProjectBrief {
       statusLabel: statusLabel,
       statusColor: statusColor,
       priority: TaskPriority.tryFromJson(json['priority']),
+      companyId: (json['company_id'] as num?)?.toInt() ??
+          InlineCompanyRef.tryFromJson(json['company'])?.id,
+      company: InlineCompanyRef.tryFromJson(json['company']),
     );
   }
 }

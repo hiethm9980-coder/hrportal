@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/legacy.dart';
 
 import '../../../../core/providers/core_providers.dart';
 import '../../data/models/task_models.dart';
+import 'company_list_scope_provider.dart' show companyListScopeIdProvider;
 
 /// Immutable filter snapshot.
 ///
@@ -18,6 +19,8 @@ class TaskFilter {
   final bool openOnly;
   final String? dueFrom;       // yyyy-MM-dd
   final String? dueTo;         // yyyy-MM-dd
+  /// When true, API sends `assignee_id=me`. Default false — full relevant list.
+  final bool assigneeOnlyMe;
 
   const TaskFilter({
     this.q = '',
@@ -28,6 +31,7 @@ class TaskFilter {
     this.openOnly = false,
     this.dueFrom,
     this.dueTo,
+    this.assigneeOnlyMe = false,
   });
 
   TaskFilter copyWith({
@@ -39,6 +43,7 @@ class TaskFilter {
     bool? openOnly,
     Object? dueFrom = _sentinel,
     Object? dueTo = _sentinel,
+    Object? assigneeOnlyMe = _sentinel,
   }) {
     return TaskFilter(
       q: q ?? this.q,
@@ -55,6 +60,9 @@ class TaskFilter {
       openOnly: openOnly ?? this.openOnly,
       dueFrom: identical(dueFrom, _sentinel) ? this.dueFrom : dueFrom as String?,
       dueTo: identical(dueTo, _sentinel) ? this.dueTo : dueTo as String?,
+      assigneeOnlyMe: identical(assigneeOnlyMe, _sentinel)
+          ? this.assigneeOnlyMe
+          : assigneeOnlyMe as bool,
     );
   }
 
@@ -65,6 +73,7 @@ class TaskFilter {
   /// (project dropdown, search box, status chips). The yellow dot on the
   /// filter icon should only indicate filters hidden *behind* that icon.
   bool get hasAdvancedFilters =>
+      assigneeOnlyMe ||
       (priorityCode != null && priorityCode!.isNotEmpty) ||
       overdueOnly ||
       openOnly ||
@@ -163,6 +172,7 @@ class MyTasksController extends StateNotifier<MyTasksState> {
     bool openOnly = false,
     String? dueFrom,
     String? dueTo,
+    bool assigneeOnlyMe = false,
   }) {
     state = state.copyWith(
       filter: state.filter.copyWith(
@@ -171,6 +181,7 @@ class MyTasksController extends StateNotifier<MyTasksState> {
         openOnly: openOnly,
         dueFrom: dueFrom,
         dueTo: dueTo,
+        assigneeOnlyMe: assigneeOnlyMe,
       ),
     );
     load(reset: true);
@@ -190,6 +201,7 @@ class MyTasksController extends StateNotifier<MyTasksState> {
               openOnly: false,
               dueFrom: null,
               dueTo: null,
+              assigneeOnlyMe: false,
             ),
     );
     load(reset: true);
@@ -204,11 +216,14 @@ class MyTasksController extends StateNotifier<MyTasksState> {
     try {
       final repo = _ref.read(taskRepositoryProvider);
       final filter = state.filter;
+      final companyId = _ref.read(companyListScopeIdProvider);
       final data = await repo.listTasks(
         q: filter.q,
         projectId: filter.projectId,
+        companyId: companyId,
         status: filter.statusCode,
         priority: filter.priorityCode,
+        assigneeId: filter.assigneeOnlyMe ? 'me' : null,
         overdue: filter.overdueOnly,
         dueFrom: filter.dueFrom,
         dueTo: filter.dueTo,
@@ -251,11 +266,14 @@ class MyTasksController extends StateNotifier<MyTasksState> {
       final repo = _ref.read(taskRepositoryProvider);
       final filter = state.filter;
       final nextPage = state.pagination.currentPage + 1;
+      final companyId = _ref.read(companyListScopeIdProvider);
       final data = await repo.listTasks(
         q: filter.q,
         projectId: filter.projectId,
+        companyId: companyId,
         status: filter.statusCode,
         priority: filter.priorityCode,
+        assigneeId: filter.assigneeOnlyMe ? 'me' : null,
         overdue: filter.overdueOnly,
         dueFrom: filter.dueFrom,
         dueTo: filter.dueTo,

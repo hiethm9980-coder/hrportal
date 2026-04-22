@@ -21,6 +21,7 @@ import '../features/requests/presentation/screens/request_screens.dart';
 import '../features/manager_requests/presentation/screens/manager_requests_screen.dart';
 import '../features/profile/presentation/screens/profile_screen.dart';
 import '../features/tasks/presentation/screens/my_tasks_screen.dart';
+import '../features/tasks/presentation/screens/project_dashboard_screen.dart';
 import '../features/tasks/presentation/screens/task_detail/task_detail_shell.dart';
 
 /// Global navigator key for SessionManager callback.
@@ -81,6 +82,13 @@ final routerProvider = Provider<GoRouter>((ref) {
       // ── Task detail (full-screen, outside main shell) ──
       // Has its own custom header + bottom nav for tab switching so it must
       // NOT nest inside `_MainShell` (that would stack two bottom navs).
+      //
+      // Supports the deep-link `?tab=<name>` query param used by task
+      // notifications, e.g. `/tasks/346?tab=comments` opens the task on
+      // the Comments tab. Valid values:
+      //   details, subtasks, time-logs, comments, attachments, activity
+      // Any unknown / missing value falls back to the shell's own default
+      // tab — safe for older payloads.
       GoRoute(
         path: '/tasks/:id',
         builder: (_, state) {
@@ -89,7 +97,22 @@ final routerProvider = Provider<GoRouter>((ref) {
           // Callers may pass the task title as `extra` so the header can show
           // it immediately while the full payload loads.
           final title = state.extra is String ? state.extra as String : null;
-          return TaskDetailShell(taskId: id, initialTitle: title);
+          final tabName = state.uri.queryParameters['tab'];
+          return TaskDetailShell(
+            taskId: id,
+            initialTitle: title,
+            initialTabName: tabName,
+          );
+        },
+      ),
+
+      /// Project KPI dashboard (full-screen, outside main shell).
+      GoRoute(
+        path: '/projects/:id/dashboard',
+        builder: (_, state) {
+          final raw = state.pathParameters['id'] ?? '0';
+          final id = int.tryParse(raw) ?? 0;
+          return ProjectDashboardScreen(projectId: id);
         },
       ),
 

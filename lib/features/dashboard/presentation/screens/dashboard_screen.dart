@@ -344,7 +344,9 @@ class _QuickActionsGrid extends ConsumerWidget {
           runSpacing: spacing,
           children: actions
               .map((a) => GestureDetector(
-                    onTap: () => context.go(a['route'] as String),
+                    // Push (not go) so Android/iOS system Back returns to the
+                    // dashboard instead of exiting the app.
+                    onTap: () => context.push(a['route'] as String),
                     child: SizedBox(
                       width: itemWidth,
                       child: Container(

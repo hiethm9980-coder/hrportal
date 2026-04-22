@@ -96,6 +96,11 @@ class TimeLogsController extends StateNotifier<TimeLogsState> {
   // ── Data loading ────────────────────────────────────────────────────
 
   Future<void> load() async {
+    // `autoDispose.family` disposes this controller as soon as the user
+    // leaves the tab. When the in-flight request finally resolves here we
+    // must NOT touch `state` — that's a Bad-state crash. Every path after
+    // an `await` checks [mounted] first.
+    if (!mounted) return;
     state = state.copyWith(isLoading: true, error: null);
     try {
       final repo = _ref.read(taskRepositoryProvider);
@@ -105,6 +110,7 @@ class TimeLogsController extends StateNotifier<TimeLogsState> {
         q: f.q,
         status: f.statusCode,
       );
+      if (!mounted) return;
       state = state.copyWith(
         summary: data.summary,
         statusBreakdown: data.statusBreakdown,
@@ -113,6 +119,7 @@ class TimeLogsController extends StateNotifier<TimeLogsState> {
         error: null,
       );
     } catch (e) {
+      if (!mounted) return;
       state = state.copyWith(isLoading: false, error: e.toString());
     }
   }
@@ -128,6 +135,7 @@ class TimeLogsController extends StateNotifier<TimeLogsState> {
     String? description,
     int? employeeId,
   }) async {
+    if (!mounted) return;
     state = state.copyWith(isMutating: true, error: null);
     try {
       final repo = _ref.read(taskRepositoryProvider);
@@ -139,10 +147,14 @@ class TimeLogsController extends StateNotifier<TimeLogsState> {
         description: description,
         employeeId: employeeId,
       );
+      if (!mounted) return;
       await load();
+      if (!mounted) return;
       state = state.copyWith(isMutating: false);
     } catch (e) {
-      state = state.copyWith(isMutating: false, error: e.toString());
+      if (mounted) {
+        state = state.copyWith(isMutating: false, error: e.toString());
+      }
       rethrow;
     }
   }
@@ -150,14 +162,44 @@ class TimeLogsController extends StateNotifier<TimeLogsState> {
   /// Delete a single log. The UI guards this behind `log.canDelete`, but the
   /// server is the ultimate authority.
   Future<void> deleteLog(int logId) async {
+    if (!mounted) return;
     state = state.copyWith(isMutating: true, error: null);
     try {
       final repo = _ref.read(taskRepositoryProvider);
       await repo.deleteTimeLog(taskId, logId);
+      if (!mounted) return;
       await load();
+      if (!mounted) return;
       state = state.copyWith(isMutating: false);
     } catch (e) {
-      state = state.copyWith(isMutating: false, error: e.toString());
+      if (mounted) {
+        state = state.copyWith(isMutating: false, error: e.toString());
+      }
+      rethrow;
+    }
+  }
+
+  /// PATCH `description` only. Pass `null` to clear the description on the server.
+  Future<void> updateLogDescription(int logId, String? description) async {
+    if (!mounted) return;
+    state = state.copyWith(isMutating: true, error: null);
+    try {
+      final repo = _ref.read(taskRepositoryProvider);
+      final updated = await repo.patchTimeLogDescription(
+        taskId,
+        logId,
+        description: description,
+      );
+      if (!mounted) return;
+      final logs = state.logs.map((l) {
+        if (l.id != logId) return l;
+        return l.copyWithDescription(updated.description);
+      }).toList();
+      state = state.copyWith(logs: logs, isMutating: false);
+    } catch (e) {
+      if (mounted) {
+        state = state.copyWith(isMutating: false, error: e.toString());
+      }
       rethrow;
     }
   }

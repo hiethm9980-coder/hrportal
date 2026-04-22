@@ -37,6 +37,12 @@ class BaseResponse<T> {
   /// Extra error context (e.g. validation errors). Null for success.
   final Map<String, dynamic>? details;
 
+  /// Pre-formatted "copy to clipboard" string rendered by the backend —
+  /// combines [message] + bullet list of field errors + (optionally)
+  /// trace id. The client should use this verbatim on the copy button
+  /// instead of assembling its own text.
+  final String? copyText;
+
   const BaseResponse({
     required this.ok,
     required this.message,
@@ -44,6 +50,7 @@ class BaseResponse<T> {
     required this.traceId,
     this.code,
     this.details,
+    this.copyText,
   });
 
   /// Whether the response is a success.
@@ -98,6 +105,7 @@ class BaseResponse<T> {
         details: json['details'] is Map
             ? Map<String, dynamic>.from(json['details'] as Map)
             : null,
+        copyText: json['copy_text'] as String?,
       );
     }
   }

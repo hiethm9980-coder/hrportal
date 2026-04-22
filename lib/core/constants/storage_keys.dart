@@ -21,6 +21,9 @@ class StorageKeys {
   /// JSON-encoded managed-companies list from login.
   static const String managedCompanies = 'managed_companies';
 
+  /// `task_company_filter_id` — optional int id as string, or "all" / empty = no param.
+  static const String companyListFilterId = 'task_company_filter_id';
+
   /// Last used API base URL — used to detect URL changes.
   static const String lastBaseUrl = 'last_base_url';
 

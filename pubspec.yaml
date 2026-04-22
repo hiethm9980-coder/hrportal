@@ -2,7 +2,7 @@ name: hr_portal
 description: "A new Flutter project."
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 
-version: 1.0.5+5
+version: 1.1.0+6
 
 environment:
   sdk: ^3.11.0
@@ -73,6 +73,11 @@ dependencies:
 
 
   path: any
+
+  # Login audit: JSON device snapshot. device_info_plus 13.x needs win32 ^6, which
+  # conflicts with flutter_secure_storage_windows / file_picker in this repo — use 11.x.
+  device_info_plus: ^11.3.0
+  package_info_plus: ^8.1.0
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -80,23 +85,23 @@ dev_dependencies:
   flutter_lints: ^6.0.0
   mocktail: ^1.0.4
 
-#   flutter_native_splash:
-# flutter_native_splash:
+#  flutter_native_splash:
+#flutter_native_splash:
 #  color: "#e2e7e9"
-#  color_dark: "#303030"
-#  image: "assets/images/logo.png"
+#  color_dark: "#161618"
+#  image: "assets/images/logo_2.png"
 #  image_dark: "assets/images/logo.png"
 #  android_12:
-#    image: "assets/images/logo.png"
-#    image_dark: "assets/images/logo.png"
+#    image: "assets/images/logo_2_android12.png"
+#    image_dark: "assets/images/logo_android12.png"
 #    color: "#e2e7e9"
-#    color_dark: "#303030"
+#    color_dark: "#161618"
 #    icon_background_color: "#e2e7e9"
-#    icon_background_color_dark: "#303030"
+#    icon_background_color_dark: "#161618"
 #  # dart run flutter_native_splash:create
 
-#   flutter_launcher_icons:
-# flutter_icons:
+#  flutter_launcher_icons:
+#flutter_icons:
 #   android: "ic_launcher"
 #   ios: true
 #   image_path: "assets/images/icon.png"

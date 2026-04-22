@@ -3,8 +3,23 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:hr_portal/core/constants/app_colors.dart';
 import 'package:hr_portal/core/localization/app_localizations.dart';
+import '../../../auth/presentation/providers/auth_providers.dart';
 import '../../data/models/project_brief_model.dart';
 import '../providers/projects_brief_provider.dart';
+
+String? _projectCompanyLine(BuildContext context, ProjectBrief p) {
+  final c = p.company;
+  if (c != null) {
+    final n = c.name.trim();
+    if (n.isNotEmpty) return n;
+    return 'Company id only'.tr(context, params: {'id': '${c.id}'});
+  }
+  if (p.companyId != null) {
+    return 'Company id only'
+        .tr(context, params: {'id': '${p.companyId}'});
+  }
+  return null;
+}
 
 /// Result of the project picker: either a selected project, the "All projects"
 /// sentinel, or a request to open a project's detail page.
@@ -43,6 +58,8 @@ class _ProjectPickerSheet extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final asyncProjects = ref.watch(projectsBriefProvider);
+    final projectsLoading = asyncProjects.isLoading;
+    final showCompanyLine = ref.watch(authProvider).canFilterTasksByCompany;
     final colors = context.appColors;
 
     return DraggableScrollableSheet(
@@ -70,29 +87,72 @@ class _ProjectPickerSheet extends ConsumerWidget {
               ),
               Padding(
                 padding: const EdgeInsets.symmetric(
-                    horizontal: 20, vertical: 12),
+                    horizontal: 12, vertical: 12),
                 child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    Icon(Icons.folder_copy_outlined,
-                        color: AppColors.primaryMid, size: 22),
-                    const SizedBox(width: 8),
-                    Text(
-                      'Select project'.tr(context),
-                      style: TextStyle(
-                        fontFamily: 'Cairo',
-                        fontSize: 16,
-                        fontWeight: FontWeight.w800,
-                        color: colors.textPrimary,
+                    Expanded(
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.folder_copy_outlined,
+                            color: AppColors.primaryMid,
+                            size: 22,
+                          ),
+                          const SizedBox(width: 8),
+                          Flexible(
+                            child: Text(
+                              'Select project'.tr(context),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontFamily: 'Cairo',
+                                fontSize: 16,
+                                fontWeight: FontWeight.w800,
+                                color: colors.textPrimary,
+                              ),
+                            ),
+                          ),
+                          IconButton(
+                            onPressed: projectsLoading
+                                ? null
+                                : () {
+                                    ref.invalidate(projectsBriefProvider);
+                                  },
+                            tooltip: MaterialLocalizations.of(context)
+                                .refreshIndicatorSemanticLabel,
+                            icon: projectsLoading
+                                ? SizedBox(
+                                    width: 22,
+                                    height: 22,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: colors.textMuted,
+                                    ),
+                                  )
+                                : Icon(
+                                    Icons.refresh_rounded,
+                                    color: colors.textMuted,
+                                    size: 22,
+                                  ),
+                          ),
+                        ],
                       ),
                     ),
-                    const Spacer(),
                     IconButton(
-                      onPressed: () {
-                        // Invalidate the cached list to force re-fetch.
-                        ref.invalidate(projectsBriefProvider);
-                      },
-                      icon: Icon(Icons.refresh_rounded,
-                          color: colors.textMuted),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(
+                        minWidth: 40,
+                        minHeight: 40,
+                      ),
+                      tooltip: MaterialLocalizations.of(context)
+                          .closeButtonTooltip,
+                      icon: Icon(
+                        Icons.close_rounded,
+                        color: colors.textSecondary,
+                        size: 22,
+                      ),
+                      onPressed: () => Navigator.of(context).pop(),
                     ),
                   ],
                 ),
@@ -140,6 +200,9 @@ class _ProjectPickerSheet extends ConsumerWidget {
                         final p = projects[i - 1];
                         return _Tile(
                           title: p.name,
+                          companyLine: showCompanyLine
+                              ? _projectCompanyLine(context, p)
+                              : null,
                           subtitle: p.code,
                           selected: selectedProjectId == p.id,
                           leading: const Icon(
@@ -147,8 +210,8 @@ class _ProjectPickerSheet extends ConsumerWidget {
                             color: AppColors.primaryMid,
                           ),
                           trailing: IconButton(
-                            tooltip: 'Project details'.tr(context),
-                            icon: const Icon(Icons.info_outline_rounded,
+                            tooltip: 'Project dashboard'.tr(context),
+                            icon: const Icon(Icons.dashboard_customize_outlined,
                                 color: AppColors.primaryMid),
                             onPressed: () => Navigator.of(context)
                                 .pop(ProjectPickerResult.details(p)),
@@ -173,6 +236,7 @@ class _ProjectPickerSheet extends ConsumerWidget {
 class _Tile extends StatelessWidget {
   final String title;
   final String? subtitle;
+  final String? companyLine;
   final Widget? leading;
   final Widget? trailing;
   final bool selected;
@@ -183,6 +247,7 @@ class _Tile extends StatelessWidget {
     required this.selected,
     required this.onTap,
     this.subtitle,
+    this.companyLine,
     this.leading,
     this.trailing,
   });
@@ -222,6 +287,32 @@ class _Tile extends StatelessWidget {
                             : colors.textPrimary,
                       ),
                     ),
+                    if (companyLine != null && companyLine!.isNotEmpty) ...[
+                      const SizedBox(height: 2),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.apartment_outlined,
+                            size: 12,
+                            color: colors.textSecondary,
+                          ),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              companyLine!,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontFamily: 'Cairo',
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: colors.textSecondary,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                     if (subtitle != null && subtitle!.isNotEmpty) ...[
                       const SizedBox(height: 2),
                       Text(

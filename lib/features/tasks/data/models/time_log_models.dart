@@ -121,6 +121,22 @@ class TimeLog {
       canDelete: json['can_delete'] as bool? ?? false,
     );
   }
+
+  TimeLog copyWithDescription(String? description) {
+    return TimeLog(
+      id: id,
+      logDate: logDate,
+      dateFrom: dateFrom,
+      dateTo: dateTo,
+      rangeLabel: rangeLabel,
+      hoursSpent: hoursSpent,
+      description: description,
+      employee: employee,
+      createdAt: createdAt,
+      status: status,
+      canDelete: canDelete,
+    );
+  }
 }
 
 /// Top-level summary card.

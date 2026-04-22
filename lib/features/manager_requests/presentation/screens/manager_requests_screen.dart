@@ -914,7 +914,6 @@ class _ManagerLeaveDetailSheetState
   @override
   Widget build(BuildContext context) {
     final decideState = ref.watch(decideLeaveProvider);
-    final isAr = Localizations.localeOf(context).languageCode == 'ar';
 
     ref.listen<DecideLeaveState>(decideLeaveProvider, (prev, next) {
       if (next.isSuccess && prev?.isSuccess != true) {
@@ -1032,7 +1031,7 @@ class _ManagerLeaveDetailSheetState
             _InfoRow(
               icon: '📆',
               label: 'Created at'.tr(context),
-              value: AppFuns.formatApiDateTime(r.createdAt, isAr: isAr),
+              value: AppFuns.formatApiDateTime(r.createdAt),
             ),
             if (r.reason != null && r.reason!.isNotEmpty)
               _InfoRow(
@@ -1052,7 +1051,7 @@ class _ManagerLeaveDetailSheetState
               _InfoRow(
                 icon: '✅',
                 label: 'Approved at'.tr(context),
-                value: AppFuns.formatApiDateTime(r.approvedAt!, isAr: isAr),
+                value: AppFuns.formatApiDateTime(r.approvedAt!),
               ),
 
             // ── Approval Timeline ──

@@ -19,6 +19,7 @@ import '../../../payroll/presentation/providers/payroll_providers.dart';
 import '../../../requests/presentation/providers/request_providers.dart';
 import '../../../manager_requests/presentation/providers/manager_request_providers.dart';
 import '../../../notifications/presentation/providers/notifications_providers.dart';
+import '../../../tasks/presentation/providers/company_list_scope_provider.dart';
 import '../../../../shared/controllers/global_error_handler.dart';
 
 // ═══════════════════════════════════════════════════════════════════
@@ -35,12 +36,19 @@ class AuthState {
   final EmployeeProfile? employee;
   final ApprovalsFlags? approvals;
   final List<ManagedCompany> managedCompanies;
+  /// `companies.manager_id` in DB: user manages at least one company.
+  final bool isCompanyManager;
+
+  /// List filter: company scope for [GET /tasks] & [GET /projects] when the user
+  /// manages at least one company (or the API still returned `managed_companies`).
+  bool get canFilterTasksByCompany => isCompanyManager || managedCompanies.isNotEmpty;
 
   const AuthState({
     this.status = AuthStatus.unknown,
     this.employee,
     this.approvals,
     this.managedCompanies = const [],
+    this.isCompanyManager = false,
   });
 
   bool get isAuthenticated => status == AuthStatus.authenticated;
@@ -64,12 +72,14 @@ class AuthState {
     EmployeeProfile? employee,
     ApprovalsFlags? approvals,
     List<ManagedCompany>? managedCompanies,
+    bool? isCompanyManager,
   }) {
     return AuthState(
       status: status ?? this.status,
       employee: employee ?? this.employee,
       approvals: approvals ?? this.approvals,
       managedCompanies: managedCompanies ?? this.managedCompanies,
+      isCompanyManager: isCompanyManager ?? this.isCompanyManager,
     );
   }
 }
@@ -126,6 +136,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       final auth = _ref.read(authRepositoryProvider);
       final me = await auth.getCurrentUser();
       var employee = me.employee;
+      final isCoMgr = me.effectiveIsCompanyManager;
 
       // Always apply stored isManager flag if API /me doesn't return it.
       if (!employee.isManager && storedIsManager) {
@@ -157,6 +168,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
         employee: employee,
         approvals: effectiveApprovals,
         managedCompanies: effectiveCompanies,
+        isCompanyManager: isCoMgr,
       );
     } on TokenExpiredException {
       await session.onLogout();
@@ -181,6 +193,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
             : null,
         approvals: cachedApprovals,
         managedCompanies: cachedCompanies,
+        isCompanyManager: cachedCompanies.isNotEmpty,
       );
     }
   }
@@ -249,6 +262,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
         employee: me.employee,
         approvals: nextApprovals,
         managedCompanies: nextCompanies,
+        isCompanyManager: me.effectiveIsCompanyManager,
       );
     } catch (_) {
       // Stale counters are not worth interrupting the user.
@@ -268,6 +282,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     _ref.invalidate(requestsListProvider);
     _ref.invalidate(managerRequestsListProvider);
     _ref.invalidate(notificationsProvider);
+    _ref.invalidate(companyListScopeIdProvider);
     state = const AuthState(status: AuthStatus.unauthenticated);
   }
 }
@@ -361,7 +376,7 @@ class LoginFormController extends StateNotifier<LoginFormState> {
     state = state.copyWith(isLoading: true, clearErrors: true);
 
     try {
-      // Fetch base_url from Firebase Remote Config before login
+      // Resolve base_url (dev = fixed; prod = Remote Config) before login
       await appConfig.loadRemoteConfig();
       ApiConstants.configure(appConfig);
       debugPrint("base_url: ${appConfig.baseUrl}");
@@ -399,6 +414,7 @@ class LoginFormController extends StateNotifier<LoginFormState> {
         employee: result.employee,
         approvals: result.approvals,
         managedCompanies: result.managedCompanies,
+        isCompanyManager: result.effectiveIsCompanyManager,
       );
     } on ValidationException catch (e) {
       state = state.copyWith(

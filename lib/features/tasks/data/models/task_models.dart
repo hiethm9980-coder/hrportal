@@ -1,3 +1,4 @@
+import 'inline_company_ref.dart';
 import 'task_priority_model.dart';
 
 /// Inline project reference embedded in task payloads.
@@ -99,6 +100,8 @@ class TaskPermissions {
   final bool canComment;
   final bool canLogTime;
   final bool canManage;
+  final bool canCreateSubtask;
+  final bool canEdit;
 
   const TaskPermissions({
     this.canUpdateStatus = false,
@@ -106,6 +109,8 @@ class TaskPermissions {
     this.canComment = false,
     this.canLogTime = false,
     this.canManage = false,
+    this.canCreateSubtask = false,
+    this.canEdit = false,
   });
 
   factory TaskPermissions.fromJson(Map<String, dynamic> json) {
@@ -115,6 +120,8 @@ class TaskPermissions {
       canComment: json['can_comment'] as bool? ?? false,
       canLogTime: json['can_log_time'] as bool? ?? false,
       canManage: json['can_manage'] as bool? ?? false,
+      canCreateSubtask: json['can_create_subtask'] as bool? ?? false,
+      canEdit: json['can_edit'] as bool? ?? false,
     );
   }
 
@@ -175,6 +182,8 @@ class Task {
   /// include the object (e.g. older list payloads) — callers should treat
   /// that as "permissive" and rely on the server to enforce.
   final TaskPermissions? permissions;
+  final int? companyId;
+  final InlineCompanyRef? company;
 
   const Task({
     required this.id,
@@ -201,6 +210,8 @@ class Task {
     this.parentId,
     this.depth = 0,
     this.permissions,
+    this.companyId,
+    this.company,
   });
 
   /// Convenience: can the current user change this task's status?
@@ -241,6 +252,23 @@ class Task {
     return null;
   }
 
+  /// Some endpoints send a nested [project] object; others only send a flat
+  /// `project_id` (or `project_name`). Without this, [project] stays null and
+  /// UIs that need a project id — e.g. subtask FAB + team fetch — break.
+  static TaskProjectRef? _projectRefFromJson(Map<String, dynamic> json) {
+    final embedded = TaskProjectRef.tryFromJson(json['project']);
+    if (embedded != null && embedded.id != 0) return embedded;
+    final pid = json['project_id'];
+    if (pid is num && pid.toInt() != 0) {
+      return TaskProjectRef(
+        id: pid.toInt(),
+        name: json['project_name']?.toString() ?? '',
+        code: json['project_code']?.toString(),
+      );
+    }
+    return embedded;
+  }
+
   factory Task.fromJson(Map<String, dynamic> json) {
     final pathRaw = json['path'];
     final pathList = pathRaw is List
@@ -251,7 +279,7 @@ class Task {
       code: json['code']?.toString(),
       title: json['title']?.toString() ?? '',
       description: json['description']?.toString(),
-      project: TaskProjectRef.tryFromJson(json['project']),
+      project: _projectRefFromJson(json),
       status: TaskStatusRef.tryFromJson(json['status']),
       priority: TaskPriority.tryFromJson(json['priority']),
       assignee: TaskAssigneeRef.tryFromJson(json['assignee']),
@@ -287,6 +315,9 @@ class Task {
       parentId: (json['parent_id'] as num?)?.toInt(),
       depth: (json['depth'] as num?)?.toInt() ?? 0,
       permissions: TaskPermissions.tryFromJson(json['permissions']),
+      companyId: (json['company_id'] as num?)?.toInt() ??
+          InlineCompanyRef.tryFromJson(json['company'])?.id,
+      company: InlineCompanyRef.tryFromJson(json['company']),
     );
   }
 
@@ -318,6 +349,8 @@ class Task {
       parentId: parentId,
       depth: depth,
       permissions: permissions,
+      companyId: companyId,
+      company: company,
     );
   }
 }

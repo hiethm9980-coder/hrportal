@@ -11,8 +11,8 @@ class ApiConstants {
   ApiConstants._();
 
   // ── Server ─────────────────────────────────────────────────────────
-  // Base URL is resolved from AppConfig (--dart-define=FLAVOR).
-  // Call ApiConstants.configure() once in main.dart after AppConfig init.
+  // Base URL: dev by default (fixed URL); prod only with --dart-define=FLAVOR=prod
+  // (Remote Config). Call ApiConstants.configure() after loadRemoteConfig().
   static late String baseUrl;
 
   /// Initialize baseUrl from environment config.
@@ -40,6 +40,17 @@ class ApiConstants {
   static const String logoutAll = '$_v1/auth/logout-all';
   static const String me = '$_v1/auth/me';
   static const String changePassword = '$_v1/change-password';
+
+  /// Must match backend validation on `device_name` (e.g. Laravel `max:1000`).
+  /// Raise this when the API allows longer JSON (full snapshot from the app).
+  static const int loginDeviceNameServerMaxChars = 1000;
+
+  /// When the full JSON exceeds [loginDeviceNameServerMaxChars], the app sends a
+  /// shorter JSON in `device_name` and repeats the full payload under this key
+  /// (ignored by servers that do not persist it — add `nullable|string|max:65535`
+  /// on the backend if you need the full blob).
+  static const bool loginSendFullDeviceSnapshotField = true;
+  static const String loginDeviceSnapshotField = 'device_snapshot';
 
   // ── Profile ─────────────────────────────────────────────────────────
   static const String profile = '$_v1/employee/profile';
@@ -98,13 +109,21 @@ class ApiConstants {
   // ── Projects (employee) ───────────────────────────────────────────
   static const String projects = '$_v1/projects';
   static String projectDetail(int id) => '$_v1/projects/$id';
+  static String projectDashboard(int id) => '$_v1/projects/$id/dashboard';
   static String projectTasks(int id) => '$_v1/projects/$id/tasks';
   static String projectTeam(int id) => '$_v1/projects/$id/team';
   static String projectMilestones(int id) => '$_v1/projects/$id/milestones';
   static String projectBudget(int id) => '$_v1/projects/$id/budget';
   static String projectDocuments(int id) => '$_v1/projects/$id/documents';
+  static String projectDocumentDelete(int projectId, int documentId) =>
+      '$_v1/projects/$projectId/documents/$documentId';
   static String projectActivity(int id) => '$_v1/projects/$id/activity';
   static String projectComments(int id) => '$_v1/projects/$id/comments';
+  static String projectMemberCandidates(int id) =>
+      '$_v1/projects/$id/member-candidates';
+  static String projectMembers(int id) => '$_v1/projects/$id/members';
+  static String projectMember(int projectId, int employeeId) =>
+      '$_v1/projects/$projectId/members/$employeeId';
 
   // ── Tasks (employee) ──────────────────────────────────────────────
   static const String tasks = '$_v1/tasks';
@@ -119,8 +138,12 @@ class ApiConstants {
   static String taskMentionCandidates(int id) =>
       '$_v1/tasks/$id/mention-candidates';
   static String taskAttachments(int id) => '$_v1/tasks/$id/attachments';
+  static String taskAttachmentDelete(int taskId, int attachmentId) =>
+      '$_v1/tasks/$taskId/attachments/$attachmentId';
   static String taskTimeLogs(int id) => '$_v1/tasks/$id/time-logs';
   static String taskTimeLogDelete(int taskId, int logId) =>
+      '$_v1/tasks/$taskId/time-logs/$logId';
+  static String taskTimeLogPatch(int taskId, int logId) =>
       '$_v1/tasks/$taskId/time-logs/$logId';
   static String taskActivity(int id) => '$_v1/tasks/$id/activity';
   static String taskStatusHistory(int id) => '$_v1/tasks/$id/status-history';

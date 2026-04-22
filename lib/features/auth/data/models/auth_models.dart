@@ -5,6 +5,18 @@ import 'package:equatable/equatable.dart';
 import '../../../profile/data/models/employee_profile_model.dart';
 import '../../../../shared/models/approvals_flags.dart';
 
+/// Parses [is_company_manager] / similar flags from JSON (bool, 0/1, strings).
+bool? jsonBoolOrNull(dynamic v) {
+  if (v is bool) return v;
+  if (v is num) return v != 0;
+  if (v is String) {
+    final s = v.toLowerCase().trim();
+    if (s == 'true' || s == '1' || s == 'yes') return true;
+    if (s == 'false' || s == '0' || s == 'no') return false;
+  }
+  return null;
+}
+
 /// Successful login payload.
 ///
 /// Contract (simplified):
@@ -15,6 +27,9 @@ class LoginData extends Equatable {
   final EmployeeProfile employee;
   final ApprovalsFlags? approvals;
   final List<ManagedCompany> managedCompanies;
+  /// From API `is_company_manager`; when null, [effectiveIsCompanyManager] falls back
+  /// to at least one [managedCompanies] entry.
+  final bool? isCompanyManager;
 
   const LoginData({
     required this.token,
@@ -22,7 +37,15 @@ class LoginData extends Equatable {
     required this.employee,
     this.approvals,
     this.managedCompanies = const [],
+    this.isCompanyManager,
   });
+
+  /// True when the user is `companies.manager_id` for at least one company.
+  bool get effectiveIsCompanyManager {
+    if (isCompanyManager == true) return true;
+    if (isCompanyManager == false) return false;
+    return managedCompanies.isNotEmpty;
+  }
 
   factory LoginData.fromJson(Map<String, dynamic> json) {
     return LoginData(
@@ -41,6 +64,7 @@ class LoginData extends Equatable {
                   ManagedCompany.fromJson(e as Map<String, dynamic>))
               .toList() ??
           const [],
+      isCompanyManager: jsonBoolOrNull(json['is_company_manager']),
     );
   }
 
@@ -51,11 +75,12 @@ class LoginData extends Equatable {
         if (approvals != null) 'approvals': approvals!.toJson(),
         'managed_companies':
             managedCompanies.map((e) => e.toJson()).toList(),
+        if (isCompanyManager != null) 'is_company_manager': isCompanyManager,
       };
 
   @override
   List<Object?> get props =>
-      [token, tokenType, employee, approvals, managedCompanies];
+      [token, tokenType, employee, approvals, managedCompanies, isCompanyManager];
 }
 
 /// Logout-all payload.
@@ -87,12 +112,21 @@ class CurrentUserData extends Equatable {
   final EmployeeProfile employee;
   final ApprovalsFlags? approvals;
   final List<ManagedCompany> managedCompanies;
+  final bool? isCompanyManager;
 
   const CurrentUserData({
     required this.employee,
     this.approvals,
     this.managedCompanies = const [],
+    this.isCompanyManager,
   });
+
+  /// See [LoginData.effectiveIsCompanyManager].
+  bool get effectiveIsCompanyManager {
+    if (isCompanyManager == true) return true;
+    if (isCompanyManager == false) return false;
+    return managedCompanies.isNotEmpty;
+  }
 
   factory CurrentUserData.fromJson(Map<String, dynamic> json) {
     // The /me endpoint may return either the employee fields directly,
@@ -113,9 +147,11 @@ class CurrentUserData extends Equatable {
                   ManagedCompany.fromJson(e as Map<String, dynamic>))
               .toList() ??
           const [],
+      isCompanyManager: jsonBoolOrNull(json['is_company_manager']),
     );
   }
 
   @override
-  List<Object?> get props => [employee, approvals, managedCompanies];
+  List<Object?> get props =>
+      [employee, approvals, managedCompanies, isCompanyManager];
 }

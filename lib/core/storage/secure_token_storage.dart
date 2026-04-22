@@ -98,6 +98,25 @@ class SecureTokenStorage {
     return _storage.read(key: StorageKeys.managedCompanies);
   }
 
+  // ── Tasks / projects company scope (list filter) ────────────────
+
+  /// Persists the selected [companyId] for task/project list APIs, or "all".
+  Future<void> saveTaskCompanyListFilterId(String? value) async {
+    if (value == null || value.isEmpty) {
+      await _storage.delete(key: StorageKeys.companyListFilterId);
+    } else {
+      await _storage.write(
+        key: StorageKeys.companyListFilterId,
+        value: value,
+      );
+    }
+  }
+
+  /// `null` / "all" → API default; otherwise numeric company id.
+  Future<String?> getTaskCompanyListFilterId() async {
+    return _storage.read(key: StorageKeys.companyListFilterId);
+  }
+
   // ── Base URL Tracking ────────────────────────────────────────────
 
   Future<void> saveBaseUrl(String url) async {
@@ -119,5 +138,6 @@ class SecureTokenStorage {
     await _storage.delete(key: StorageKeys.isManager);
     await _storage.delete(key: StorageKeys.approvalsFlags);
     await _storage.delete(key: StorageKeys.managedCompanies);
+    await _storage.delete(key: StorageKeys.companyListFilterId);
   }
 }

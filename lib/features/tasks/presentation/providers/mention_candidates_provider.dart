@@ -57,17 +57,19 @@ class MentionCandidatesController
 
   /// Fetch candidates filtered by [q] (server-side `LIKE` over name/code).
   Future<void> setQuery(String q) async {
+    if (!mounted) return;
     final seq = ++_requestSeq;
     state = state.copyWith(query: q, isLoading: true, error: null);
     try {
       final repo = _ref.read(taskRepositoryProvider);
       final data = await repo.listMentionCandidates(taskId, q: q);
       // Drop stale responses — if the user typed faster than the network,
-      // _requestSeq has already moved on and our payload is outdated.
-      if (seq != _requestSeq) return;
+      // _requestSeq has already moved on and our payload is outdated. Also
+      // bail out if the controller has been disposed (tab switch).
+      if (!mounted || seq != _requestSeq) return;
       state = state.copyWith(items: data.items, isLoading: false, error: null);
     } catch (e) {
-      if (seq != _requestSeq) return;
+      if (!mounted || seq != _requestSeq) return;
       state = state.copyWith(isLoading: false, error: e.toString());
     }
   }

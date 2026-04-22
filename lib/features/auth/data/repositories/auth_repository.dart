@@ -2,11 +2,13 @@
 
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 
 import '../../../../core/constants/api_constants.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../core/network/session_manager.dart';
+import '../../../../core/utils/login_device_snapshot.dart';
 import '../models/auth_models.dart';
 
 /// Repository for authentication operations.
@@ -46,6 +48,39 @@ class AuthRepository {
     };
     if (fcmToken != null && fcmToken.isNotEmpty) {
       data['fcm_token'] = fcmToken;
+    }
+    try {
+      final snapshotMap = await collectLoginDeviceSnapshot().timeout(
+        const Duration(seconds: 6),
+        onTimeout: () => {
+          'error': 'device_info_timeout',
+          'device_label': 'timeout',
+          'schema': 'login_client_snapshot_v2',
+        },
+      );
+      final fullJson = jsonEncode(snapshotMap);
+      final maxLen = ApiConstants.loginDeviceNameServerMaxChars;
+
+      String deviceNameStr = fullJson;
+      if (deviceNameStr.length > maxLen) {
+        deviceNameStr = jsonEncode(compactDeviceSnapshotMap(snapshotMap));
+      }
+      if (deviceNameStr.length > maxLen) {
+        deviceNameStr = jsonEncode(minimalDeviceSnapshotMap(snapshotMap));
+      }
+      data['device_name'] = deviceNameStr;
+
+      if (ApiConstants.loginSendFullDeviceSnapshotField &&
+          fullJson.length > maxLen) {
+        data[ApiConstants.loginDeviceSnapshotField] = fullJson;
+      }
+    } catch (e, st) {
+      final err = <String, dynamic>{
+        'error': 'device_info_failed',
+        'message': e.toString(),
+      };
+      if (kDebugMode) err['stack'] = st.toString();
+      data['device_name'] = jsonEncode(err);
     }
     final response = await _client.post<LoginData>(
       ApiConstants.login,

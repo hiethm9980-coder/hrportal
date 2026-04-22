@@ -12,6 +12,7 @@ class AdvancedFilterValues {
   final bool openOnly;
   final String? dueFrom; // yyyy-MM-dd
   final String? dueTo;
+  final bool assigneeOnlyMe;
 
   const AdvancedFilterValues({
     this.priorityCode,
@@ -19,6 +20,7 @@ class AdvancedFilterValues {
     this.openOnly = false,
     this.dueFrom,
     this.dueTo,
+    this.assigneeOnlyMe = false,
   });
 }
 
@@ -46,6 +48,7 @@ class _AdvancedFilterSheetState extends State<_AdvancedFilterSheet> {
   late String? _priority;
   late bool _overdueOnly;
   late bool _openOnly;
+  late bool _assigneeOnlyMe;
   DateTime? _from;
   DateTime? _to;
 
@@ -62,6 +65,7 @@ class _AdvancedFilterSheetState extends State<_AdvancedFilterSheet> {
     _priority = widget.current.priorityCode;
     _overdueOnly = widget.current.overdueOnly;
     _openOnly = widget.current.openOnly;
+    _assigneeOnlyMe = widget.current.assigneeOnlyMe;
     _from = _tryParse(widget.current.dueFrom);
     _to = _tryParse(widget.current.dueTo);
   }
@@ -112,22 +116,70 @@ class _AdvancedFilterSheetState extends State<_AdvancedFilterSheet> {
                 ),
                 const SizedBox(height: 12),
                 Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    Icon(Icons.tune_rounded,
-                        color: AppColors.primaryMid, size: 22),
-                    const SizedBox(width: 8),
-                    Text(
-                      'Filters'.tr(context),
-                      style: TextStyle(
-                        fontFamily: 'Cairo',
-                        fontSize: 16,
-                        fontWeight: FontWeight.w800,
-                        color: colors.textPrimary,
+                    Expanded(
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.tune_rounded,
+                            color: AppColors.primaryMid,
+                            size: 22,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Filters'.tr(context),
+                            style: TextStyle(
+                              fontFamily: 'Cairo',
+                              fontSize: 16,
+                              fontWeight: FontWeight.w800,
+                              color: colors.textPrimary,
+                            ),
+                          ),
+                        ],
                       ),
+                    ),
+                    IconButton(
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(
+                        minWidth: 40,
+                        minHeight: 40,
+                      ),
+                      tooltip:
+                          MaterialLocalizations.of(context).closeButtonTooltip,
+                      icon: Icon(
+                        Icons.close_rounded,
+                        color: colors.textSecondary,
+                        size: 22,
+                      ),
+                      onPressed: () => Navigator.of(context).pop(),
                     ),
                   ],
                 ),
                 const SizedBox(height: 16),
+                // ── Scope: all relevant vs assignee only ───────────────
+                _SectionLabel(text: 'Tasks scope section'.tr(context)),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _ScopeChipSheet(
+                        selected: !_assigneeOnlyMe,
+                        label: 'Tasks scope all'.tr(context),
+                        onTap: () => setState(() => _assigneeOnlyMe = false),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _ScopeChipSheet(
+                        selected: _assigneeOnlyMe,
+                        label: 'Tasks scope assignee only'.tr(context),
+                        onTap: () => setState(() => _assigneeOnlyMe = true),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
                 // ── Priority ──────────────────────────────────────────
                 _SectionLabel(text: 'Priority'.tr(context)),
                 const SizedBox(height: 8),
@@ -263,6 +315,7 @@ class _AdvancedFilterSheetState extends State<_AdvancedFilterSheet> {
                               openOnly: _openOnly,
                               dueFrom: _from != null ? _fmtDate(_from!) : null,
                               dueTo: _to != null ? _fmtDate(_to!) : null,
+                              assigneeOnlyMe: _assigneeOnlyMe,
                             ),
                           );
                         },
@@ -302,6 +355,52 @@ class _PriorityDef {
   final String labelKey;
   final Color color;
   const _PriorityDef(this.code, this.labelKey, this.color);
+}
+
+class _ScopeChipSheet extends StatelessWidget {
+  final bool selected;
+  final String label;
+  final VoidCallback onTap;
+
+  const _ScopeChipSheet({
+    required this.selected,
+    required this.label,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 160),
+        curve: Curves.easeOut,
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 11),
+        decoration: BoxDecoration(
+          color: selected ? AppColors.primaryMid.withOpacity(0.12) : colors.gray50,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: selected ? AppColors.primaryMid : colors.gray200,
+            width: selected ? 2 : 1,
+          ),
+        ),
+        child: Text(
+          label,
+          maxLines: 2,
+          textAlign: TextAlign.center,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            fontFamily: 'Cairo',
+            fontSize: 12,
+            fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
+            color: selected ? AppColors.primaryMid : colors.textPrimary,
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class _SectionLabel extends StatelessWidget {

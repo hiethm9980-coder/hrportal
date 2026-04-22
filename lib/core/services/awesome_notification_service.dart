@@ -304,8 +304,14 @@ class AwesomeNotificationController {
       if (route != null && route.isNotEmpty) {
         final ctx = rootNavigatorKey.currentContext;
         if (ctx != null && ctx.mounted) {
-          ctx.go(route);
+          // Awesome notifications are only shown while the app is live
+          // (they're created inside the FCM `onMessage` foreground handler),
+          // so a body tap is always a WARM path — push on top of the current
+          // stack so Back returns to the previous screen instead of exiting.
+          ctx.push(route);
         } else {
+          // Edge case: app already torn down — let the router redirect
+          // consume it as a cold deep-link (uses go, Back → home).
           pendingDeepLink = route;
         }
       }

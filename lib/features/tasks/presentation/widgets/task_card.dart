@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:hr_portal/core/constants/app_colors.dart';
 import 'package:hr_portal/core/constants/app_shadows.dart';
 import 'package:hr_portal/core/localization/app_localizations.dart';
+import 'package:hr_portal/core/utils/app_funs.dart';
 import '../../data/models/task_models.dart';
 import '../../data/models/task_status_model.dart';
 
@@ -37,6 +38,12 @@ class TaskCard extends StatelessWidget {
   /// [onStatusChange] — see [Task.canEditProgress].
   final ProgressCommit? onProgressChange;
 
+  /// When true (e.g. company manager), show [company] / [company_id] for quick disambiguation.
+  final bool showCompanyName;
+
+  /// Subtle border + tint after returning from this task's detail screen.
+  final bool highlightAfterReturn;
+
   const TaskCard({
     super.key,
     required this.task,
@@ -44,6 +51,8 @@ class TaskCard extends StatelessWidget {
     this.onStatusChange,
     this.onTap,
     this.onProgressChange,
+    this.showCompanyName = false,
+    this.highlightAfterReturn = false,
   });
 
   @override
@@ -61,13 +70,28 @@ class TaskCard extends StatelessWidget {
             ? onProgressChange
             : null;
 
+    final companyLine = _taskCompanyDisplayLine(context, task);
+
+    final highlight = highlightAfterReturn;
+    final fill = highlight
+        ? Color.alphaBlend(
+            AppColors.primaryMid.withValues(alpha: 0.09),
+            colors.bgCard,
+          )
+        : colors.bgCard;
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: colors.bgCard,
+        color: fill,
         borderRadius: BorderRadius.circular(16),
         boxShadow: AppShadows.card,
-        border: Border.all(color: colors.cardBorder, width: 0.5),
+        border: Border.all(
+          color: highlight
+              ? AppColors.primaryMid.withValues(alpha: 0.42)
+              : colors.cardBorder,
+          width: highlight ? 1.25 : 0.5,
+        ),
       ),
       clipBehavior: Clip.antiAlias,
       child: Column(
@@ -94,6 +118,10 @@ class TaskCard extends StatelessWidget {
                         _OpenIconBox(onTap: onTap),
                       ],
                     ),
+                    if (showCompanyName && companyLine != null) ...[
+                      const SizedBox(height: 6),
+                      _CompanyNameRow(label: companyLine),
+                    ],
                     const SizedBox(height: 10),
                     // Breadcrumb above the title for subtasks. The backend
                     // sends `path_label` pre-rendered ("A / B / C") — we strip
@@ -201,6 +229,49 @@ class TaskCard extends StatelessWidget {
 // ═══════════════════════════════════════════════════════════════════
 // Sub-widgets
 // ═══════════════════════════════════════════════════════════════════
+
+String? _taskCompanyDisplayLine(BuildContext context, Task task) {
+  final c = task.company;
+  if (c != null) {
+    final n = c.name.trim();
+    if (n.isNotEmpty) return n;
+    return 'Company id only'.tr(context, params: {'id': '${c.id}'});
+  }
+  if (task.companyId != null) {
+    return 'Company id only'
+        .tr(context, params: {'id': '${task.companyId}'});
+  }
+  return null;
+}
+
+class _CompanyNameRow extends StatelessWidget {
+  final String label;
+  const _CompanyNameRow({required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return Row(
+      children: [
+        Icon(Icons.apartment_outlined, size: 13, color: colors.textMuted),
+        const SizedBox(width: 4),
+        Expanded(
+          child: Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontFamily: 'Cairo',
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: colors.textSecondary,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
 
 class _TopRow extends StatelessWidget {
   final Task task;
@@ -762,16 +833,26 @@ class _CountersRow extends StatelessWidget {
       ));
     }
 
-    // Due date anchored to the END of the row.
-    final dueWidget = (task.dueDate ?? '').isNotEmpty
-        ? _Counter(
-            icon: Icons.event_outlined,
-            text: task.dueDate!,
-          )
-        : null;
+    // Due date at layout **end**: visual left in RTL, visual right in LTR.
+    final hasDue = (task.dueDate ?? '').isNotEmpty;
 
-    if (items.isEmpty && dueWidget == null) {
+    if (items.isEmpty && !hasDue) {
       return const SizedBox.shrink();
+    }
+
+    final rowChildren = <Widget>[
+      ...items.expand((w) => [w, const SizedBox(width: 10)]),
+    ];
+
+    if (hasDue) {
+      rowChildren.add(
+        Expanded(
+          child: Align(
+            alignment: AlignmentDirectional.centerEnd,
+            child: _DueDateCounter(text: _formatTaskDueDateLabel(task.dueDate!)),
+          ),
+        ),
+      );
     }
 
     return DefaultTextStyle(
@@ -781,11 +862,8 @@ class _CountersRow extends StatelessWidget {
         color: colors.textMuted,
       ),
       child: Row(
-        children: [
-          ...items.expand((w) => [w, const SizedBox(width: 10)]),
-          const Spacer(),
-          ?dueWidget,
-        ],
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: rowChildren,
       ),
     );
   }
@@ -821,4 +899,56 @@ class _Counter extends StatelessWidget {
       ],
     );
   }
+}
+
+/// Calendar icon + due label; [Align] on parent uses [AlignmentDirectional.centerEnd]
+/// so the whole block sits at the **logical end** of the row (left in RTL, right in LTR).
+class _DueDateCounter extends StatelessWidget {
+  final String text;
+
+  const _DueDateCounter({required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return LayoutBuilder(
+      builder: (context, c) {
+        final textMax = (c.maxWidth - 18).clamp(0.0, double.infinity);
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsetsDirectional.only(top: 1),
+              child: Icon(Icons.event_outlined, size: 13, color: colors.textMuted),
+            ),
+            const SizedBox(width: 3),
+            ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: textMax),
+              child: Text(
+                text,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.end,
+                style: TextStyle(
+                  fontFamily: 'Cairo',
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: colors.textSecondary,
+                  height: 1.25,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+/// Parses API `due_date` and formats with [AppFuns.formatDate].
+String _formatTaskDueDateLabel(String raw) {
+  final d = DateTime.tryParse(raw);
+  if (d == null) return raw;
+  return AppFuns.formatDate(d);
 }

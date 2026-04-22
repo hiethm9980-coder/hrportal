@@ -82,10 +82,15 @@ class CommentsController extends StateNotifier<CommentsState> {
   // ── Loading ────────────────────────────────────────────────────────
 
   Future<void> load() async {
+    // `autoDispose.family` may have already disposed the controller while
+    // this request was in flight (quick tab switch). Guard every write
+    // that follows an `await`.
+    if (!mounted) return;
     state = state.copyWith(isLoading: true, error: null);
     try {
       final repo = _ref.read(taskRepositoryProvider);
       final data = await repo.listComments(taskId, q: state.filter.q);
+      if (!mounted) return;
       state = state.copyWith(
         summary: data.summary,
         comments: data.comments,
@@ -93,6 +98,7 @@ class CommentsController extends StateNotifier<CommentsState> {
         error: null,
       );
     } catch (e) {
+      if (!mounted) return;
       state = state.copyWith(isLoading: false, error: e.toString());
     }
   }
@@ -108,10 +114,12 @@ class CommentsController extends StateNotifier<CommentsState> {
   Future<void> send(String body) async {
     final trimmed = body.trim();
     if (trimmed.isEmpty) return;
+    if (!mounted) return;
     state = state.copyWith(isSending: true, error: null);
     try {
       final repo = _ref.read(taskRepositoryProvider);
       final created = await repo.createComment(taskId, body: trimmed);
+      if (!mounted) return;
       state = state.copyWith(
         comments: [created, ...state.comments],
         summary: CommentsSummary(
@@ -121,7 +129,9 @@ class CommentsController extends StateNotifier<CommentsState> {
         isSending: false,
       );
     } catch (e) {
-      state = state.copyWith(isSending: false, error: e.toString());
+      if (mounted) {
+        state = state.copyWith(isSending: false, error: e.toString());
+      }
       rethrow;
     }
   }
@@ -129,10 +139,12 @@ class CommentsController extends StateNotifier<CommentsState> {
   /// Delete a comment then patch the local list optimistically — the server
   /// is authoritative, but a full reload would feel laggy in a chat UI.
   Future<void> delete(int commentId) async {
+    if (!mounted) return;
     state = state.copyWith(isMutating: true, error: null);
     try {
       final repo = _ref.read(taskRepositoryProvider);
       await repo.deleteComment(taskId, commentId);
+      if (!mounted) return;
       final remaining =
           state.comments.where((c) => c.id != commentId).toList();
       state = state.copyWith(
@@ -144,7 +156,9 @@ class CommentsController extends StateNotifier<CommentsState> {
         isMutating: false,
       );
     } catch (e) {
-      state = state.copyWith(isMutating: false, error: e.toString());
+      if (mounted) {
+        state = state.copyWith(isMutating: false, error: e.toString());
+      }
       rethrow;
     }
   }

@@ -209,6 +209,7 @@ class ApiClient {
             message: baseResponse.message,
             traceId: baseResponse.traceId,
             details: baseResponse.details,
+            copyText: baseResponse.copyText,
             statusCode: response.statusCode,
           );
         }
@@ -252,6 +253,7 @@ class ApiClient {
             details: data['details'] is Map
                 ? Map<String, dynamic>.from(data['details'] as Map)
                 : null,
+            copyText: data['copy_text'] as String?,
             statusCode: e.response?.statusCode,
           );
         }

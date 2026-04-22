@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:jiffy/jiffy.dart';
 
@@ -84,6 +85,31 @@ class _HrMobileAppState extends ConsumerState<HrMobileApp> {
       locale: materialLocale,
       // ── Router ──
       routerConfig: router,
+
+      // ── Status bar: white icons on the navy gradient header ─────────
+      // Every in-app header paints `AppColors.navyGradient` behind the
+      // system status bar, so the clock / battery / wifi icons must be
+      // white to stay readable. Wrapping MaterialApp's `builder` in an
+      // AnnotatedRegion is the only reliable way — `SystemChrome` called
+      // once in `main()` gets reset on every route transition.
+      // Mirror layout: Arabic = RTL, English = LTR (independent of device
+      // direction when locale is forced).
+      builder: (context, child) {
+        final textDir = locale.languageCode.toLowerCase() == 'ar'
+            ? TextDirection.rtl
+            : TextDirection.ltr;
+        return Directionality(
+          textDirection: textDir,
+          child: AnnotatedRegion<SystemUiOverlayStyle>(
+            value: const SystemUiOverlayStyle(
+              statusBarColor: Colors.transparent,
+              statusBarIconBrightness: Brightness.light, // Android
+              statusBarBrightness: Brightness.dark,       // iOS
+            ),
+            child: child ?? const SizedBox.shrink(),
+          ),
+        );
+      },
     );
   }
 }

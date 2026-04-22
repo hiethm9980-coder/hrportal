@@ -2,18 +2,19 @@ import 'package:flutter/material.dart';
 
 import 'package:hr_portal/core/constants/app_colors.dart';
 import 'package:hr_portal/core/localization/app_localizations.dart';
+import 'tabs/activity_tab.dart';
+import 'tabs/attachments_tab.dart';
 import 'tabs/comments_tab.dart';
+import 'tabs/details_tab.dart';
+import 'tabs/subtasks_tab.dart';
 import 'tabs/time_logs_tab.dart';
 
-/// The five tabs exposed by the task detail screen.
+/// The six tabs exposed by the task detail screen.
 ///
-/// The legacy "Subtasks" tab has been retired: with the flat-list backend,
-/// every task (root or subtask, at any depth) shows up directly in the user's
-/// "My Tasks" list, so a per-task subtasks browser is no longer needed.
-///
-/// [time] and [comments] are fully implemented; the other three render a
-/// placeholder until they're built.
+/// [subtasks], [time] and [comments] are fully implemented; the other three
+/// render a placeholder until they're built.
 enum TaskDetailTab {
+  subtasks,
   time,
   comments,
   attachments,
@@ -24,8 +25,8 @@ enum TaskDetailTab {
 /// Wraps every task detail tab behind a shared bottom nav.
 ///
 /// Each tab is responsible for its own header so it can tailor the controls
-/// (timer on Time, composer on Comments, etc.). The shell only owns the
-/// bottom navigation bar.
+/// (status dropdown + progress on Subtasks, timer on Time, composer on
+/// Comments, etc.). The shell only owns the bottom navigation bar.
 class TaskDetailShell extends StatefulWidget {
   /// The id of the task being viewed. Passed down to every tab so they can
   /// fetch their slice of data.
@@ -36,14 +37,27 @@ class TaskDetailShell extends StatefulWidget {
   /// navigate from a card that already knows the title.
   final String? initialTitle;
 
-  /// Which tab to show first. Defaults to [TaskDetailTab.time].
+  /// Which tab to show first — used by internal navigation (e.g. tapping a
+  /// task card from My Tasks). Defaults to [TaskDetailTab.subtasks].
   final TaskDetailTab initialTab;
+
+  /// Deep-link tab identifier from the `?tab=<name>` query param in
+  /// notification routes. When set (and matches one of the known names)
+  /// it takes precedence over [initialTab]. Supported values:
+  ///
+  ///   details · subtasks · time-logs · comments · attachments · activity
+  ///
+  /// Any unknown / null value falls through to [initialTab]. Kept as a
+  /// `String?` (not an enum) so the router can forward the raw query
+  /// value without having to know the enum layout.
+  final String? initialTabName;
 
   const TaskDetailShell({
     super.key,
     required this.taskId,
     this.initialTitle,
-    this.initialTab = TaskDetailTab.time,
+    this.initialTab = TaskDetailTab.subtasks,
+    this.initialTabName,
   });
 
   @override
@@ -56,7 +70,50 @@ class _TaskDetailShellState extends State<TaskDetailShell> {
   @override
   void initState() {
     super.initState();
-    _tab = widget.initialTab;
+    // Deep-link tab name wins if present; otherwise fall back to the
+    // caller-provided enum (or the shell's own default).
+    _tab = _tabFromName(widget.initialTabName) ?? widget.initialTab;
+  }
+
+  @override
+  void didUpdateWidget(covariant TaskDetailShell oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // If GoRouter rebuilds the widget with a new `?tab=` query param —
+    // e.g. a second notification for the same task arrives while the
+    // screen is already open — switch the visible tab to match.
+    if (widget.initialTabName != oldWidget.initialTabName) {
+      final next = _tabFromName(widget.initialTabName);
+      if (next != null && next != _tab) {
+        setState(() => _tab = next);
+      }
+    }
+  }
+
+  /// Map the backend-issued deep-link slug to our tab enum. Returns
+  /// `null` for unknown / missing names so the caller can fall back.
+  ///
+  /// Keep in sync with the backend notification dispatcher: see
+  /// `TaskNotificationService.php`'s route builder.
+  static TaskDetailTab? _tabFromName(String? name) {
+    switch (name?.trim().toLowerCase()) {
+      case 'details':
+        return TaskDetailTab.details;
+      case 'subtasks':
+        return TaskDetailTab.subtasks;
+      // Backend emits `time-logs` (dashed) — our enum value is `time`
+      // (picked when the tab was originally built). Map both for safety.
+      case 'time-logs':
+      case 'time':
+        return TaskDetailTab.time;
+      case 'comments':
+        return TaskDetailTab.comments;
+      case 'attachments':
+        return TaskDetailTab.attachments;
+      case 'activity':
+        return TaskDetailTab.activity;
+      default:
+        return null;
+    }
   }
 
   @override
@@ -73,6 +130,11 @@ class _TaskDetailShellState extends State<TaskDetailShell> {
 
   Widget _buildTab() {
     switch (_tab) {
+      case TaskDetailTab.subtasks:
+        return SubtasksTab(
+          taskId: widget.taskId,
+          initialTitle: widget.initialTitle,
+        );
       case TaskDetailTab.time:
         return TimeLogsTab(
           taskId: widget.taskId,
@@ -84,22 +146,24 @@ class _TaskDetailShellState extends State<TaskDetailShell> {
           initialTitle: widget.initialTitle,
         );
       case TaskDetailTab.attachments:
-        return _PlaceholderTab(
-          title: 'Attachments'.tr(context),
-          icon: Icons.attach_file_rounded,
+        return AttachmentsTab(
+          taskId: widget.taskId,
           initialTitle: widget.initialTitle,
         );
       case TaskDetailTab.activity:
-        return _PlaceholderTab(
-          title: 'Activity'.tr(context),
-          icon: Icons.timeline_rounded,
+        return ActivityTab(
+          taskId: widget.taskId,
           initialTitle: widget.initialTitle,
         );
       case TaskDetailTab.details:
-        return _PlaceholderTab(
-          title: 'Details'.tr(context),
-          icon: Icons.info_outline_rounded,
+        return DetailsTab(
+          taskId: widget.taskId,
           initialTitle: widget.initialTitle,
+          // Let the Details tab jump to sibling tabs when the user taps
+          // a counter (subtasks / comments / attachments / time logs).
+          // The shell is the only thing that knows which tab is active,
+          // so it must own `setState` — we just pass down a closure.
+          onNavigateToTab: (t) => setState(() => _tab = t),
         );
     }
   }
@@ -136,6 +200,12 @@ class _BottomNav extends StatelessWidget {
           padding: const EdgeInsets.symmetric(vertical: 4),
           child: Row(
             children: [
+              _NavItem(
+                icon: '🧩',
+                label: 'Subtasks'.tr(context),
+                active: current == TaskDetailTab.subtasks,
+                onTap: () => onChanged(TaskDetailTab.subtasks),
+              ),
               _NavItem(
                 icon: '⏱',
                 label: 'Time'.tr(context),
@@ -241,109 +311,7 @@ class _NavItem extends StatelessWidget {
   }
 }
 
-// ═══════════════════════════════════════════════════════════════════
-// Placeholder for the tabs that are not built yet.
-// ═══════════════════════════════════════════════════════════════════
-
-class _PlaceholderTab extends StatelessWidget {
-  final String title;
-  final IconData icon;
-  final String? initialTitle;
-
-  const _PlaceholderTab({
-    required this.title,
-    required this.icon,
-    required this.initialTitle,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return Column(
-      children: [
-        // Minimal matching header so the screen still feels anchored while
-        // these tabs are under construction.
-        Container(
-          decoration: const BoxDecoration(gradient: AppColors.navyGradient),
-          padding: EdgeInsets.only(
-            top: MediaQuery.of(context).padding.top + 10,
-            bottom: 14,
-            left: 14,
-            right: 14,
-          ),
-          child: Row(
-            children: [
-              GestureDetector(
-                onTap: () => Navigator.of(context).maybePop(),
-                child: Container(
-                  width: 36,
-                  height: 36,
-                  decoration: BoxDecoration(
-                    color: Colors.white24,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: const Icon(
-                    Icons.arrow_back_ios_new_rounded,
-                    color: Colors.white,
-                    size: 18,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: const TextStyle(
-                        fontFamily: 'Cairo',
-                        fontSize: 17,
-                        fontWeight: FontWeight.w900,
-                        color: Colors.white,
-                      ),
-                    ),
-                    if ((initialTitle ?? '').isNotEmpty)
-                      Text(
-                        initialTitle!,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontFamily: 'Cairo',
-                          fontSize: 11,
-                          color: Colors.white.withOpacity(0.7),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-        Expanded(
-          child: Center(
-            child: Padding(
-              padding: const EdgeInsets.all(32),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(icon, size: 64, color: colors.textDisabled),
-                  const SizedBox(height: 12),
-                  Text(
-                    'Coming soon'.tr(context),
-                    style: TextStyle(
-                      fontFamily: 'Cairo',
-                      fontSize: 15,
-                      fontWeight: FontWeight.w800,
-                      color: colors.textSecondary,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
+// All six tabs now have real implementations — the `_PlaceholderTab`
+// "coming soon" widget that used to live here is no longer needed and
+// has been removed. Attachments, Activity, and Details each own a full
+// screen now; see their respective files under `tabs/`.

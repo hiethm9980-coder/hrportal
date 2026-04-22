@@ -71,12 +71,45 @@ class CommentMention {
   }
 }
 
+/// Role badge for the comment author. Reflects the author's *current* role
+/// in this task (dynamic — changes if the member is added/removed).
+///
+/// Codes: `PROJECT_MANAGER`, `TASK_ASSIGNEE`, `TASK_MEMBER`, `NOT_MEMBER`.
+class CommentAuthorRole {
+  final String code;
+  final String label;
+  final String color; // hex
+
+  const CommentAuthorRole({
+    required this.code,
+    required this.label,
+    required this.color,
+  });
+
+  factory CommentAuthorRole.fromJson(Map<String, dynamic> json) {
+    return CommentAuthorRole(
+      code: json['code']?.toString() ?? '',
+      label: json['label']?.toString() ?? '',
+      color: json['color']?.toString() ?? '#9CA3AF',
+    );
+  }
+
+  static CommentAuthorRole? tryFromJson(Object? raw) {
+    if (raw is Map) {
+      return CommentAuthorRole.fromJson(Map<String, dynamic>.from(raw));
+    }
+    return null;
+  }
+}
+
 /// A single comment row.
 class Comment {
   final int id;
   final String body;          // raw, with @[emp:ID|NAME] tokens
   final String bodyPlain;     // human-readable fallback
   final CommentAuthor? author;
+  /// Author's current role in this task — server-driven, dynamic badge.
+  final CommentAuthorRole? authorRole;
   final List<CommentMention> mentions;
   final DateTime? createdAt;
   final bool isEdited;
@@ -87,6 +120,7 @@ class Comment {
     required this.body,
     required this.bodyPlain,
     this.author,
+    this.authorRole,
     this.mentions = const [],
     this.createdAt,
     this.isEdited = false,
@@ -104,6 +138,7 @@ class Comment {
       body: json['body']?.toString() ?? '',
       bodyPlain: json['body_plain']?.toString() ?? json['body']?.toString() ?? '',
       author: CommentAuthor.tryFromJson(json['author']),
+      authorRole: CommentAuthorRole.tryFromJson(json['author_role']),
       mentions: mentions,
       createdAt: _parseDate(json['created_at']),
       isEdited: json['is_edited'] as bool? ?? false,
@@ -140,16 +175,44 @@ class CommentsData {
     this.comments = const [],
   });
 
+  /// Some backends send `comments`, others `items`, and Laravel paginators
+  /// often nest rows under `data` (or `data.data`). If we only read
+  /// `comments`, a successful POST + local append looks fine until the next
+  /// full GET — then the list parses as empty and messages “vanish”.
+  static List<Map<String, dynamic>> _rawCommentRows(Map<String, dynamic> json) {
+    List<Map<String, dynamic>> mapsFrom(List? source) {
+      if (source == null) return [];
+      return source
+          .whereType<Map>()
+          .map((e) => Map<String, dynamic>.from(e))
+          .toList();
+    }
+
+    final fromComments = mapsFrom(json['comments'] as List?);
+    if (fromComments.isNotEmpty) return fromComments;
+
+    final fromItems = mapsFrom(json['items'] as List?);
+    if (fromItems.isNotEmpty) return fromItems;
+
+    final d = json['data'];
+    if (d is List) return mapsFrom(d);
+    if (d is Map) {
+      final inner = d['data'];
+      if (inner is List) return mapsFrom(inner);
+      final nestedComments = d['comments'];
+      if (nestedComments is List) return mapsFrom(nestedComments);
+    }
+
+    return [];
+  }
+
   factory CommentsData.fromJson(Map<String, dynamic> json) {
-    final raw = (json['comments'] as List?) ?? const [];
-    final list = raw
-        .whereType<Map>()
-        .map((e) => Comment.fromJson(Map<String, dynamic>.from(e)))
-        .toList();
+    final rows = _rawCommentRows(json);
+    final list = rows.map(Comment.fromJson).toList();
     return CommentsData(
       summary: json['summary'] is Map
           ? CommentsSummary.fromJson(
-              Map<String, dynamic>.from(json['summary']))
+              Map<String, dynamic>.from(json['summary'] as Map))
           : const CommentsSummary(),
       comments: list,
     );
