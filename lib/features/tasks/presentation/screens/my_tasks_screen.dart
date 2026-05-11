@@ -155,6 +155,9 @@ class _MyTasksScreenState extends ConsumerState<MyTasksScreen> {
           dueFrom: values.dueFrom,
           dueTo: values.dueTo,
           assigneeOnlyMe: values.assigneeOnlyMe,
+          sortBy: values.sortBy,
+          sortDir: values.sortDir,
+          listScope: values.listScope,
         );
   }
 

@@ -18,6 +18,11 @@ class ApiErrorCodes {
   static const String validationFailed = 'VALIDATION_FAILED';
   static const String businessRuleViolation = 'BUSINESS_RULE_VIOLATION';
 
+  /// Returned when the user tries to mutate `progress_percent` or
+  /// `status` on a task that has subtasks — the server now derives these
+  /// values automatically and rejects manual writes (HTTP 422).
+  static const String parentProgressLocked = 'PARENT_PROGRESS_LOCKED';
+
   // ── 404 Resource ───────────────────────────────────────────────────
   static const String resourceNotFound = 'RESOURCE_NOT_FOUND';
 

@@ -227,6 +227,11 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
   Future<void> _submit(ProjectTeamData team) async {
     if (_submitting) return;
 
+    // Drop the IME so the loading state + any server-error chips aren't
+    // partially hidden under the keyboard while the network call is in
+    // flight.
+    AppFuns.hideKeyboard();
+
     final canPickAssignee = _effectiveCanPickAssignee(team);
 
     // Reset any prior server errors — the user is trying again.

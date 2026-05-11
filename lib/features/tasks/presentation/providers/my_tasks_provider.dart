@@ -10,7 +10,25 @@ import 'company_list_scope_provider.dart' show companyListScopeIdProvider;
 /// All fields are optional except [perPage]. The server combines them with
 /// AND logic. The status filter is applied to the task list but deliberately
 /// does *not* affect the `status_breakdown` counts returned by the backend.
+/// Constants that mirror the backend's `data.list_scope` whitelist.
+/// `roots` → fetch from `/tasks/roots` (root tasks only — the default the
+/// UX wants when the user first opens the screen).
+/// `all`   → fetch from `/tasks` (every task, root + subtasks at any depth).
+class TaskListScope {
+  static const String roots = 'roots';
+  static const String all = 'all';
+  /// Default scope shown on first entry / pull-to-refresh / clear-filters.
+  static const String defaultScope = roots;
+  static const Set<String> values = {roots, all};
+}
+
 class TaskFilter {
+  /// Backend whitelist for `sort_by` query parameter. Any value outside of
+  /// this set is silently ignored by the server, so we mirror the same set
+  /// here to keep the UI honest.
+  static const String defaultSortBy = 'updated_at';
+  static const String defaultSortDir = 'desc';
+
   final String q;
   final int? projectId;
   final String? statusCode;    // null => "All" chip selected
@@ -21,6 +39,15 @@ class TaskFilter {
   final String? dueTo;         // yyyy-MM-dd
   /// When true, API sends `assignee_id=me`. Default false — full relevant list.
   final bool assigneeOnlyMe;
+  /// Sort key sent as `sort_by` query param. Backend whitelist:
+  /// `name` | `updated_at` | `created_at`. Default `updated_at`.
+  final String sortBy;
+  /// Sort direction sent as `sort_dir`. `asc` | `desc`. Default `desc`.
+  final String sortDir;
+  /// Which list endpoint to call: [TaskListScope.roots] (default — only
+  /// tasks with `parent_id IS NULL`) or [TaskListScope.all] (root +
+  /// subtasks at any depth). Drives the URL choice in the repository.
+  final String listScope;
 
   const TaskFilter({
     this.q = '',
@@ -32,6 +59,9 @@ class TaskFilter {
     this.dueFrom,
     this.dueTo,
     this.assigneeOnlyMe = false,
+    this.sortBy = defaultSortBy,
+    this.sortDir = defaultSortDir,
+    this.listScope = TaskListScope.defaultScope,
   });
 
   TaskFilter copyWith({
@@ -44,6 +74,9 @@ class TaskFilter {
     Object? dueFrom = _sentinel,
     Object? dueTo = _sentinel,
     Object? assigneeOnlyMe = _sentinel,
+    String? sortBy,
+    String? sortDir,
+    String? listScope,
   }) {
     return TaskFilter(
       q: q ?? this.q,
@@ -63,8 +96,21 @@ class TaskFilter {
       assigneeOnlyMe: identical(assigneeOnlyMe, _sentinel)
           ? this.assigneeOnlyMe
           : assigneeOnlyMe as bool,
+      sortBy: sortBy ?? this.sortBy,
+      sortDir: sortDir ?? this.sortDir,
+      listScope: listScope ?? this.listScope,
     );
   }
+
+  /// True when the active sort differs from the server-side default
+  /// (updated_at desc). Used by [hasAdvancedFilters] to light up the
+  /// yellow dot when the user picked a non-default sort order.
+  bool get hasCustomSort =>
+      sortBy != defaultSortBy || sortDir != defaultSortDir;
+
+  /// True when the user switched away from the default «root tasks only»
+  /// view to «all tasks». Used by [hasAdvancedFilters] to flag the change.
+  bool get hasCustomListScope => listScope != TaskListScope.defaultScope;
 
   /// Whether the user has any filter set inside the *advanced filter sheet*.
   ///
@@ -78,7 +124,9 @@ class TaskFilter {
       overdueOnly ||
       openOnly ||
       (dueFrom != null && dueFrom!.isNotEmpty) ||
-      (dueTo != null && dueTo!.isNotEmpty);
+      (dueTo != null && dueTo!.isNotEmpty) ||
+      hasCustomSort ||
+      hasCustomListScope;
 }
 
 const _sentinel = Object();
@@ -173,6 +221,9 @@ class MyTasksController extends StateNotifier<MyTasksState> {
     String? dueFrom,
     String? dueTo,
     bool assigneeOnlyMe = false,
+    String sortBy = TaskFilter.defaultSortBy,
+    String sortDir = TaskFilter.defaultSortDir,
+    String listScope = TaskListScope.defaultScope,
   }) {
     state = state.copyWith(
       filter: state.filter.copyWith(
@@ -182,6 +233,9 @@ class MyTasksController extends StateNotifier<MyTasksState> {
         dueFrom: dueFrom,
         dueTo: dueTo,
         assigneeOnlyMe: assigneeOnlyMe,
+        sortBy: sortBy,
+        sortDir: sortDir,
+        listScope: listScope,
       ),
     );
     load(reset: true);
@@ -202,6 +256,9 @@ class MyTasksController extends StateNotifier<MyTasksState> {
               dueFrom: null,
               dueTo: null,
               assigneeOnlyMe: false,
+              sortBy: TaskFilter.defaultSortBy,
+              sortDir: TaskFilter.defaultSortDir,
+              listScope: TaskListScope.defaultScope,
             ),
     );
     load(reset: true);
@@ -227,11 +284,14 @@ class MyTasksController extends StateNotifier<MyTasksState> {
         overdue: filter.overdueOnly,
         dueFrom: filter.dueFrom,
         dueTo: filter.dueTo,
+        sortBy: filter.sortBy,
+        sortDir: filter.sortDir,
+        rootsOnly: filter.listScope == TaskListScope.roots,
         page: 1,
         perPage: _perPage,
       );
 
-      // The backend already orders by updated_at DESC — no client sort needed.
+      // Server returns the list already ordered by `sortBy`/`sortDir`.
       var items = data.tasks;
       if (filter.openOnly) {
         items = items
@@ -277,6 +337,9 @@ class MyTasksController extends StateNotifier<MyTasksState> {
         overdue: filter.overdueOnly,
         dueFrom: filter.dueFrom,
         dueTo: filter.dueTo,
+        sortBy: filter.sortBy,
+        sortDir: filter.sortDir,
+        rootsOnly: filter.listScope == TaskListScope.roots,
         page: nextPage,
         perPage: _perPage,
       );

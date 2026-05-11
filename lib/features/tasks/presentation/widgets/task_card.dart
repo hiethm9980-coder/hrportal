@@ -6,6 +6,7 @@ import 'package:hr_portal/core/localization/app_localizations.dart';
 import 'package:hr_portal/core/utils/app_funs.dart';
 import '../../data/models/task_models.dart';
 import '../../data/models/task_status_model.dart';
+import 'task_progress_palette.dart';
 
 /// Callback signature for commiting a new progress value to the server.
 /// Returns a future so the card can show a small loading indicator while
@@ -200,13 +201,23 @@ class TaskCard extends StatelessWidget {
               child: _ProgressSlider(
                 taskId: task.id,
                 initialPercent: task.progressPercent!,
+                statusCode: task.status?.code,
                 onCommit: effectiveProgressChange,
               ),
             )
           else if (task.progressPercent != null)
             Padding(
               padding: const EdgeInsets.fromLTRB(14, 0, 14, 10),
-              child: _ProgressBar(percent: task.progressPercent!),
+              child: _ProgressBar(
+                percent: task.progressPercent!,
+                statusCode: task.status?.code,
+                // Server-driven «computed» indicator: the task is locked
+                // *because* it has children (per the new backend rule).
+                // We deliberately don't flag legacy permission-locks
+                // (assignee mismatch, etc.) — they're a different story.
+                computedFromSubtasks:
+                    task.subtasksTotal > 0 && !task.canEditProgress,
+              ),
             ),
           // ── Status chips: independent tap target. ──────────────────
           if (allStatuses.isNotEmpty) ...[
@@ -425,7 +436,13 @@ class _StatusRow extends StatelessWidget {
         itemBuilder: (_, i) {
           final s = statuses[i];
           final isActive = s.code == currentCode;
-          final color = _parseHex(s.color);
+          // Use the canonical palette so status chips match the slider /
+          // breakdown row colors. Custom statuses (unknown codes) keep
+          // their server-supplied hex via the fallback.
+          final color = TaskProgressPalette.forStatusCode(
+            s.code,
+            fallbackHex: s.color,
+          );
           return GestureDetector(
             onTap: tap == null ? null : () => tap(s),
             child: AnimatedContainer(
@@ -585,11 +602,18 @@ class _OpenIconBox extends StatelessWidget {
 class _ProgressSlider extends StatefulWidget {
   final int taskId;
   final int initialPercent;
+
+  /// Current task status code (e.g. `HOLD`, `IN_PROGRESS`, …) — used by
+  /// [TaskProgressPalette] so a HOLD task always paints purple even when
+  /// the percent (e.g. 90) would otherwise pick blue.
+  final String? statusCode;
+
   final ProgressCommit onCommit;
 
   const _ProgressSlider({
     required this.taskId,
     required this.initialPercent,
+    required this.statusCode,
     required this.onCommit,
   });
 
@@ -661,7 +685,13 @@ class _ProgressSliderState extends State<_ProgressSlider> {
   Widget build(BuildContext context) {
     final colors = context.appColors;
     final percent = _value.round();
-    final barColor = _barColorFor(percent);
+    // While the user is dragging, the status hasn't been re-derived
+    // server-side yet; only the explicit HOLD lock should override the
+    // percent-based color (HOLD progress can be 90 → would paint blue).
+    final barColor = TaskProgressPalette.forTask(
+      percent,
+      statusCode: widget.statusCode,
+    );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -723,13 +753,6 @@ class _ProgressSliderState extends State<_ProgressSlider> {
     );
   }
 
-  /// Color scale — same as read-only [_ProgressBar] so both look identical
-  /// when progress is non-editable.
-  Color _barColorFor(int percent) {
-    if (percent >= 80) return AppColors.success;
-    if (percent >= 40) return AppColors.gold;
-    return AppColors.error;
-  }
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -738,13 +761,28 @@ class _ProgressSliderState extends State<_ProgressSlider> {
 
 class _ProgressBar extends StatelessWidget {
   final int percent; // 0..100
-  const _ProgressBar({required this.percent});
+
+  /// Current task status code — see [_ProgressSlider.statusCode].
+  final String? statusCode;
+
+  /// True when the bar is read-only because the server is computing this
+  /// task's progress from its subtasks (`permissions.can_update_progress`
+  /// is false AND `subtasks_total > 0`). When set we show a tiny lock +
+  /// «computed» tag so the user understands why dragging does nothing.
+  final bool computedFromSubtasks;
+
+  const _ProgressBar({
+    required this.percent,
+    this.statusCode,
+    this.computedFromSubtasks = false,
+  });
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
     final clamped = percent.clamp(0, 100);
-    final barColor = _barColorFor(clamped);
+    final barColor =
+        TaskProgressPalette.forTask(clamped, statusCode: statusCode);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -760,14 +798,31 @@ class _ProgressBar extends StatelessWidget {
               ),
             ),
             const Spacer(),
-            Text(
-              'Progress'.tr(context),
-              style: TextStyle(
-                fontFamily: 'Cairo',
-                fontSize: 10,
+            if (computedFromSubtasks) ...[
+              Icon(
+                Icons.calculate_outlined,
+                size: 12,
                 color: colors.textMuted,
               ),
-            ),
+              const SizedBox(width: 3),
+              Text(
+                'Auto'.tr(context),
+                style: TextStyle(
+                  fontFamily: 'Cairo',
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                  color: colors.textMuted,
+                ),
+              ),
+            ] else
+              Text(
+                'Progress'.tr(context),
+                style: TextStyle(
+                  fontFamily: 'Cairo',
+                  fontSize: 10,
+                  color: colors.textMuted,
+                ),
+              ),
           ],
         ),
         const SizedBox(height: 4),
@@ -784,13 +839,6 @@ class _ProgressBar extends StatelessWidget {
     );
   }
 
-  /// Color scale: red → amber → green as progress increases. Keeps the
-  /// card scannable at a glance.
-  Color _barColorFor(int percent) {
-    if (percent >= 80) return AppColors.success;
-    if (percent >= 40) return AppColors.gold;
-    return AppColors.error;
-  }
 }
 
 // ═══════════════════════════════════════════════════════════════════

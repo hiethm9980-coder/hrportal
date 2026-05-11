@@ -127,11 +127,18 @@ class ApiConstants {
 
   // ── Tasks (employee) ──────────────────────────────────────────────
   static const String tasks = '$_v1/tasks';
+  /// Root-only variant of [tasks]: returns tasks with `parent_id IS NULL`.
+  /// Same query parameters, same response shape — only the dataset differs.
+  static const String tasksRoots = '$_v1/tasks/roots';
   static const String taskStatuses = '$_v1/tasks/statuses';
   static String taskDetail(int id) => '$_v1/tasks/$id';
   static String taskStatus(int id) => '$_v1/tasks/$id/status';
   static String taskProgress(int id) => '$_v1/tasks/$id/progress';
   static String taskSubtasks(int id) => '$_v1/tasks/$id/subtasks';
+  /// AI-bulk subtasks generator. Body: { employee_job, parent_task, task_text }.
+  /// Server enforces 5 req/min/user; details in repository docstring.
+  static String taskSubtasksAiBulk(int id) =>
+      '$_v1/tasks/$id/subtasks/ai-bulk';
   static String taskComments(int id) => '$_v1/tasks/$id/comments';
   static String taskCommentDelete(int taskId, int commentId) =>
       '$_v1/tasks/$taskId/comments/$commentId';

@@ -329,12 +329,37 @@ class TaskDetailsPermissions {
     this.canLogTime = false,
   });
 
+  /// AND-combine multiple permission keys: any present `false` wins.
+  /// When no key is present we default to `false` (defensive — match the
+  /// old behavior of returning false when the field is missing).
+  static bool _resolvePermBool(
+    Map<String, dynamic> json, {
+    required List<String> keys,
+  }) {
+    var sawAny = false;
+    var result = true;
+    for (final k in keys) {
+      if (json.containsKey(k)) {
+        sawAny = true;
+        if (json[k] != true) result = false;
+      }
+    }
+    return sawAny && result;
+  }
+
   factory TaskDetailsPermissions.fromJson(Map<String, dynamic> json) {
     return TaskDetailsPermissions(
       canEditTitle: json['can_edit_title'] as bool? ?? false,
       canEditDescription: json['can_edit_description'] as bool? ?? false,
       canEditPriority: json['can_edit_priority'] as bool? ?? false,
-      canEditStatus: json['can_edit_status'] as bool? ?? false,
+      // Server may ship either `can_edit_status` (legacy) or
+      // `can_update_status` (after the parent-lock rule landed). Read
+      // the one that's present; if both are present, false wins so we
+      // never offer an edit the server would reject.
+      canEditStatus: _resolvePermBool(
+        json,
+        keys: const ['can_edit_status', 'can_update_status'],
+      ),
       canUpdateProgress: json['can_update_progress'] as bool? ?? false,
       canEditDueDate: json['can_edit_due_date'] as bool? ?? false,
       canEditMembers: json['can_edit_members'] as bool? ?? false,

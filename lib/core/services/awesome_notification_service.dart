@@ -8,11 +8,99 @@ import 'package:hr_portal/router/app_router.dart';
 import 'package:share_plus/share_plus.dart';
 
 class AwesomeNotificationService {
+  /// القناة الافتراضية — تستخدم صوت النظام الافتراضي عندما لا يحدد السيرفر
+  /// `voice` (أو يرسلها فارغة/null).
   static const String channelKey = 'alerts_channel';
   static const String channelGroupKey = 'alerts_group';
 
+  /// خريطة `voice` → channelKey. كل قناة مرتبطة بملف صوت في
+  /// `android/app/src/main/res/raw/<key>.ogg`.
+  ///
+  /// ملاحظة Android مهمة: بعد إنشاء قناة على الجهاز لا يمكن تغيير صوتها
+  /// عبر الكود (قيد نظام Android 8+). لذلك نستخدم channelKey مختلف لكل
+  /// صوت بدلاً من تعديل القناة الواحدة.
+  static const Map<String, String> _voiceChannels = {
+    'a': 'alerts_channel_a',
+    'b': 'alerts_channel_b',
+    'c': 'alerts_channel_c',
+    'd': 'alerts_channel_d',
+  };
+
   static bool _inited = false;
   static bool _bgInited = false;
+
+  /// يبني قائمة القنوات (الافتراضية + قناة لكل صوت). تُستخدم في كلا
+  /// الـ isolates (foreground و background) لضمان وجود نفس القنوات.
+  static List<NotificationChannel> _buildChannels({required bool decorate}) {
+    NotificationChannel build({
+      required String key,
+      required String name,
+      String? soundSource,
+    }) {
+      return NotificationChannel(
+        channelGroupKey: channelGroupKey,
+        channelKey: key,
+        channelName: name,
+        channelDescription: 'Channel for app alerts',
+        importance: NotificationImportance.High,
+        channelShowBadge: true,
+        defaultColor: decorate ? const Color(0xffe7b245) : null,
+        ledColor: decorate ? Colors.white : null,
+        playSound: !kIsWeb,
+        soundSource: soundSource,
+        icon: kIsWeb ? null : 'resource://drawable/ic_notify',
+      );
+    }
+
+    return [
+      build(key: channelKey, name: 'Alerts'),
+      for (final entry in _voiceChannels.entries)
+        build(
+          key: entry.value,
+          name: 'Alerts ${entry.key.toUpperCase()}',
+          // ملف الصوت داخل res/raw/<key>.ogg — بدون اللاحقة.
+          soundSource: 'resource://raw/${entry.key}',
+        ),
+    ];
+  }
+
+  /// يختار channelKey المناسب حسب `voice` القادم من السيرفر.
+  /// - `null` / فارغ / قيمة غير معروفة → القناة الافتراضية (صوت النظام).
+  /// - `"a"` / `"b"` / `"c"` / `"d"` → قناة الصوت المخصص المقابل.
+  static String _channelKeyForVoice(String? voice) {
+    final normalized = voice?.trim().toLowerCase();
+    if (normalized == null || normalized.isEmpty) return channelKey;
+    return _voiceChannels[normalized] ?? channelKey;
+  }
+
+  /// يفرض إعادة إنشاء قنوات الصوت بصوتها الصحيح. ضروري لأن Android 8+
+  /// يُجمّد إعدادات الصوت لأي قناة فور إنشائها — ولا تتغير حتى لو غيّرناها
+  /// في الكود. باستخدام `forceUpdate: true` تُحذف القناة وتُعاد بالصوت
+  /// المحدّث (القناة الافتراضية لا تُلمس لتفادي إلغاء تخصيصات المستخدم).
+  static Future<void> _forceUpdateVoiceChannels({required bool decorate}) async {
+    for (final entry in _voiceChannels.entries) {
+      try {
+        await AwesomeNotifications().setChannel(
+          NotificationChannel(
+            channelGroupKey: channelGroupKey,
+            channelKey: entry.value,
+            channelName: 'Alerts ${entry.key.toUpperCase()}',
+            channelDescription: 'Channel for app alerts',
+            importance: NotificationImportance.High,
+            channelShowBadge: true,
+            defaultColor: decorate ? const Color(0xffe7b245) : null,
+            ledColor: decorate ? Colors.white : null,
+            playSound: !kIsWeb,
+            soundSource: 'resource://raw/${entry.key}',
+            icon: kIsWeb ? null : 'resource://drawable/ic_notify',
+          ),
+          forceUpdate: true,
+        );
+      } catch (e) {
+        debugPrint('⚠️ setChannel ${entry.value} failed: $e');
+      }
+    }
+  }
 
   /// تهيئة الحزمة والقناة + تسجيل المستمعات
   static Future<void> init() async {
@@ -20,20 +108,7 @@ class AwesomeNotificationService {
     _inited = true;
     await AwesomeNotifications().initialize(
       kIsWeb ? null : 'resource://drawable/ic_notify',
-      [
-        NotificationChannel(
-          channelGroupKey: channelGroupKey,
-          channelKey: channelKey,
-          channelName: 'Alerts',
-          channelDescription: 'Channel for app alerts',
-          importance: NotificationImportance.High,
-          channelShowBadge: true,
-          defaultColor: const Color(0xffe7b245),
-          ledColor: Colors.white,
-          playSound: !kIsWeb,
-          icon: kIsWeb ? null : 'resource://drawable/ic_notify',
-        ),
-      ],
+      _buildChannels(decorate: true),
       channelGroups: [
         NotificationChannelGroup(
           channelGroupKey: channelGroupKey,
@@ -42,6 +117,10 @@ class AwesomeNotificationService {
       ],
       debug: true,
     );
+
+    if (!kIsWeb) {
+      await _forceUpdateVoiceChannels(decorate: true);
+    }
 
     AwesomeNotifications().setListeners(
       onNotificationCreatedMethod:
@@ -64,18 +143,7 @@ class AwesomeNotificationService {
     _bgInited = true;
     await AwesomeNotifications().initialize(
       kIsWeb ? null : 'resource://drawable/ic_notify',
-      [
-        NotificationChannel(
-          channelGroupKey: channelGroupKey,
-          channelKey: channelKey,
-          channelName: 'Alerts',
-          channelDescription: 'Channel for app alerts',
-          importance: NotificationImportance.High,
-          channelShowBadge: true,
-          playSound: !kIsWeb,
-          icon: kIsWeb ? null : 'resource://drawable/ic_notify',
-        ),
-      ],
+      _buildChannels(decorate: false),
       channelGroups: [
         NotificationChannelGroup(
           channelGroupKey: channelGroupKey,
@@ -83,6 +151,24 @@ class AwesomeNotificationService {
         ),
       ],
       debug: false,
+    );
+
+    if (!kIsWeb) {
+      await _forceUpdateVoiceChannels(decorate: false);
+    }
+
+    // Listeners are also needed in the background isolate so that events
+    // created while the app is terminated are queued and delivered properly
+    // once the main isolate resumes.
+    AwesomeNotifications().setListeners(
+      onNotificationCreatedMethod:
+          AwesomeNotificationController.onNotificationCreatedMethod,
+      onNotificationDisplayedMethod:
+          AwesomeNotificationController.onNotificationDisplayedMethod,
+      onActionReceivedMethod:
+          AwesomeNotificationController.onActionReceivedMethod,
+      onDismissActionReceivedMethod:
+          AwesomeNotificationController.onDismissedActionReceivedMethod,
     );
   }
 
@@ -100,6 +186,8 @@ class AwesomeNotificationService {
     required String bodyEn,
     String? imageUrl,
     Map<String, String>? payload,
+    String? notificationId,
+    String? voice,
   }) async {
     if (kIsWeb) {
       final allowed = await AwesomeNotifications().isNotificationAllowed();
@@ -107,7 +195,14 @@ class AwesomeNotificationService {
     }
 
     final bool hasImage = imageUrl != null && imageUrl.trim().isNotEmpty;
-    final int id = DateTime.now().millisecondsSinceEpoch.remainder(100000);
+
+    // ✅ إذا أُرسل notificationId ثابت (ID الإشعار من السيرفر) نشتق منه int
+    // مستقر لـ Awesome، حتى لا يُعرض نفس الإشعار مرتين لو وصل من FCM في
+    // حالتين مختلفتين (foreground + background) أو أُعيد إرساله. بدون ذلك
+    // نستخدم timestamp عشوائياً.
+    final int id = notificationId != null && notificationId.isNotEmpty
+        ? (notificationId.hashCode & 0x7FFFFFFF) % 2147483647
+        : DateTime.now().millisecondsSinceEpoch.remainder(100000);
 
     final mergedPayload = <String, String>{
       if (payload != null) ...payload,
@@ -145,10 +240,15 @@ class AwesomeNotificationService {
       actionButtons = [];
     }
 
+    final selectedChannelKey = _channelKeyForVoice(voice);
+    debugPrint(
+      '🔔 [VOICE] raw="$voice" → channel="$selectedChannelKey"',
+    );
+
     await AwesomeNotifications().createNotification(
       content: NotificationContent(
         id: id,
-        channelKey: channelKey,
+        channelKey: selectedChannelKey,
         title: titleEn,
         body: bodyEn,
         icon: kIsWeb ? null : 'resource://drawable/ic_notify',
@@ -159,6 +259,10 @@ class AwesomeNotificationService {
         largeIcon: hasImage ? imageUrl : null,
         hideLargeIconOnExpand: true,
         payload: mergedPayload,
+        category: NotificationCategory.Message,
+        wakeUpScreen: true,
+        displayOnForeground: true,
+        displayOnBackground: true,
       ),
       localizations: {
         'ar': NotificationLocalization(

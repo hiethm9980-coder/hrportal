@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/legacy.dart';
 import '../../../../core/providers/core_providers.dart';
 import '../../data/models/task_models.dart';
 import 'company_list_scope_provider.dart';
+import 'my_tasks_provider.dart' show TaskFilter;
 
 /// Filter snapshot for the subtasks list. Mirrors the My Tasks filter but
 /// deliberately omits `projectId` (subtasks always inherit the parent's
@@ -17,6 +18,11 @@ class SubtasksFilter {
   final bool openOnly;
   final String? dueFrom;
   final String? dueTo;
+  /// Sort key forwarded as `sort_by`. Same backend whitelist as `/tasks`:
+  /// `name` | `updated_at` | `created_at`. Default `updated_at`.
+  final String sortBy;
+  /// Sort direction forwarded as `sort_dir`. `asc` | `desc`. Default `desc`.
+  final String sortDir;
 
   const SubtasksFilter({
     this.q = '',
@@ -26,6 +32,8 @@ class SubtasksFilter {
     this.openOnly = false,
     this.dueFrom,
     this.dueTo,
+    this.sortBy = TaskFilter.defaultSortBy,
+    this.sortDir = TaskFilter.defaultSortDir,
   });
 
   SubtasksFilter copyWith({
@@ -36,6 +44,8 @@ class SubtasksFilter {
     bool? openOnly,
     Object? dueFrom = _sentinel,
     Object? dueTo = _sentinel,
+    String? sortBy,
+    String? sortDir,
   }) {
     return SubtasksFilter(
       q: q ?? this.q,
@@ -49,8 +59,16 @@ class SubtasksFilter {
       openOnly: openOnly ?? this.openOnly,
       dueFrom: identical(dueFrom, _sentinel) ? this.dueFrom : dueFrom as String?,
       dueTo: identical(dueTo, _sentinel) ? this.dueTo : dueTo as String?,
+      sortBy: sortBy ?? this.sortBy,
+      sortDir: sortDir ?? this.sortDir,
     );
   }
+
+  /// True when the active sort differs from the server-side default
+  /// (`updated_at desc`).
+  bool get hasCustomSort =>
+      sortBy != TaskFilter.defaultSortBy ||
+      sortDir != TaskFilter.defaultSortDir;
 
   /// Filters hidden behind the tune icon — same semantics as the My Tasks
   /// `hasAdvancedFilters` flag.
@@ -59,7 +77,8 @@ class SubtasksFilter {
       overdueOnly ||
       openOnly ||
       (dueFrom != null && dueFrom!.isNotEmpty) ||
-      (dueTo != null && dueTo!.isNotEmpty);
+      (dueTo != null && dueTo!.isNotEmpty) ||
+      hasCustomSort;
 }
 
 const _sentinel = Object();
@@ -152,6 +171,8 @@ class SubtasksController extends StateNotifier<SubtasksState> {
     bool openOnly = false,
     String? dueFrom,
     String? dueTo,
+    String sortBy = TaskFilter.defaultSortBy,
+    String sortDir = TaskFilter.defaultSortDir,
   }) {
     state = state.copyWith(
       filter: state.filter.copyWith(
@@ -160,6 +181,8 @@ class SubtasksController extends StateNotifier<SubtasksState> {
         openOnly: openOnly,
         dueFrom: dueFrom,
         dueTo: dueTo,
+        sortBy: sortBy,
+        sortDir: sortDir,
       ),
     );
     load(reset: true);
@@ -175,6 +198,8 @@ class SubtasksController extends StateNotifier<SubtasksState> {
               openOnly: false,
               dueFrom: null,
               dueTo: null,
+              sortBy: TaskFilter.defaultSortBy,
+              sortDir: TaskFilter.defaultSortDir,
             ),
     );
     load(reset: true);
@@ -200,6 +225,8 @@ class SubtasksController extends StateNotifier<SubtasksState> {
         overdue: filter.overdueOnly,
         dueFrom: filter.dueFrom,
         dueTo: filter.dueTo,
+        sortBy: filter.sortBy,
+        sortDir: filter.sortDir,
         companyId: companyId,
         page: 1,
         perPage: _perPage,
@@ -256,6 +283,8 @@ class SubtasksController extends StateNotifier<SubtasksState> {
         overdue: filter.overdueOnly,
         dueFrom: filter.dueFrom,
         dueTo: filter.dueTo,
+        sortBy: filter.sortBy,
+        sortDir: filter.sortDir,
         companyId: companyId,
         page: nextPage,
         perPage: _perPage,

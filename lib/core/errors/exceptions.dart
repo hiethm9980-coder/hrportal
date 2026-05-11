@@ -166,6 +166,22 @@ class BusinessRuleException extends ApiException {
   }) : super(code: 'BUSINESS_RULE_VIOLATION', statusCode: 422);
 }
 
+/// Specific 422 raised when the user tries to mutate `progress` or
+/// `status` on a task that has subtasks. The backend computes those
+/// values from the children, so manual writes are rejected with this
+/// code. The UI gates the controls on `permissions.can_update_progress`
+/// to avoid this path entirely — it's a defensive fallback for stale
+/// permissions or race conditions.
+class ParentProgressLockedException extends ApiException {
+  const ParentProgressLockedException({
+    super.message =
+        'This task is computed from its subtasks — edit the subtasks instead.',
+    super.traceId,
+    super.details,
+    super.copyText,
+  }) : super(code: 'PARENT_PROGRESS_LOCKED', statusCode: 422);
+}
+
 // ═══════════════════════════════════════════════════════════════════
 // Resource (404)
 // ═══════════════════════════════════════════════════════════════════

@@ -3,6 +3,7 @@ import 'package:dio/dio.dart';
 import '../../../../core/constants/api_constants.dart';
 import '../../../../core/network/api_client.dart';
 import '../models/activity_models.dart';
+import '../models/ai_bulk_subtasks_models.dart';
 import '../models/attachment_models.dart';
 import '../models/comment_models.dart';
 import '../models/create_task_request.dart';
@@ -43,6 +44,14 @@ class TaskRepository {
   /// - [status] is a status *code* (e.g. `DONE`) — NOT an id.
   /// - [priority] is a priority *code* (e.g. `HIGH`).
   /// - [q] matches against title + description + code.
+  /// - [sortBy] is the sort key (server whitelist: `name` | `updated_at` |
+  ///   `created_at`). Any other value is silently ignored by the server, so
+  ///   we forward as-is.
+  /// - [sortDir] is `asc` or `desc`. Defaults to `desc` (newest-first).
+  /// - [rootsOnly] switches to the root-only endpoint
+  ///   (`GET /api/v1/tasks/roots`) which returns just the tasks where
+  ///   `parent_id IS NULL`. The query parameters and the response shape
+  ///   are identical to `/tasks`, so the same caller code works for both.
   Future<TasksListData> listTasks({
     String? q,
     int? projectId,
@@ -53,11 +62,14 @@ class TaskRepository {
     bool overdue = false,
     String? dueFrom,
     String? dueTo,
+    String? sortBy,
+    String? sortDir,
+    bool rootsOnly = false,
     int page = 1,
     int perPage = 50,
   }) async {
     final response = await _client.get<TasksListData>(
-      ApiConstants.tasks,
+      rootsOnly ? ApiConstants.tasksRoots : ApiConstants.tasks,
       queryParameters: {
         if (q != null && q.trim().isNotEmpty) 'q': q.trim(),
         if (projectId != null) 'project_id': projectId,
@@ -69,6 +81,8 @@ class TaskRepository {
         if (overdue) 'overdue': 1,
         if (dueFrom != null && dueFrom.isNotEmpty) 'due_from': dueFrom,
         if (dueTo != null && dueTo.isNotEmpty) 'due_to': dueTo,
+        if (sortBy != null && sortBy.isNotEmpty) 'sort_by': sortBy,
+        if (sortDir != null && sortDir.isNotEmpty) 'sort_dir': sortDir,
         'page': page,
         'per_page': perPage,
       },
@@ -109,6 +123,8 @@ class TaskRepository {
     bool overdue = false,
     String? dueFrom,
     String? dueTo,
+    String? sortBy,
+    String? sortDir,
     int? companyId,
     int page = 1,
     int perPage = 50,
@@ -124,6 +140,8 @@ class TaskRepository {
         if (overdue) 'overdue': 1,
         if (dueFrom != null && dueFrom.isNotEmpty) 'due_from': dueFrom,
         if (dueTo != null && dueTo.isNotEmpty) 'due_to': dueTo,
+        if (sortBy != null && sortBy.isNotEmpty) 'sort_by': sortBy,
+        if (sortDir != null && sortDir.isNotEmpty) 'sort_dir': sortDir,
         if (companyId != null) 'company_id': companyId,
         'page': page,
         'per_page': perPage,
@@ -376,6 +394,35 @@ class TaskRepository {
       },
     );
     return response.data ?? Task(id: 0, title: body.title);
+  }
+
+  /// Generate up to 10 subtasks at once via the backend's AI assistant.
+  ///
+  /// `task_text` is a `;`-separated list of subtask titles; the server lets
+  /// the AI flesh each one out into a real subtask (title + description +
+  /// sane defaults). The AI step is server-side — the client just submits
+  /// the brief and waits.
+  ///
+  /// Server enforces a 5 req/min/user rate limit. On 429, the
+  /// [RateLimitedException] carries `details.retry_after_seconds` so the
+  /// caller can drive a cooldown timer.
+  Future<AiBulkSubtasksResult> createSubtasksWithAi(
+    int parentTaskId,
+    AiBulkSubtasksRequest body,
+  ) async {
+    final response = await _client.post<AiBulkSubtasksResult>(
+      ApiConstants.taskSubtasksAiBulk(parentTaskId),
+      data: body.toJson(),
+      fromJson: (json) =>
+          AiBulkSubtasksResult.fromJson(json as Map<String, dynamic>),
+    );
+    return response.data ??
+        const AiBulkSubtasksResult(
+          createdCount: 0,
+          rateLimitRemaining: 0,
+          rateLimitTotal: 0,
+          rateLimitResetInSeconds: 0,
+        );
   }
 
   /// Create a subtask under [parentTaskId]. Same fields as [createRootTask];

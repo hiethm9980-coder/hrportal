@@ -28,57 +28,92 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   // يضمن تسجيل البلجنز في هذا الـ isolate (لتفادي MissingPluginException)
   DartPluginRegistrant.ensureInitialized();
 
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  // ✅ سجلات تظهر في `adb logcat` حتى في الـ release. للفلترة:
+  //   adb logcat | findstr /i "flutter Awesome FCM 🔥"
+  debugPrint(
+    '🔥 [BG] FCM message received id=${message.messageId} data=${message.data}',
+  );
 
-  // تهيئة خفيفة للقنوات فقط
-  await AwesomeNotificationService.initForBackground();
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+  } catch (e) {
+    debugPrint('🔥 [BG] Firebase.initializeApp failed: $e');
+  }
+
+  try {
+    await AwesomeNotificationService.initForBackground();
+  } catch (e) {
+    debugPrint('🔥 [BG] AwesomeNotifications initForBackground failed: $e');
+  }
 
   final d = message.data;
 
-  // ✅ ID لمنع التكرار (يفضل أن ترسله من السيرفر داخل data["id"])
-  final id = (d['id'] ?? message.messageId ?? DateTime.now().millisecondsSinceEpoch.toString()).toString();
+  // ✅ ID فريد للإشعار. نستخدمه أيضاً كـ deduplication key لـ Awesome
+  // (نفس ID لا يُعرض مرتين). إذا السيرفر يرسل data['id'] استخدمه.
+  final id = (d['id'] ??
+          message.messageId ??
+          DateTime.now().millisecondsSinceEpoch.toString())
+      .toString();
 
-  // ✅ اعتمد على data-only
   final titleEn = (d['title_en'] ?? d['title'] ?? 'Notification').toString();
   final bodyEn = (d['body_en'] ?? d['body'] ?? '').toString();
   final titleAr = (d['title_ar'] ?? titleEn).toString();
   final bodyAr = (d['body_ar'] ?? bodyEn).toString();
 
-  // إذا ما فيه محتوى لا تحفظ ولا تعرض
-  if (titleEn.isEmpty && bodyEn.isEmpty) return;
+  // إذا ما فيه محتوى لا نعرض ولا نحفظ
+  if (titleEn.isEmpty && bodyEn.isEmpty) {
+    debugPrint('🔥 [BG] Empty title/body, skipping');
+    return;
+  }
 
-  // ✅ created_at: إذا السيرفر يرسله كـ epoch استخدمه، وإلا استخدم الآن
-  final createdAt = int.tryParse((d['created_at'] ?? '').toString()) ?? DateTime.now().millisecondsSinceEpoch;
+  final createdAt = int.tryParse((d['created_at'] ?? '').toString()) ??
+      DateTime.now().millisecondsSinceEpoch;
 
-  // ✅ 1) احفظ في SQLite (بدون تكرار)
-  final inserted = await DbHelper().insertOrIgnore(
-    table: 'notifications',
-    obj: {
-      'id': id,
-      'title_ar': titleAr,
-      'body_ar': bodyAr,
-      'title_en': titleEn,
-      'body_en': bodyEn,
-      'img': d['image']?.toString(),
-      'url': d['url']?.toString(),
-      'route': d['route']?.toString(),
-      'payload': jsonEncode(d),
-      'is_read': 0,
-      'created_at': createdAt,
-    }..removeWhere((k, v) => v == null),
-  );
+  // ✅ 1) اعرض الإشعار أولاً — لا تجعل عرض الإشعار يعتمد على نجاح حفظ DB.
+  // في background isolate قد يفشل فتح SQLite (lock من main isolate في
+  // غياب WAL، schema mismatch، أو أي سبب آخر) فلا يجوز أن يمنع ذلك ظهور
+  // الإشعار للمستخدم. الـ deduplication يضمنه Awesome نفسه عبر notificationId
+  // الفريد المشتق من id (انظر showLocalizedNotification).
+  try {
+    await AwesomeNotificationService.showLocalizedNotification(
+      notificationId: id,
+      titleAr: titleAr,
+      bodyAr: bodyAr,
+      titleEn: titleEn,
+      bodyEn: bodyEn,
+      imageUrl: d['image']?.toString(),
+      voice: d['voice']?.toString(),
+      payload: d.map((k, v) => MapEntry(k, v.toString())),
+    );
+    debugPrint('🔥 [BG] Awesome notification shown id=$id');
+  } catch (e, s) {
+    debugPrint('🔥 [BG] Awesome show failed: $e\n$s');
+  }
 
-  if (inserted == 0) return; // ✅ لا تعرض المكرر
-
-  // ✅ 2) ثم اعرض الإشعار محليًا عبر Awesome
-  await AwesomeNotificationService.showLocalizedNotification(
-    titleAr: titleAr,
-    bodyAr: bodyAr,
-    titleEn: titleEn,
-    bodyEn: bodyEn,
-    imageUrl: d['image']?.toString(),
-    payload: d.map((k, v) => MapEntry(k, v.toString())),
-  );
+  // ✅ 2) ثم احفظ في DB (في try مستقل) — فشل الحفظ لا يلغي عرض الإشعار.
+  try {
+    final inserted = await DbHelper().insertOrIgnore(
+      table: 'notifications',
+      obj: {
+        'id': id,
+        'title_ar': titleAr,
+        'body_ar': bodyAr,
+        'title_en': titleEn,
+        'body_en': bodyEn,
+        'img': d['image']?.toString(),
+        'url': d['url']?.toString(),
+        'route': d['route']?.toString(),
+        'payload': jsonEncode(d),
+        'is_read': 0,
+        'created_at': createdAt,
+      }..removeWhere((k, v) => v == null),
+    );
+    debugPrint('🔥 [BG] DB insert result=$inserted id=$id');
+  } catch (e, s) {
+    debugPrint('🔥 [BG] DB insert failed: $e\n$s');
+  }
 }
 
 /// Detects if the API base URL changed since last run.

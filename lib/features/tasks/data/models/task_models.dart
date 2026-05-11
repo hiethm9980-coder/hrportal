@@ -494,18 +494,43 @@ class PaginationInfo {
   }
 }
 
-/// The complete payload for GET /api/v1/tasks.
+/// What the server actually applied as sort, echoed back in `data.sort`.
+/// Used to verify the backend honoured our `sort_by`/`sort_dir` query
+/// parameters. `null` when the server didn't include the field.
+class AppliedSort {
+  final String? by;
+  final String? dir;
+  const AppliedSort({this.by, this.dir});
+
+  factory AppliedSort.fromJson(Map<String, dynamic> json) =>
+      AppliedSort(by: json['by'] as String?, dir: json['dir'] as String?);
+
+  @override
+  String toString() => '${by ?? '?'}/${dir ?? '?'}';
+}
+
+/// The complete payload for GET /api/v1/tasks (and `/tasks/roots`).
 class TasksListData {
   final List<Task> tasks;
   final TaskStats stats;
   final StatusBreakdown statusBreakdown;
   final PaginationInfo pagination;
+  /// Echo of the sort actually applied by the backend (`data.sort`). `null`
+  /// when the server didn't include this field at all (older builds).
+  final AppliedSort? appliedSort;
+  /// Echo of the list scope the server used (`data.list_scope`):
+  /// `"all"`   → returned by `GET /tasks` (every task, root + subtasks).
+  /// `"roots"` → returned by `GET /tasks/roots` (root tasks only).
+  /// `null`    → field missing (older backend that doesn't echo it).
+  final String? listScope;
 
   const TasksListData({
     this.tasks = const [],
     this.stats = const TaskStats(),
     this.statusBreakdown = const StatusBreakdown(),
     this.pagination = const PaginationInfo(),
+    this.appliedSort,
+    this.listScope,
   });
 
   factory TasksListData.fromJson(Map<String, dynamic> json) {
@@ -529,6 +554,10 @@ class TasksListData {
       pagination: json['pagination'] is Map
           ? PaginationInfo.fromJson(Map<String, dynamic>.from(json['pagination']))
           : const PaginationInfo(),
+      appliedSort: json['sort'] is Map
+          ? AppliedSort.fromJson(Map<String, dynamic>.from(json['sort']))
+          : null,
+      listScope: json['list_scope'] as String?,
     );
   }
 }

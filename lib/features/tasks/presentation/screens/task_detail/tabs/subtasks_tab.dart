@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_expandable_fab/flutter_expandable_fab.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -17,6 +18,7 @@ import '../../../providers/task_statuses_provider.dart';
 import '../../../widgets/advanced_filter_sheet.dart';
 import '../../../widgets/task_card.dart';
 import '../../add_task_screen.dart';
+import '../../ai_create_subtasks_screen.dart';
 import 'subtasks_parent_header.dart';
 
 /// "Subtasks" tab of the task detail screen.
@@ -44,6 +46,12 @@ class _SubtasksTabState extends ConsumerState<SubtasksTab> {
   Timer? _searchDebounce;
   bool _showSearch = false;
 
+  // ── Expandable FAB ────────────────────────────────────────────────
+  // Key lets us programmatically collapse the FAB after a child action
+  // fires — without it the menu stays open over the new screen.
+  final _fabKey = GlobalKey<ExpandableFabState>();
+  void _closeFab() => _fabKey.currentState?.toggle();
+
   // ── Add-subtask overlay state ────────────────────────────────────
   // We render [AddTaskScreen] as an in-tree Stack overlay rather than a
   // Navigator push so the task detail shell's bottom navigation bar stays
@@ -64,6 +72,26 @@ class _SubtasksTabState extends ConsumerState<SubtasksTab> {
   void _handleSubtaskCreated() {
     setState(() => _showAddSheet = false);
     ref.read(subtasksProvider(widget.taskId).notifier).load(reset: true);
+  }
+
+  /// Push the AI-bulk subtasks form. Returns `true` from the form when at
+  /// least one subtask was created — we use that as the cue to refresh the
+  /// list so the new tasks appear without a manual pull-to-refresh.
+  Future<void> _openAiCreate() async {
+    final state = ref.read(subtasksProvider(widget.taskId));
+    final parentTitle = state.parent?.title ?? widget.initialTitle ?? '';
+    final created = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => AiCreateSubtasksScreen(
+          parentTaskId: widget.taskId,
+          parentTaskTitle: parentTitle,
+        ),
+      ),
+    );
+    if (!mounted) return;
+    if (created == true) {
+      ref.read(subtasksProvider(widget.taskId).notifier).load(reset: true);
+    }
   }
 
   @override
@@ -118,16 +146,25 @@ class _SubtasksTabState extends ConsumerState<SubtasksTab> {
 
   Future<void> _openAdvancedFilters() async {
     final state = ref.read(subtasksProvider(widget.taskId));
-    // The sheet wants a concrete [TaskFilter]; build one on the fly — only
-    // the fields the sheet reads are populated.
+    // The sheet wants a concrete [TaskFilter]; build one on the fly. Sort
+    // is supported by the backend on `/tasks/{id}/subtasks`, so we forward
+    // the current sort state into the sheet and apply whatever it returns.
     final adapted = TaskFilter(
       priorityCode: state.filter.priorityCode,
       overdueOnly: state.filter.overdueOnly,
       openOnly: state.filter.openOnly,
       dueFrom: state.filter.dueFrom,
       dueTo: state.filter.dueTo,
+      sortBy: state.filter.sortBy,
+      sortDir: state.filter.sortDir,
     );
-    final result = await showAdvancedFilterSheet(context, current: adapted);
+    // The «display mode» chips (root tasks only / all tasks) stay hidden —
+    // that switch is meaningless inside a subtasks tree.
+    final result = await showAdvancedFilterSheet(
+      context,
+      current: adapted,
+      showListScope: false,
+    );
     if (result == null || !mounted) return;
     ref.read(subtasksProvider(widget.taskId).notifier).applyAdvancedFilters(
           priorityCode: result.priorityCode,
@@ -135,6 +172,8 @@ class _SubtasksTabState extends ConsumerState<SubtasksTab> {
           openOnly: result.openOnly,
           dueFrom: result.dueFrom,
           dueTo: result.dueTo,
+          sortBy: result.sortBy,
+          sortDir: result.sortDir,
         );
   }
 
@@ -207,6 +246,11 @@ class _SubtasksTabState extends ConsumerState<SubtasksTab> {
     final parentTitle = state.parent?.title ?? widget.initialTitle ?? '';
     final canCreate = state.canCreateSubtask;
     final parentProjectId = state.parent?.project?.id;
+    // Mirror the FAB to the start edge: right in LTR, left in RTL. The
+    // package doesn't auto-flip on Directionality, so we read it ourselves.
+    final isRtl = Directionality.of(context) == TextDirection.rtl;
+    final fabPos =
+        isRtl ? ExpandableFabPos.left : ExpandableFabPos.right;
 
     // We wrap the body in an inner `Scaffold` purely to get the standard
     // bottom-right FAB positioning used by My Tasks. The outer task detail
@@ -224,20 +268,54 @@ class _SubtasksTabState extends ConsumerState<SubtasksTab> {
       },
       child: Scaffold(
       backgroundColor: Colors.transparent,
+      floatingActionButtonLocation: ExpandableFab.location,
       floatingActionButton: canCreate && !_showAddSheet && parentProjectId != null
-          ? FloatingActionButton.extended(
-              heroTag: 'add-subtask-fab-${widget.taskId}',
-              backgroundColor: AppColors.primaryMid,
-              foregroundColor: Colors.white,
-              onPressed: _openAddSheet,
-              icon: const Icon(Icons.add_task_rounded),
-              label: Text(
-                'Add task'.tr(context),
-                style: const TextStyle(
-                  fontFamily: 'Cairo',
-                  fontWeight: FontWeight.w800,
-                ),
+          ? ExpandableFab(
+              key: _fabKey,
+              type: ExpandableFabType.up,
+              pos: fabPos,
+              distance: 70,
+              childrenAnimation: ExpandableFabAnimation.none,
+              overlayStyle: ExpandableFabOverlayStyle(
+                color: Colors.black.withValues(alpha: 0.45),
+                blur: 2,
               ),
+              openButtonBuilder: RotateFloatingActionButtonBuilder(
+                child: const Icon(Icons.add_rounded, size: 28),
+                fabSize: ExpandableFabSize.regular,
+                foregroundColor: Colors.white,
+                backgroundColor: AppColors.primaryMid,
+                shape: const CircleBorder(),
+              ),
+              closeButtonBuilder: DefaultFloatingActionButtonBuilder(
+                child: const Icon(Icons.close_rounded, size: 24),
+                fabSize: ExpandableFabSize.regular,
+                foregroundColor: Colors.white,
+                backgroundColor: AppColors.primaryMid,
+                shape: const CircleBorder(),
+              ),
+              children: [
+                _FabAction(
+                  heroTag: 'add-subtask-ai-fab-${widget.taskId}',
+                  label: 'Create with AI'.tr(context),
+                  icon: Icons.auto_awesome_rounded,
+                  background: AppColors.gold,
+                  onTap: () {
+                    _closeFab();
+                    _openAiCreate();
+                  },
+                ),
+                _FabAction(
+                  heroTag: 'add-subtask-fab-${widget.taskId}',
+                  label: 'Add task'.tr(context),
+                  icon: Icons.add_task_rounded,
+                  background: AppColors.primaryMid,
+                  onTap: () {
+                    _closeFab();
+                    _openAddSheet();
+                  },
+                ),
+              ],
             )
           : null,
       body: Stack(
@@ -441,7 +519,10 @@ class _Body extends StatelessWidget {
       child: ListView.builder(
         controller: scrollController,
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(14, 14, 14, 32),
+        // Generous bottom padding so the last card isn't hidden behind the
+        // ExpandableFab. The FAB is ~56px tall + ~16px lift from the
+        // screen edge — 120 leaves visible breathing room.
+        padding: const EdgeInsets.fromLTRB(14, 14, 14, 120),
         itemCount: state.items.length + (state.hasMore ? 1 : 0),
         itemBuilder: (_, i) {
           if (i >= state.items.length) {
@@ -560,6 +641,77 @@ class _ErrorView extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// ExpandableFab child: a label pill + small circular FAB.
+// ═══════════════════════════════════════════════════════════════════
+//
+// Children are laid out in logical order [label, icon], so the icon
+// always lands at the *end* of the reading direction:
+//   - LTR (English) → icon on the right.
+//   - RTL (Arabic)  → icon on the left.
+// We deliberately use the ambient Directionality and let the Row flip
+// itself; no manual mirroring required.
+
+class _FabAction extends StatelessWidget {
+  final String heroTag;
+  final String label;
+  final IconData icon;
+  final Color background;
+  final VoidCallback onTap;
+
+  const _FabAction({
+    required this.heroTag,
+    required this.label,
+    required this.icon,
+    required this.background,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Material(
+          color: Colors.white,
+          elevation: 4,
+          shadowColor: Colors.black26,
+          borderRadius: BorderRadius.circular(10),
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(10),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 14,
+                vertical: 10,
+              ),
+              child: Text(
+                label,
+                style: const TextStyle(
+                  fontFamily: 'Cairo',
+                  fontSize: 13,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.primary,
+                ),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 10),
+        FloatingActionButton.small(
+          heroTag: heroTag,
+          backgroundColor: background,
+          foregroundColor: Colors.white,
+          elevation: 4,
+          shape: const CircleBorder(),
+          onPressed: onTap,
+          child: Icon(icon, size: 22),
+        ),
+      ],
     );
   }
 }

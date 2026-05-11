@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:hr_portal/core/localization/app_localizations.dart';
 import '../../data/models/task_models.dart';
+import 'task_progress_palette.dart';
 
 /// A horizontal row of status chips rendered in the dark header area.
 ///
@@ -40,7 +41,14 @@ class StatusChipsRow extends StatelessWidget {
         (s) => _Chip(
           label: s.label,
           count: s.count,
-          color: _parseHex(s.color),
+          // Drive the chip's accent color from the canonical palette so
+          // the breakdown row shares hues with the slider + status chips
+          // elsewhere. Server hex is kept as a fallback for any custom
+          // statuses the team may add later.
+          color: TaskProgressPalette.forStatusCode(
+            s.code,
+            fallbackHex: s.color,
+          ),
           selected: selectedCode == s.code,
           onTap: () => onChanged(s.code),
         ),
@@ -128,8 +136,3 @@ class _Chip extends StatelessWidget {
   }
 }
 
-Color _parseHex(String hex) {
-  final cleaned = hex.replaceAll('#', '').trim();
-  final withAlpha = cleaned.length == 6 ? 'FF$cleaned' : cleaned;
-  return Color(int.parse(withAlpha, radix: 16));
-}

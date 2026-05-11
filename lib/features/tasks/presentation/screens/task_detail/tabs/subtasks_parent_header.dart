@@ -7,6 +7,7 @@ import '../../../../data/models/task_models.dart';
 import '../../../../data/models/task_priority_model.dart';
 import '../../../../data/models/task_status_model.dart';
 import '../../../widgets/status_chips_row.dart';
+import '../../../widgets/task_progress_palette.dart';
 
 /// Commit callback for the parent task's progress input. Returns a future
 /// so the header can await the server round-trip.
@@ -128,6 +129,69 @@ class SubtasksParentHeader extends StatelessWidget {
             onParentStatusChange: onParentStatusChange,
             onParentProgressCommit: onParentProgressCommit,
             onFilterTap: onFilterTap,
+          ),
+          // ── Lock hint ──────────────────────────────────────────────
+          // Shows when the parent task has subtasks (so the server has
+          // locked manual edits per the new rule). Surfaces *why* the
+          // controls are read-only — silent locks confuse users.
+          if (!canEditProgress &&
+              !canEditStatus &&
+              (parent?.subtasksTotal ?? 0) > 0) ...[
+            const SizedBox(height: 8),
+            _ParentLockedHint(subtasksCount: parent!.subtasksTotal),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// "Computed from subtasks" hint banner.
+// ═══════════════════════════════════════════════════════════════════
+//
+// Displayed only when the server has locked both status and progress
+// editing because the parent has children (server flag
+// `permissions.can_update_progress = false`). The user otherwise sees
+// faded badges with no explanation.
+
+class _ParentLockedHint extends StatelessWidget {
+  final int subtasksCount;
+  const _ParentLockedHint({required this.subtasksCount});
+
+  @override
+  Widget build(BuildContext context) {
+    final raw = 'Computed from %d subtasks'.tr(context);
+    final label = raw.replaceAll('%d', '$subtasksCount');
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.calculate_outlined,
+            size: 14,
+            color: Colors.white.withValues(alpha: 0.85),
+          ),
+          const SizedBox(width: 6),
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontFamily: 'Cairo',
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                color: Colors.white.withValues(alpha: 0.9),
+                height: 1.35,
+              ),
+            ),
           ),
         ],
       ),
@@ -436,7 +500,12 @@ class _ParentStatusDropdown extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = current != null ? _parseHex(current!.color) : Colors.white;
+    final color = current != null
+        ? TaskProgressPalette.forStatusCode(
+            current!.code,
+            fallbackHex: current!.color,
+          )
+        : Colors.white;
     final label = current?.label ?? 'Set status'.tr(context);
 
     return PopupMenuButton<TaskStatus>(
@@ -455,7 +524,10 @@ class _ParentStatusDropdown extends StatelessWidget {
                   width: 10,
                   height: 10,
                   decoration: BoxDecoration(
-                    color: _parseHex(s.color),
+                    color: TaskProgressPalette.forStatusCode(
+                      s.code,
+                      fallbackHex: s.color,
+                    ),
                     shape: BoxShape.circle,
                   ),
                 ),
@@ -527,7 +599,12 @@ class _ParentStatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = current != null ? _parseHex(current!.color) : Colors.white;
+    final color = current != null
+        ? TaskProgressPalette.forStatusCode(
+            current!.code,
+            fallbackHex: current!.color,
+          )
+        : Colors.white;
     final label = current?.label ?? '—';
     return Container(
       height: 44,

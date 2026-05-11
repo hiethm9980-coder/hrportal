@@ -114,6 +114,7 @@ class NotificationFCMService {
       titleEn: titleEn,
       bodyEn: bodyEn,
       imageUrl: d['image']?.toString(),
+      voice: d['voice']?.toString(),
       payload: {
         ...d.map((k, v) => MapEntry(k, v.toString())),
         if (route.isNotEmpty) 'route': route,

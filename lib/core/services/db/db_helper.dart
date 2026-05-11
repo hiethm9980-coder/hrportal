@@ -33,6 +33,16 @@ class DbHelper {
       // ممارسات جيدة
       db.execute('PRAGMA foreign_keys = ON;');
 
+      // ✅ WAL + busy_timeout: ضروريان للسماح بفتح نفس قاعدة البيانات من
+      // background isolate (FCM background handler) بالتوازي مع الـ main
+      // isolate دون أن يفشل الإدخال بسبب SQLITE_BUSY أو قفل الملف.
+      // (PRAGMA يجب أن تنفذ خارج Transaction)
+      try {
+        db.execute('PRAGMA journal_mode = WAL;');
+        db.execute('PRAGMA synchronous = NORMAL;');
+        db.execute('PRAGMA busy_timeout = 5000;');
+      } catch (_) {}
+
       // إنشاء الجداول داخل Transaction
       db.execute('BEGIN;');
       db.execute(t.notifications);

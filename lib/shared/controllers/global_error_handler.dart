@@ -149,6 +149,22 @@ class GlobalErrorHandler {
       );
     }
 
+    if (error is ParentProgressLockedException) {
+      // Distinct title so users see «Computed from subtasks» rather than
+      // a vague «Not allowed». Server message already explains what to
+      // do, so we keep it as-is for the body.
+      return UiError(
+        action: ErrorAction.showSnackbar,
+        title: 'Locked: parent task',
+        message: pickMessage(
+          error,
+          'Edit subtasks — this task is computed from them.',
+        ),
+        traceId: error.traceId,
+        copyText: error.copyText,
+      );
+    }
+
     if (error is BusinessRuleException) {
       return UiError(
         action: ErrorAction.showSnackbar,

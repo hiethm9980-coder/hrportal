@@ -40,6 +40,9 @@ class SubtasksData {
   final List<Task> subtasks;
   final PaginationInfo pagination;
   final SubtasksPermissions permissions;
+  /// Echo of the sort actually applied by the backend (`data.sort`). `null`
+  /// when the server didn't include this field at all (older builds).
+  final AppliedSort? appliedSort;
 
   const SubtasksData({
     required this.parent,
@@ -48,6 +51,7 @@ class SubtasksData {
     this.subtasks = const [],
     this.pagination = const PaginationInfo(),
     this.permissions = const SubtasksPermissions(),
+    this.appliedSort,
   });
 
   factory SubtasksData.fromJson(Map<String, dynamic> json) {
@@ -81,6 +85,9 @@ class SubtasksData {
           ? SubtasksPermissions.fromJson(
               Map<String, dynamic>.from(json['permissions']))
           : const SubtasksPermissions(),
+      appliedSort: json['sort'] is Map
+          ? AppliedSort.fromJson(Map<String, dynamic>.from(json['sort']))
+          : null,
     );
   }
 }

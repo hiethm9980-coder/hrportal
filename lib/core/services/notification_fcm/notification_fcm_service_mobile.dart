@@ -82,6 +82,7 @@ class NotificationFCMService {
 
   Future<void> _onForegroundMessage(RemoteMessage message) async {
     final d = message.data;
+    log('📩 [FG] FCM data=$d');
 
     // ID لمنع التكرار
     final id =
@@ -97,8 +98,26 @@ class NotificationFCMService {
 
     if (titleEn.isEmpty && bodyEn.isEmpty) return;
 
-    // 1) حفظ في SQLite
-    final inserted = await _saveToLocalDb(
+    // 1) عرض الإشعار أولاً عبر Awesome (مع ID ثابت يمنع التكرار من Awesome
+    //    نفسه لو وصلت نفس الرسالة في حالتين مختلفتين). فشل DB لاحقاً لا يلغي
+    //    عرض الإشعار للمستخدم.
+    try {
+      await AwesomeNotificationService.showLocalizedNotification(
+        notificationId: id,
+        titleAr: titleAr,
+        bodyAr: bodyAr,
+        titleEn: titleEn,
+        bodyEn: bodyEn,
+        imageUrl: d['image']?.toString(),
+        voice: d['voice']?.toString(),
+        payload: d.map((k, v) => MapEntry(k, v.toString())),
+      );
+    } catch (e, s) {
+      log('FG: Awesome show failed: $e', stackTrace: s);
+    }
+
+    // 2) ثم احفظ في SQLite (في try مستقل)
+    await _saveToLocalDb(
       id: id,
       titleAr: titleAr,
       bodyAr: bodyAr,
@@ -109,19 +128,6 @@ class NotificationFCMService {
       route: d['route']?.toString(),
       payload: d,
       createdAt: DateTime.now().millisecondsSinceEpoch,
-    );
-
-    // ✅ لا تعرض إشعار مكرر (نفس ID)
-    if (!inserted) return;
-
-    // 2) عرض إشعار محلي عبر Awesome
-    await AwesomeNotificationService.showLocalizedNotification(
-      titleAr: titleAr,
-      bodyAr: bodyAr,
-      titleEn: titleEn,
-      bodyEn: bodyEn,
-      imageUrl: d['image']?.toString(),
-      payload: d.map((k, v) => MapEntry(k, v.toString())),
     );
 
     // 3) Notify screens to auto-refresh if the route is relevant.

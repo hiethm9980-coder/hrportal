@@ -84,6 +84,14 @@ class ExceptionMapper {
           copyText: copyText,
         );
 
+      case ApiErrorCodes.parentProgressLocked:
+        return ParentProgressLockedException(
+          message: message,
+          traceId: traceId,
+          details: details,
+          copyText: copyText,
+        );
+
       // ── 404 Resource ─────────────────────────────────────────────
       case ApiErrorCodes.resourceNotFound:
         return ResourceNotFoundException(

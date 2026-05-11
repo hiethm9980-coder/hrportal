@@ -14,6 +14,7 @@ import '../../../../data/models/task_priority_model.dart';
 import '../../../../data/models/task_status_model.dart';
 import '../../../providers/task_details_provider.dart';
 import '../../../providers/task_statuses_provider.dart';
+import '../../../widgets/task_progress_palette.dart';
 import '../task_detail_shell.dart' show TaskDetailTab;
 
 /// "Details" tab of the task detail screen.
@@ -900,7 +901,13 @@ class _StatusChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (status == null) return Text('—', style: _muted(context));
-    final color = _parseHex(status!.color);
+    // Status chip color follows the canonical 5-code palette (matches
+    // the slider hue) — server hex stays as a fallback for any custom
+    // status the team configures later.
+    final color = TaskProgressPalette.forStatusCode(
+      status!.code,
+      fallbackHex: status!.color,
+    );
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
@@ -1854,7 +1861,10 @@ class _StatusPickerSheet extends StatelessWidget {
                         width: 12,
                         height: 12,
                         decoration: BoxDecoration(
-                          color: _parseHex(s.color),
+                          color: TaskProgressPalette.forStatusCode(
+                            s.code,
+                            fallbackHex: s.color,
+                          ),
                           shape: BoxShape.circle,
                         ),
                       ),
@@ -2154,13 +2164,29 @@ class _ProgressSliderSheetState extends State<_ProgressSliderSheet> {
               ),
             ),
             const SizedBox(height: 6),
-            Slider(
-              value: _value.toDouble(),
-              min: 0,
-              max: 100,
-              divisions: 100,
-              activeColor: AppColors.primaryMid,
-              onChanged: (v) => setState(() => _value = v.round()),
+            // Color follows the same 4-tier mapping the server applies on
+            // save (red 0 → orange 1-69 → blue 70-99 → green 100). HOLD
+            // isn't a value the user can pick on this slider, so we don't
+            // pass a status code here.
+            Builder(
+              builder: (context) {
+                final c = TaskProgressPalette.forPercent(_value);
+                return SliderTheme(
+                  data: SliderTheme.of(context).copyWith(
+                    activeTrackColor: c,
+                    inactiveTrackColor: c.withValues(alpha: 0.18),
+                    thumbColor: c,
+                    overlayColor: c.withValues(alpha: 0.15),
+                  ),
+                  child: Slider(
+                    value: _value.toDouble(),
+                    min: 0,
+                    max: 100,
+                    divisions: 100,
+                    onChanged: (v) => setState(() => _value = v.round()),
+                  ),
+                );
+              },
             ),
             const SizedBox(height: 6),
             _SheetActions(

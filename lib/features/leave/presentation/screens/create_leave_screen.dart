@@ -161,6 +161,10 @@ class _CreateLeaveScreenState extends ConsumerState<CreateLeaveScreen> {
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         side: const BorderSide(color: AppColors.primaryMid),
+                        // Light → navy primary. Dark → theme white wins.
+                        foregroundColor: context.isDark
+                            ? null
+                            : AppColors.primaryMid,
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12)),
                       ),
@@ -168,7 +172,11 @@ class _CreateLeaveScreenState extends ConsumerState<CreateLeaveScreen> {
                           style: TextStyle(
                             fontFamily: 'Cairo',
                             fontWeight: FontWeight.w700,
-                            color: AppColors.primaryMid,
+                            // Same fork — inline style would otherwise
+                            // win over the theme/foregroundColor pick.
+                            color: context.isDark
+                                ? Colors.white
+                                : AppColors.primaryMid,
                           )),
                     ),
                   ),

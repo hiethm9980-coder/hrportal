@@ -14,6 +14,17 @@
     <uses-permission android:name="android.permission.INTERNET" />
 
     <!--
+        ضروري لـ FCM background handler في الـ release: بدون WAKE_LOCK قد لا
+        يستطيع الـ background isolate الاستيقاظ لتشغيل Awesome وعرض الإشعار.
+    -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+
+    <!--
+        لـ FCM auto-init وإيقاظ التطبيق عند وصول الإشعار حتى لو كان مغلقاً.
+    -->
+    <uses-permission android:name="com.google.android.c2dm.permission.RECEIVE" />
+
+    <!--
         إزالة أذونات الوسائط المُدمَجة من إضافة file_picker.
         التطبيق يستخدم اختيار ملفات PDF/JPG/PNG/ZIP فقط عبر FileType.custom،
         و Android 13+ يستخدم Photo Picker الذي لا يتطلب أي إذن.
@@ -57,7 +68,9 @@
             android:theme="@style/LaunchTheme"
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
             android:hardwareAccelerated="true"
-            android:windowSoftInputMode="adjustResize">
+            android:windowSoftInputMode="adjustResize"
+            android:turnScreenOn="true"
+            android:showOnLockScreen="true">
             <!-- Specifies an Android theme to apply to this Activity as soon as
                  the Android process has started. This theme is visible to the user
                  while the Flutter UI initializes. After that, this theme continues
@@ -76,6 +89,22 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+
+        <!--
+            ✅ أيقونة افتراضية لإشعارات FCM في حال أُرسل notification block
+            من السيرفر (احتياطي). نستخدم نفس ic_notify الموجودة في res/drawable.
+        -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
+            android:resource="@drawable/ic_notify" />
+
+        <!--
+            ✅ القناة الافتراضية لإشعارات FCM. نستخدم نفس channel_id الذي
+            تسجله AwesomeNotificationService (alerts_channel) لتوحيد السلوك.
+        -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="alerts_channel" />
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and

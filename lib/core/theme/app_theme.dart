@@ -273,12 +273,19 @@ class AppTheme {
           minimumSize: const Size(0, 48),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           side: BorderSide(color: c.inputBorder),
+          // White foreground in dark mode — the default `primary` reads
+          // poorly on the dark scaffold. Individual screens that need
+          // a colored accent can still override via `styleFrom`.
+          foregroundColor: Colors.white,
           textStyle: const TextStyle(fontFamily: _fontFamily, fontSize: 14, fontWeight: FontWeight.w600),
         ),
       ),
 
       textButtonTheme: TextButtonThemeData(
-        style: TextButton.styleFrom(textStyle: const TextStyle(fontFamily: _fontFamily, fontSize: 14, fontWeight: FontWeight.w600)),
+        style: TextButton.styleFrom(
+          foregroundColor: Colors.white,
+          textStyle: const TextStyle(fontFamily: _fontFamily, fontSize: 14, fontWeight: FontWeight.w600),
+        ),
       ),
 
       bottomNavigationBarTheme: BottomNavigationBarThemeData(
