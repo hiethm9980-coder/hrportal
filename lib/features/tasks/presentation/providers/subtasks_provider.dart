@@ -8,14 +8,17 @@ import 'my_tasks_provider.dart' show TaskFilter;
 
 /// Filter snapshot for the subtasks list. Mirrors the My Tasks filter but
 /// deliberately omits `projectId` (subtasks always inherit the parent's
-/// project) and `assigneeId` (subtasks of a parent can be assigned to anyone
-/// — no built-in "assigned to me" restriction on this screen).
+/// project). Supports `assigneeOnlyMe` so the user can narrow the subtasks
+/// of a parent to just the ones assigned to them (sent as `assignee_id=me`).
 class SubtasksFilter {
   final String q;
   final String? statusCode;
   final String? priorityCode;
   final bool overdueOnly;
   final bool openOnly;
+  /// When true, the API call adds `assignee_id=me` so only subtasks
+  /// assigned to the current user are returned. Default false → full list.
+  final bool assigneeOnlyMe;
   final String? dueFrom;
   final String? dueTo;
   /// Sort key forwarded as `sort_by`. Same backend whitelist as `/tasks`:
@@ -30,6 +33,7 @@ class SubtasksFilter {
     this.priorityCode,
     this.overdueOnly = false,
     this.openOnly = false,
+    this.assigneeOnlyMe = false,
     this.dueFrom,
     this.dueTo,
     this.sortBy = TaskFilter.defaultSortBy,
@@ -42,6 +46,7 @@ class SubtasksFilter {
     Object? priorityCode = _sentinel,
     bool? overdueOnly,
     bool? openOnly,
+    bool? assigneeOnlyMe,
     Object? dueFrom = _sentinel,
     Object? dueTo = _sentinel,
     String? sortBy,
@@ -57,6 +62,7 @@ class SubtasksFilter {
           : priorityCode as String?,
       overdueOnly: overdueOnly ?? this.overdueOnly,
       openOnly: openOnly ?? this.openOnly,
+      assigneeOnlyMe: assigneeOnlyMe ?? this.assigneeOnlyMe,
       dueFrom: identical(dueFrom, _sentinel) ? this.dueFrom : dueFrom as String?,
       dueTo: identical(dueTo, _sentinel) ? this.dueTo : dueTo as String?,
       sortBy: sortBy ?? this.sortBy,
@@ -76,6 +82,7 @@ class SubtasksFilter {
       (priorityCode != null && priorityCode!.isNotEmpty) ||
       overdueOnly ||
       openOnly ||
+      assigneeOnlyMe ||
       (dueFrom != null && dueFrom!.isNotEmpty) ||
       (dueTo != null && dueTo!.isNotEmpty) ||
       hasCustomSort;
@@ -169,6 +176,7 @@ class SubtasksController extends StateNotifier<SubtasksState> {
     String? priorityCode,
     bool overdueOnly = false,
     bool openOnly = false,
+    bool assigneeOnlyMe = false,
     String? dueFrom,
     String? dueTo,
     String sortBy = TaskFilter.defaultSortBy,
@@ -179,6 +187,7 @@ class SubtasksController extends StateNotifier<SubtasksState> {
         priorityCode: priorityCode,
         overdueOnly: overdueOnly,
         openOnly: openOnly,
+        assigneeOnlyMe: assigneeOnlyMe,
         dueFrom: dueFrom,
         dueTo: dueTo,
         sortBy: sortBy,
@@ -196,6 +205,7 @@ class SubtasksController extends StateNotifier<SubtasksState> {
               priorityCode: null,
               overdueOnly: false,
               openOnly: false,
+              assigneeOnlyMe: false,
               dueFrom: null,
               dueTo: null,
               sortBy: TaskFilter.defaultSortBy,
@@ -222,6 +232,9 @@ class SubtasksController extends StateNotifier<SubtasksState> {
         q: filter.q,
         status: filter.statusCode,
         priority: filter.priorityCode,
+        // إذا فعّل المستخدم Toggle "المسندة إليّ" نُرسل assignee_id=me؛
+        // وإلا نُهمل المعلمة فيرجع كل الأبناء.
+        assigneeId: filter.assigneeOnlyMe ? 'me' : null,
         overdue: filter.overdueOnly,
         dueFrom: filter.dueFrom,
         dueTo: filter.dueTo,
@@ -280,6 +293,7 @@ class SubtasksController extends StateNotifier<SubtasksState> {
         q: filter.q,
         status: filter.statusCode,
         priority: filter.priorityCode,
+        assigneeId: filter.assigneeOnlyMe ? 'me' : null,
         overdue: filter.overdueOnly,
         dueFrom: filter.dueFrom,
         dueTo: filter.dueTo,

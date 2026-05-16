@@ -164,9 +164,15 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                             ),
                           ],
                         ),
-                        child: const Center(
-                          child:
-                              Text('🏢', style: TextStyle(fontSize: 44)),
+                        child: Center(
+                          child: Padding(
+                            padding: const EdgeInsets.all(14),
+                            child: Image.asset(
+                              'assets/images/logo.png',
+                              fit: BoxFit.contain,
+                              filterQuality: FilterQuality.high,
+                            ),
+                          ),
                         ),
                       ),
                       const SizedBox(height: 24),

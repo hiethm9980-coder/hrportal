@@ -24,8 +24,8 @@ if (keystorePropertiesFile.exists()) {
 
 android {
     namespace = "com.newhorizon.hr.hr_portal"
-    compileSdk = flutter.compileSdkVersion
-    ndkVersion = flutter.ndkVersion
+    compileSdk = 37
+    ndkVersion = "30.0.14904198"
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
@@ -37,8 +37,10 @@ android {
         applicationId = "com.newhorizon.hr.hr_portal"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = flutter.minSdkVersion
-        targetSdk = flutter.targetSdkVersion
+        // Android 7.0 (API 24) — يدعم الأجهزة القديمة والمحاكي القديم.
+        // (افتراضي Flutter 3.41 أعلى من 24.)
+        minSdk = 24
+        targetSdk = 37
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }

@@ -57,8 +57,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       }
 
       // Not authenticated → force login.
+      // الاستثناء الوحيد: /settings مسموح للمستخدم غير المسجّل ليعدّل الثيم/اللغة
+      // (زر الخروج داخلها يختفي تلقائيًا حتى لو وصلها بدون تسجيل دخول).
       if (auth.isUnauthenticated) {
-        if (location == '/login') return null;
+        if (location == '/login' || location == '/settings') return null;
         return '/login';
       }
 

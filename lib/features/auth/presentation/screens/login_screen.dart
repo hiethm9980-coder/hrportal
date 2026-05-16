@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import 'package:hr_portal/core/constants/app_colors.dart';
 import 'package:hr_portal/core/localization/app_localizations.dart';
-import 'package:hr_portal/core/localization/locale_provider.dart';
-import 'package:hr_portal/core/theme/theme_mode_provider.dart';
 import 'package:hr_portal/shared/widgets/common_widgets.dart';
 
 import '../../../../shared/controllers/global_error_handler.dart';
@@ -17,8 +16,6 @@ class LoginScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final form = ref.watch(loginFormProvider);
     final notifier = ref.read(loginFormProvider.notifier);
-    final localeMode = ref.watch(localeModeProvider);
-    final themeMode = ref.watch(themeModeProvider);
 
     // Show error snackbar/dialog when error changes.
     ref.listen<LoginFormState>(loginFormProvider, (prev, next) {
@@ -28,28 +25,6 @@ class LoginScreen extends ConsumerWidget {
         }
       }
     });
-
-    String getLocaleName(AppLocaleMode mode) {
-      switch (mode) {
-        case AppLocaleMode.system:
-          return 'System'.tr(context);
-        case AppLocaleMode.en:
-          return 'English'.tr(context);
-        case AppLocaleMode.ar:
-          return 'Arabic'.tr(context);
-      }
-    }
-
-    String getThemeName(ThemeMode mode) {
-      switch (mode) {
-        case ThemeMode.system:
-          return 'System'.tr(context);
-        case ThemeMode.light:
-          return 'Light'.tr(context);
-        case ThemeMode.dark:
-          return 'Dark'.tr(context);
-      }
-    }
 
     return Scaffold(
       backgroundColor: context.appColors.bg,
@@ -68,14 +43,58 @@ class LoginScreen extends ConsumerWidget {
                 ),
               ),
               padding: EdgeInsets.only(
-                top: MediaQuery.of(context).padding.top + 32,
+                top: MediaQuery.of(context).padding.top + 8,
                 bottom: 40,
                 left: 22,
                 right: 22,
               ),
               child: Column(
                 children: [
-                  const Text('🏢', style: TextStyle(fontSize: 42)),
+                  // زر الإعدادات في النهاية (RTL-aware عبر Align/end).
+                  Align(
+                    alignment: AlignmentDirectional.centerEnd,
+                    child: Material(
+                      color: Colors.white.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(20),
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(20),
+                        onTap: () => context.push('/settings'),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 8,
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                Icons.settings_outlined,
+                                color: Colors.white,
+                                size: 18,
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                'Settings'.tr(context),
+                                style: const TextStyle(
+                                  fontFamily: 'Cairo',
+                                  color: Colors.white,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Image.asset(
+                    'assets/images/logo.png',
+                    height: 72,
+                    fit: BoxFit.contain,
+                    filterQuality: FilterQuality.high,
+                  ),
                   const SizedBox(height: 12),
                   Text(
                     'Welcome'.tr(context),
@@ -106,60 +125,6 @@ class LoginScreen extends ConsumerWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                    // ── Language / Theme Selectors ──
-                    Wrap(
-                      alignment: WrapAlignment.center,
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        _SettingChip(
-                          icon: Icons.brightness_6_outlined,
-                          label:
-                              "${'Theme'.tr(context)} (${getThemeName(themeMode)})",
-                          items: [
-                            PopupMenuItem(
-                              value: ThemeMode.system,
-                              child: Text('System'.tr(context)),
-                            ),
-                            PopupMenuItem(
-                              value: ThemeMode.light,
-                              child: Text('Light'.tr(context)),
-                            ),
-                            PopupMenuItem(
-                              value: ThemeMode.dark,
-                              child: Text('Dark'.tr(context)),
-                            ),
-                          ],
-                          onSelected: (m) => ref
-                              .read(themeModeProvider.notifier)
-                              .setThemeMode(m as ThemeMode),
-                        ),
-                        _SettingChip(
-                          icon: Icons.language,
-                          label:
-                              "${'Language'.tr(context)} (${getLocaleName(localeMode)})",
-                          items: [
-                            PopupMenuItem(
-                              value: AppLocaleMode.system,
-                              child: Text('System'.tr(context)),
-                            ),
-                            PopupMenuItem(
-                              value: AppLocaleMode.en,
-                              child: Text('English'.tr(context)),
-                            ),
-                            PopupMenuItem(
-                              value: AppLocaleMode.ar,
-                              child: Text('Arabic'.tr(context)),
-                            ),
-                          ],
-                          onSelected: (m) => ref
-                              .read(localeModeProvider.notifier)
-                              .setMode(m as AppLocaleMode),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 20),
-
                     // ── Username Label ──
                     Text(
                       'Email or username'.tr(context),
@@ -259,53 +224,3 @@ class LoginScreen extends ConsumerWidget {
   }
 }
 
-/// Small chip-style popup button for settings (theme, language).
-class _SettingChip extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final List<PopupMenuEntry> items;
-  final Function(dynamic) onSelected;
-
-  const _SettingChip({
-    required this.icon,
-    required this.label,
-    required this.items,
-    required this.onSelected,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return PopupMenuButton(
-      padding: EdgeInsets.zero,
-      position: PopupMenuPosition.under,
-      onSelected: onSelected,
-      itemBuilder: (_) => items,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: context.appColors.bgCard,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: context.appColors.gray200),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 16, color: AppColors.primaryMid),
-            const SizedBox(width: 6),
-            Text(
-              label,
-              style: TextStyle(fontFamily: 'Cairo',
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-                color: context.appColors.textSecondary,
-              ),
-            ),
-            const SizedBox(width: 4),
-            Icon(Icons.arrow_drop_down,
-                size: 16, color: context.appColors.gray400),
-          ],
-        ),
-      ),
-    );
-  }
-}

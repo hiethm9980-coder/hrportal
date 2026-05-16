@@ -2,7 +2,9 @@ name: hr_portal
 description: "A new Flutter project."
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 
-version: 1.2.0+11
+version: 1.2.2+12
+
+# flutter build appbundle --release --dart-define=FLAVOR=prod
 
 environment:
   sdk: ^3.11.0
@@ -124,15 +126,6 @@ flutter:
     - assets/
     - assets/i18n/
     - assets/images/
-    # - assets/notifications_key/
-    # - assets/tmp/
-    # - assets/images/
-    # - assets/images/icons/
-    # - assets/images/gifs/
-    # - assets/images/flags/
-    # - assets/svg/
-    # - assets/svg/dark/
-    # - assets/svg/light/
 
   fonts:
     - family: Cairo

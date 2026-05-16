@@ -1,8 +1,12 @@
 // awesome_notification_service.dart
+import 'dart:ui' as ui;
+
 import 'package:awesome_notifications/awesome_notifications.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hr_portal/core/constants/storage_keys.dart';
 import 'package:hr_portal/core/services/notification_action_service.dart';
 import 'package:hr_portal/router/app_router.dart';
 import 'package:share_plus/share_plus.dart';
@@ -13,8 +17,12 @@ class AwesomeNotificationService {
   static const String channelKey = 'alerts_channel';
   static const String channelGroupKey = 'alerts_group';
 
+  /// لون خلفية أيقونة الإشعار (الدائرة الصغيرة خلف الـ silhouette الأبيض).
+  /// يحل مشكلة "أيقونة بيضاء على خلفية بيضاء = غير مرئية" على بعض الأجهزة.
+  static const Color notificationAccentColor = Color(0xFF0F2952);
+
   /// خريطة `voice` → channelKey. كل قناة مرتبطة بملف صوت في
-  /// `android/app/src/main/res/raw/<key>.ogg`.
+  /// `android/app/src/main/res/raw/<key>.wav`.
   ///
   /// ملاحظة Android مهمة: بعد إنشاء قناة على الجهاز لا يمكن تغيير صوتها
   /// عبر الكود (قيد نظام Android 8+). لذلك نستخدم channelKey مختلف لكل
@@ -44,7 +52,9 @@ class AwesomeNotificationService {
         channelDescription: 'Channel for app alerts',
         importance: NotificationImportance.High,
         channelShowBadge: true,
-        defaultColor: decorate ? const Color(0xffe7b245) : null,
+        // اللون يطبَّق دائماً لضمان ظهور دائرة ملونة خلف الأيقونة على جميع
+        // الأجهزة — وإلا تظهر بيضاء على بيضاء.
+        defaultColor: notificationAccentColor,
         ledColor: decorate ? Colors.white : null,
         playSound: !kIsWeb,
         soundSource: soundSource,
@@ -58,10 +68,42 @@ class AwesomeNotificationService {
         build(
           key: entry.value,
           name: 'Alerts ${entry.key.toUpperCase()}',
-          // ملف الصوت داخل res/raw/<key>.ogg — بدون اللاحقة.
+          // ملف الصوت داخل res/raw/<key>.wav — يُمرَّر بدون اللاحقة.
           soundSource: 'resource://raw/${entry.key}',
         ),
     ];
+  }
+
+  /// تُعيد لغة الإشعار الفعلية ("ar" أو "en") بناءً على تفضيل التطبيق
+  /// المحفوظ في `flutter_secure_storage`:
+  /// - إذا كان المستخدم اختار "ar" → عربي
+  /// - إذا كان المستخدم اختار "en" → إنجليزي
+  /// - إذا كان "system" أو غير محدد → نتبع لغة الجهاز (ar / غير ذلك → en)
+  ///
+  /// تعمل في كلا الـ isolates (foreground و background) لأن
+  /// `flutter_secure_storage` يعتمد على platform channels يُهيّئها
+  /// `DartPluginRegistrant.ensureInitialized()` المُستدعى في
+  /// `_firebaseMessagingBackgroundHandler`.
+  static Future<String> _resolveAppLanguage() async {
+    try {
+      const storage = FlutterSecureStorage();
+      final saved = (await storage.read(key: StorageKeys.locale))
+          ?.trim()
+          .toLowerCase();
+      if (saved == 'ar') return 'ar';
+      if (saved == 'en') return 'en';
+      // 'system' أو null → اتبع لغة الجهاز.
+      // ملاحظة: نستخدم `ui.PlatformDispatcher.instance` بدلاً من
+      // `WidgetsBinding.instance.platformDispatcher` لأنها متاحة في أي
+      // isolate (بما فيه background isolate في terminated state) بدون
+      // الحاجة لتهيئة WidgetsFlutterBinding.
+      final dispatcher = ui.PlatformDispatcher.instance;
+      final locales = dispatcher.locales;
+      final device = locales.isNotEmpty ? locales.first : dispatcher.locale;
+      return device.languageCode.toLowerCase() == 'ar' ? 'ar' : 'en';
+    } catch (_) {
+      return 'en';
+    }
   }
 
   /// يختار channelKey المناسب حسب `voice` القادم من السيرفر.
@@ -88,7 +130,7 @@ class AwesomeNotificationService {
             channelDescription: 'Channel for app alerts',
             importance: NotificationImportance.High,
             channelShowBadge: true,
-            defaultColor: decorate ? const Color(0xffe7b245) : null,
+            defaultColor: notificationAccentColor,
             ledColor: decorate ? Colors.white : null,
             playSound: !kIsWeb,
             soundSource: 'resource://raw/${entry.key}',
@@ -204,17 +246,26 @@ class AwesomeNotificationService {
         ? (notificationId.hashCode & 0x7FFFFFFF) % 2147483647
         : DateTime.now().millisecondsSinceEpoch.remainder(100000);
 
+    // ✅ نقرأ لغة التطبيق المحفوظة (وليس لغة الجهاز) ثم نختار العنوان/النص
+    // المناسبين مباشرة. هكذا يصل الإشعار للمستخدم بلغة تطبيقه حتى لو كانت
+    // مختلفة عن لغة نظام الهاتف.
+    final String lang = await _resolveAppLanguage();
+    final bool isArabic = lang == 'ar';
+    final String effectiveTitle = isArabic ? titleAr : titleEn;
+    final String effectiveBody = isArabic ? bodyAr : bodyEn;
+
     final mergedPayload = <String, String>{
       if (payload != null) ...payload,
-      'title': payload?['title'] ?? titleEn,
-      'body': payload?['body'] ?? bodyEn,
+      'title': payload?['title'] ?? effectiveTitle,
+      'body': payload?['body'] ?? effectiveBody,
     };
 
     // Determine if this is an approval notification (for managers).
     final route = payload?['route'];
     final isApproval = NotificationActionService.isApprovalRoute(route);
 
-    // Build action buttons based on notification type.
+    // Build action buttons based on notification type — تسميات الأزرار
+    // تتبع لغة التطبيق أيضاً.
     final List<NotificationActionButton> actionButtons;
 
     if (isApproval) {
@@ -222,14 +273,14 @@ class AwesomeNotificationService {
       actionButtons = [
         NotificationActionButton(
           key: 'APPROVE',
-          label: 'Approve',
+          label: isArabic ? 'موافقة ✅' : 'Approve ✅',
           requireInputText: true,
           actionType: ActionType.SilentBackgroundAction,
           color: const Color(0xFF16A34A),
         ),
         NotificationActionButton(
           key: 'REJECT',
-          label: 'Reject',
+          label: isArabic ? 'رفض ❌' : 'Reject ❌',
           requireInputText: true,
           actionType: ActionType.SilentBackgroundAction,
           color: const Color(0xFFDC2626),
@@ -242,16 +293,20 @@ class AwesomeNotificationService {
 
     final selectedChannelKey = _channelKeyForVoice(voice);
     debugPrint(
-      '🔔 [VOICE] raw="$voice" → channel="$selectedChannelKey"',
+      '🔔 [VOICE] raw="$voice" → channel="$selectedChannelKey" | lang="$lang"',
     );
 
     await AwesomeNotifications().createNotification(
       content: NotificationContent(
         id: id,
         channelKey: selectedChannelKey,
-        title: titleEn,
-        body: bodyEn,
+        title: effectiveTitle,
+        body: effectiveBody,
         icon: kIsWeb ? null : 'resource://drawable/ic_notify',
+        // ✅ يضمن ظهور خلفية ملوّنة (دائرة) خلف الـ silhouette الأبيض على
+        // جميع الأجهزة. بدونها بعض ROMs (مثل Samsung/Xiaomi) تتجاهل لون
+        // القناة وتعرض الأيقونة بيضاء على خلفية بيضاء — فلا تظهر إطلاقاً.
+        color: notificationAccentColor,
         notificationLayout: hasImage
             ? NotificationLayout.BigPicture
             : NotificationLayout.BigText,
@@ -264,22 +319,8 @@ class AwesomeNotificationService {
         displayOnForeground: true,
         displayOnBackground: true,
       ),
-      localizations: {
-        'ar': NotificationLocalization(
-          title: titleAr,
-          body: bodyAr,
-          buttonLabels: isApproval
-              ? {'APPROVE': 'موافقة ✅', 'REJECT': 'رفض ❌'}
-              : {},
-        ),
-        'en': NotificationLocalization(
-          title: titleEn,
-          body: bodyEn,
-          buttonLabels: isApproval
-              ? {'APPROVE': 'Approve ✅', 'REJECT': 'Reject ❌'}
-              : {},
-        ),
-      },
+      // ملاحظة: لا نمرر `localizations` بعد الآن، لأنها تعتمد على لغة
+      // الجهاز. التحويل تم يدويًا أعلاه بحسب لغة التطبيق.
       actionButtons: actionButtons,
     );
   }
@@ -367,6 +408,7 @@ class AwesomeNotificationController {
           content: NotificationContent(
             id: DateTime.now().millisecondsSinceEpoch.remainder(100000),
             channelKey: AwesomeNotificationService.channelKey,
+            color: AwesomeNotificationService.notificationAccentColor,
             title: 'فشل الإجراء ⚠️ قم باتخاذ القرار من التطبيق',
             body: '$e',
             notificationLayout: NotificationLayout.Default,

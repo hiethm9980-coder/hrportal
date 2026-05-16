@@ -29,6 +29,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   Widget build(BuildContext context) {
     final themeMode = ref.watch(themeModeProvider);
     final localeMode = ref.watch(localeModeProvider);
+    // زر تسجيل الخروج لا يظهر إلا للمستخدم المسجَّل دخوله، حتى لو وصل
+    // المستخدم لهذه الصفحة من شاشة Login (الزر يكون بلا معنى حينها).
+    final isAuthenticated = ref.watch(authProvider).isAuthenticated;
     return Scaffold(
       backgroundColor: context.appColors.bg,
       body: Column(
@@ -176,34 +179,35 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ),
           ),
 
-          // ── Logout Button (fixed at bottom) ──
-          SafeArea(
-            top: false,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-              child: SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: FilledButton.icon(
-                  style: FilledButton.styleFrom(
-                    backgroundColor: AppColors.error,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
+          // ── Logout Button (يظهر فقط للمستخدم المسجَّل دخوله) ──
+          if (isAuthenticated)
+            SafeArea(
+              top: false,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                child: SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: FilledButton.icon(
+                    style: FilledButton.styleFrom(
+                      backgroundColor: AppColors.error,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
                     ),
-                  ),
-                  onPressed: () => _showLogoutDialog(context, ref),
-                  icon: const Icon(Icons.logout, size: 20),
-                  label: Text(
-                    'Logout'.tr(context),
-                    style: TextStyle(fontFamily: 'Cairo',
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
+                    onPressed: () => _showLogoutDialog(context, ref),
+                    icon: const Icon(Icons.logout, size: 20),
+                    label: Text(
+                      'Logout'.tr(context),
+                      style: TextStyle(fontFamily: 'Cairo',
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                   ),
                 ),
               ),
             ),
-          ),
         ],
       ),
     );

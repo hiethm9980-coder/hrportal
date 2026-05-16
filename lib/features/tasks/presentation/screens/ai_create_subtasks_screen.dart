@@ -98,9 +98,23 @@ class _AiCreateSubtasksScreenState
   /// rules are applied by the [_onTextChanged] listener (after every IME
   /// commit) and by [_insertSemicolon] (so tapping the «+» button never
   /// produces a leading or duplicate `;` either).
+  ///
+  /// قواعد التنظيف الحيّ:
+  /// 1) أي سطر جديد (`\n` / `\r` / `\r\n`) → مسافة واحدة.
+  /// 2) تقليص أي تتابع مسافات (سواء كانت ASCII space أو tab أو NBSP) إلى
+  ///    مسافة واحدة فقط.
+  /// 3) ممنوع البدء بمسافة أو فاصلة منقوطة (`;`).
+  /// 4) تقليص أي `;;` (مع/بدون مسافات بينها) إلى `; ` واحد.
   static String _normalizeLive(String raw) {
     return raw
+        // 1) line breaks → مسافة واحدة.
+        .replaceAll(RegExp(r'[\r\n]+'), ' ')
+        // 2) أي تتابع مسافات → مسافة واحدة (يشمل tab, NBSP, …).
+        //    `\s` يطابق line breaks أيضاً لكنها أُزيلت في الخطوة 1.
+        .replaceAll(RegExp(r'[ \t ]{2,}'), ' ')
+        // 3) منع البدء بمسافة أو ;.
         .replaceFirst(_liveLeading, '')
+        // 4) تقليص ;; إلى ; مع مسافة واحدة.
         .replaceAll(_liveConsecutive, '; ');
   }
 
@@ -651,15 +665,16 @@ class _TextInput extends StatelessWidget {
         expands: true,
         textAlignVertical: TextAlignVertical.top,
         maxLength: maxChars,
-        keyboardType: TextInputType.multiline,
-        textInputAction: TextInputAction.newline,
+        // ملاحظة: نتعمّد `TextInputType.text` (وليس multiline) لمنع زر
+        // Enter من الظهور على لوحة المفاتيح. النص سيبقى يتلفّ تلقائياً
+        // داخل المربع بفضل `maxLines: null` و `expands: true`.
+        keyboardType: TextInputType.text,
+        textInputAction: TextInputAction.done,
         inputFormatters: [
           LengthLimitingTextInputFormatter(maxChars),
           // Live cleanup: forbid leading `;` and collapse consecutive
-          // `;;`. We deliberately keep a trailing `;` while typing —
-          // stripping it mid-type would erase the separator the user
-          // just typed before adding the next task. Final trailing-`;`
-          // trim happens in [_cleanForApi] right before submit.
+          // `;;`. Also strips any line breaks (the user can't type them
+          // anymore, but this guards against paste).
           _SemicolonNormalizer(),
         ],
         style: TextStyle(
@@ -1306,6 +1321,8 @@ class _SubmittingOverlay extends StatelessWidget {
 class _SemicolonNormalizer extends TextInputFormatter {
   static final RegExp _leading = RegExp(r'^[\s;]+');
   static final RegExp _consecutive = RegExp(r'(?:;\s*){2,}');
+  static final RegExp _newlines = RegExp(r'[\r\n]+');
+  static final RegExp _multiSpaces = RegExp(r'[ \t ]{2,}');
 
   @override
   TextEditingValue formatEditUpdate(
@@ -1314,7 +1331,13 @@ class _SemicolonNormalizer extends TextInputFormatter {
   ) {
     final original = newValue.text;
     var cleaned = original
+        // 1) أي سطر جديد → مسافة.
+        .replaceAll(_newlines, ' ')
+        // 2) مسافات متعددة → مسافة واحدة.
+        .replaceAll(_multiSpaces, ' ')
+        // 3) ممنوع البدء بمسافة أو ;.
         .replaceFirst(_leading, '')
+        // 4) ;; → ;
         .replaceAll(_consecutive, '; ');
 
     if (cleaned == original) return newValue;
