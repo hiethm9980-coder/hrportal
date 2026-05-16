@@ -198,19 +198,33 @@ class GlobalErrorHandler {
 
     if (error is NetworkException) {
       // Client-side error — no server message.
+      // مثل TimeoutException، الـ VPN هو السبب الأول لـ NoInternetException
+      // عند المستخدمين في المنطقة — لذا نُذكّرهم به صراحةً.
       return const UiError(
         action: ErrorAction.showFullScreen,
         title: 'No connection',
-        message: 'Check your internet connection and try again.',
+        message:
+            'Could not reach the server. Please check the following:\n'
+            '• Make sure you have a stable internet connection\n'
+            '• Turn off your VPN if it is enabled\n'
+            '• Try a different network (Wi-Fi or mobile data)\n'
+            'Then try again.',
       );
     }
 
     if (error is TimeoutException) {
       // Client-side error — no server message.
+      // VPN غالباً السبب الأول للـ timeouts عند المستخدمين في المنطقة:
+      // يمر الاتصال عبر بلد بعيد، تتدنى السرعة، فيتجاوز الـ 15 ثانية.
       return const UiError(
         action: ErrorAction.showSnackbar,
-        title: 'Timeout',
-        message: 'The server is slow. Try again.',
+        title: 'Connection timeout',
+        message:
+            'The server took too long to respond. Please check the following:\n'
+            '• Make sure you have a stable internet connection\n'
+            '• Turn off your VPN if it is enabled\n'
+            '• Try a different network (Wi-Fi or mobile data)\n'
+            'Then try again.',
       );
     }
 
