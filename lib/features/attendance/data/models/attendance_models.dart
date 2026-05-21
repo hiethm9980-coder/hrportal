@@ -102,7 +102,15 @@ class AttendanceRecord extends Equatable {
 /// Summary statistics for an attendance history query.
 ///
 /// Contract: §10.3 AttendanceSummary
+///
+/// All per-status day counters are returned by the backend and reflect the
+/// **full date period** (NOT affected by an active `status` filter). The
+/// new per-status fields (`pendingDays`, `shortageDays`, `earlyDepartureDays`,
+/// `lateAndEarlyDays`, `incompleteDays`, `weekendDays`, `holidayDays`) were
+/// added so the UI chips can show accurate counts without local counting.
+/// Older backends that don't include these fields default to 0.
 class AttendanceSummary extends Equatable {
+  // ── الإجماليات الأساسية (موجودة من قديم) ──
   final int totalDays;
   final int presentDays;
   final int absentDays;
@@ -111,6 +119,23 @@ class AttendanceSummary extends Equatable {
   final double totalWorkedHours;
   final double totalOvertimeHours;
   final int totalLateMinutes;
+
+  // ── حقول per-status الجديدة (للـ chips الإضافية) ──
+  final int pendingDays;
+  final int shortageDays;
+  final int earlyDepartureDays;
+  final int lateAndEarlyDays;
+  final int incompleteDays;
+  final int weekendDays;
+  final int holidayDays;
+
+  // ── إجماليات زمنية إضافية ──
+  /// إجمالي الدقائق التي عمل بها الموظف خلال الفترة كاملةً — int دقيق
+  /// (بخلاف [totalWorkedHours] الذي مقرَّب). نستخدمه لعرض ساعات/دقائق
+  /// المجموع بدقة في الهيدر.
+  final int totalWorkedMinutes;
+  final int totalEarlyDepartureMinutes;
+  final int totalShortageMinutes;
 
   const AttendanceSummary({
     required this.totalDays,
@@ -121,18 +146,42 @@ class AttendanceSummary extends Equatable {
     required this.totalWorkedHours,
     required this.totalOvertimeHours,
     required this.totalLateMinutes,
+    this.pendingDays = 0,
+    this.shortageDays = 0,
+    this.earlyDepartureDays = 0,
+    this.lateAndEarlyDays = 0,
+    this.incompleteDays = 0,
+    this.weekendDays = 0,
+    this.holidayDays = 0,
+    this.totalWorkedMinutes = 0,
+    this.totalEarlyDepartureMinutes = 0,
+    this.totalShortageMinutes = 0,
   });
 
   factory AttendanceSummary.fromJson(Map<String, dynamic> json) {
+    // Helper: int parse safe — يقبل غياب الحقل تماماً (backward compatible
+    // مع أجهزة الـ TestFlight/Play القديمة ضمن نفس backend).
+    int i(String key) => (json[key] as num?)?.toInt() ?? 0;
     return AttendanceSummary(
-      totalDays: json['total_days'] as int,
-      presentDays: json['present_days'] as int,
-      absentDays: json['absent_days'] as int,
-      lateDays: json['late_days'] as int,
-      leaveDays: json['leave_days'] as int,
-      totalWorkedHours: (json['total_worked_hours'] as num).toDouble(),
-      totalOvertimeHours: (json['total_overtime_hours'] as num).toDouble(),
-      totalLateMinutes: json['total_late_minutes'] as int,
+      totalDays: i('total_days'),
+      presentDays: i('present_days'),
+      absentDays: i('absent_days'),
+      lateDays: i('late_days'),
+      leaveDays: i('leave_days'),
+      totalWorkedHours: (json['total_worked_hours'] as num?)?.toDouble() ?? 0,
+      totalOvertimeHours:
+          (json['total_overtime_hours'] as num?)?.toDouble() ?? 0,
+      totalLateMinutes: i('total_late_minutes'),
+      pendingDays: i('pending_days'),
+      shortageDays: i('shortage_days'),
+      earlyDepartureDays: i('early_departure_days'),
+      lateAndEarlyDays: i('late_and_early_days'),
+      incompleteDays: i('incomplete_days'),
+      weekendDays: i('weekend_days'),
+      holidayDays: i('holiday_days'),
+      totalWorkedMinutes: i('total_worked_minutes'),
+      totalEarlyDepartureMinutes: i('total_early_departure_minutes'),
+      totalShortageMinutes: i('total_shortage_minutes'),
     );
   }
 
@@ -145,6 +194,16 @@ class AttendanceSummary extends Equatable {
         'total_worked_hours': totalWorkedHours,
         'total_overtime_hours': totalOvertimeHours,
         'total_late_minutes': totalLateMinutes,
+        'pending_days': pendingDays,
+        'shortage_days': shortageDays,
+        'early_departure_days': earlyDepartureDays,
+        'late_and_early_days': lateAndEarlyDays,
+        'incomplete_days': incompleteDays,
+        'weekend_days': weekendDays,
+        'holiday_days': holidayDays,
+        'total_worked_minutes': totalWorkedMinutes,
+        'total_early_departure_minutes': totalEarlyDepartureMinutes,
+        'total_shortage_minutes': totalShortageMinutes,
       };
 
   @override

@@ -1,3 +1,5 @@
+import 'package:awesome_notifications/awesome_notifications.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -5,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:hr_portal/core/constants/app_colors.dart';
 import 'package:hr_portal/core/constants/app_shadows.dart';
 import 'package:hr_portal/core/localization/app_localizations.dart';
+import 'package:hr_portal/core/services/notification_fcm/notification_fcm_service.dart';
 import 'package:hr_portal/features/profile/data/models/employee_profile_model.dart';
 import 'package:hr_portal/shared/widgets/common_widgets.dart';
 
@@ -84,7 +87,33 @@ class DashboardScreen extends ConsumerWidget {
                           const SizedBox(width: 8),
                           _HeaderIconButton(
                             icon: '🔔',
-                            onTap: () => context.push('/notifications'),
+                            // على الويب: نطلب إذن الإشعارات أولاً (user-gesture
+                            // مضمون من ضغطة الأيقونة) ثم نفتح الشاشة. على الموبايل
+                            // الدالة no-op فيُنفّذ الانتقال مباشرة. لو رفض المستخدم
+                            // الإذن أو سبق له أن قرر، لا يُعاد طلبه — الانتقال
+                            // يتم على كل حال.
+                            //
+                            // ✅ كذلك نُصفّر بادج أيقونة التطبيق (Launcher) لأن
+                            // المستخدم سيرى الإشعارات الآن — العدّاد يُعاد بناؤه
+                            // من الصفر مع كل إشعار جديد بعد ذلك.
+                            onTap: () async {
+                              // نُصفّر البادج على كل المنصات (Android/iOS) —
+                              // awesome_notifications يتولى التحويل لـ APIs
+                              // الـ native المناسبة.
+                              try {
+                                await AwesomeNotifications()
+                                    .setGlobalBadgeCounter(0);
+                              } catch (_) {
+                                // فشل صامت — لا يجب أن يمنع الانتقال.
+                              }
+                              if (kIsWeb) {
+                                await NotificationFCMService()
+                                    .requestWebPermissionAndToken();
+                              }
+                              if (context.mounted) {
+                                context.push('/notifications');
+                              }
+                            },
                           ),
                         ],
                       ),
@@ -426,6 +455,13 @@ class _AttendanceSummaryCard extends StatelessWidget {
               label: 'Leave'.tr(context),
               value: '${summary.leaveDays}',
               color: AppColors.info),
+          // "نقص" — يطابق chip "نقص" في شاشة الحضور (أحمر فاتح). القيمة
+          // مأخوذة من `summary.shortageDays` الذي يُرجعه السيرفر منذ آخر
+          // تحديث للـ AttendanceController.
+          _SummaryStat(
+              label: 'Shortage'.tr(context),
+              value: '${summary.shortageDays}',
+              color: const Color(0xFFEF5350)),
         ],
       ),
     );

@@ -127,11 +127,27 @@ class SecureTokenStorage {
     return _storage.read(key: StorageKeys.lastBaseUrl);
   }
 
+  // ── Last Username (for login pre-fill) ───────────────────────────
+
+  /// Saves the last successfully-used login identifier so the next login
+  /// screen can pre-fill it. **Persists across logout** intentionally.
+  Future<void> saveLastUsername(String value) async {
+    await _storage.write(key: StorageKeys.lastUsername, value: value);
+  }
+
+  /// Returns the last successfully-used login identifier, or `null` if no
+  /// user has logged in successfully on this device yet.
+  Future<String?> getLastUsername() async {
+    return _storage.read(key: StorageKeys.lastUsername);
+  }
+
   // ── Clear ─────────────────────────────────────────────────────────
 
   Future<void> clearAll() async {
     // ⚠️ Don't use `deleteAll()` because the app may store other persistent
-    // preferences (like language) in secure storage.
+    // preferences (like language, last username) in secure storage.
+    // Note: `lastUsername` is intentionally NOT cleared — pre-filling the
+    // login field on next visit is the whole point of saving it.
     await _storage.delete(key: StorageKeys.token);
     await _storage.delete(key: StorageKeys.employeeId);
     await _storage.delete(key: StorageKeys.companyId);

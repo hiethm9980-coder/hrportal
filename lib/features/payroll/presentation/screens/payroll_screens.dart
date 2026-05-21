@@ -205,6 +205,10 @@ class _PayslipTile extends StatelessWidget {
                             ],
                           ),
                         ),
+                        const SizedBox(height: 16),
+
+                        // ── Payment Status Card ──
+                        _PaymentStatusCard(payslip: ps),
                         const SizedBox(height: 24),
 
                         // ── Lines ──
@@ -417,6 +421,284 @@ class _PayslipTile extends StatelessWidget {
 }
 
 // ═══════════════════════════════════════════════════════════════════
+// Payment Status Card
+// ═══════════════════════════════════════════════════════════════════
+
+/// يعرض حالة دفع كشف الراتب: شارة حالة + المستلم/المتبقي + شريط تقدّم +
+/// ملاحظة HR (إن وُجدت). كل البيانات من الحقول الجديدة في `Payslip`
+/// (`runStatus`, `paidAmount`, `remainingAmount`, `isFullyPaid`,
+/// `paymentProgressPct`, `paymentStatement`).
+class _PaymentStatusCard extends StatelessWidget {
+  final Payslip payslip;
+  const _PaymentStatusCard({required this.payslip});
+
+  /// نص + لون شارة **حالة الموظف الشخصية** (`status` الكشف نفسه).
+  /// - `accrued` → مرحَّل، لم أستلم بعد.
+  /// - `paid` → استلمت كامل المبلغ.
+  (String, Color) _personalStatusInfo(BuildContext context) {
+    switch (payslip.status.toLowerCase()) {
+      case 'paid':
+        return ('Received'.tr(context), AppColors.success);
+      case 'accrued':
+        return ('Awaiting payment'.tr(context), AppColors.warning);
+      default:
+        return (payslip.status, AppColors.info);
+    }
+  }
+
+  /// نص + لون **حالة الـ run الأب** (`run_status`) — معلومة سياقية تشرح
+  /// أين يقف الدفع على مستوى الدفعة كاملةً.
+  (String, Color)? _runStatusInfo(BuildContext context) {
+    switch (payslip.runStatus) {
+      case 'paid':
+        return ('Fully paid'.tr(context), AppColors.success);
+      case 'partially_paid':
+        return ('Partially paid'.tr(context), AppColors.warning);
+      case 'posted':
+        return ('Posted'.tr(context), AppColors.info);
+      default:
+        return null; // السيرفر لم يُرجع run_status — لا نُظهر الـ sub-label.
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final (personalLabel, personalColor) = _personalStatusInfo(context);
+    final runInfo = _runStatusInfo(context);
+    final currency = payslip.currency ?? '';
+    final paidFmt = AppFuns.replaceArabicNumbers(
+        payslip.paidAmount.toStringAsFixed(2));
+    final remainingFmt = AppFuns.replaceArabicNumbers(
+        payslip.remainingAmount.toStringAsFixed(2));
+    final netFmt = AppFuns.replaceArabicNumbers(
+        payslip.totalNet.toStringAsFixed(2));
+    final pct = payslip.paymentProgressPct.clamp(0, 100);
+
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // ── Title + Personal status chip (الحالة الرئيسية للموظف) ──
+          Row(
+            children: [
+              const Text('💳', style: TextStyle(fontSize: 18)),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Payment status'.tr(context),
+                  style: TextStyle(
+                    fontFamily: 'Cairo',
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                    color: colors.textPrimary,
+                  ),
+                ),
+              ),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: personalColor.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  personalLabel,
+                  style: TextStyle(
+                    fontFamily: 'Cairo',
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: personalColor,
+                  ),
+                ),
+              ),
+            ],
+          ),
+
+          // ── Run status (سطر فرعي يشرح حالة الدفعة كاملةً) ──
+          if (runInfo != null) ...[
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Text(
+                  '${'Run status'.tr(context)}: ',
+                  style: TextStyle(
+                    fontFamily: 'Cairo',
+                    fontSize: 11,
+                    color: colors.textMuted,
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: runInfo.$2.withValues(alpha: 0.10),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Text(
+                    runInfo.$1,
+                    style: TextStyle(
+                      fontFamily: 'Cairo',
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                      color: runInfo.$2,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+          const SizedBox(height: 14),
+
+          // ── Paid / Remaining row ──
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Paid'.tr(context),
+                      style: TextStyle(
+                        fontFamily: 'Cairo',
+                        fontSize: 11,
+                        color: colors.textMuted,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '$paidFmt $currency',
+                      style: TextStyle(
+                        fontFamily: 'Cairo',
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.success,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                  width: 1, height: 32, color: colors.gray200),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Remaining'.tr(context),
+                      style: TextStyle(
+                        fontFamily: 'Cairo',
+                        fontSize: 11,
+                        color: colors.textMuted,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      payslip.isFullyPaid
+                          ? '0 $currency'
+                          : '$remainingFmt $currency',
+                      style: TextStyle(
+                        fontFamily: 'Cairo',
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                        color: payslip.isFullyPaid
+                            ? AppColors.success
+                            : AppColors.warning,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+
+          // ── Progress bar ──
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: LinearProgressIndicator(
+              value: pct / 100.0,
+              minHeight: 8,
+              backgroundColor: colors.gray100,
+              valueColor: AlwaysStoppedAnimation<Color>(
+                payslip.isFullyPaid
+                    ? AppColors.success
+                    : AppColors.warning,
+              ),
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Paid {pct}% ({paid} of {total} {currency})'.tr(
+              context,
+              params: {
+                'pct': '$pct',
+                'paid': paidFmt,
+                'total': netFmt,
+                'currency': currency,
+              },
+            ),
+            style: TextStyle(
+              fontFamily: 'Cairo',
+              fontSize: 11,
+              color: colors.textMuted,
+            ),
+          ),
+
+          // ── HR statement (if any) ──
+          if (payslip.paymentStatement != null &&
+              payslip.paymentStatement!.trim().isNotEmpty) ...[
+            const SizedBox(height: 14),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: colors.bg,
+                borderRadius: BorderRadius.circular(10),
+                border: BorderDirectional(
+                  start: BorderSide(color: AppColors.primaryMid, width: 3),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Text('📝', style: TextStyle(fontSize: 13)),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Note'.tr(context),
+                        style: TextStyle(
+                          fontFamily: 'Cairo',
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: colors.textMuted,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    payslip.paymentStatement!,
+                    style: TextStyle(
+                      fontFamily: 'Cairo',
+                      fontSize: 12,
+                      color: colors.textPrimary,
+                      height: 1.5,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════
 // Payslip Detail Screen
 // ═══════════════════════════════════════════════════════════════════
 
@@ -521,6 +803,10 @@ class PayslipDetailScreen extends ConsumerWidget {
                       ],
                     ),
                   ),
+                  const SizedBox(height: 16),
+
+                  // ── Payment Status Card ──
+                  _PaymentStatusCard(payslip: payslip),
                   const SizedBox(height: 24),
 
                   // ── Lines ──

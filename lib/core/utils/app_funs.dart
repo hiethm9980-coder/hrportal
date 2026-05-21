@@ -111,6 +111,18 @@ class AppFuns {
     return formatDate(dt, withDay: withDay);
   }
 
+  /// تاريخ يوم فقط بصيغة `Y-m-d` (مثل `"1997-03-03"`) → نفس نمط [formatDate]
+  /// (افتراضياً **الإثنين، 3 مارس 1997**).
+  ///
+  /// تُستخدم لحقول لا يرافقها وقت في عقد الـ API: تاريخ الميلاد، تاريخ التعيين،
+  /// بداية/نهاية العقد. لا يوجد تحويل منطقة زمنية لأن لا وقت فيها.
+  static String formatYmdDate(String? ymd, {bool withDay = true}) {
+    if (ymd == null || ymd.trim().isEmpty) return '';
+    final dt = DateTime.tryParse(ymd.trim());
+    if (dt == null) return ymd; // لو فشل التحليل أعد القيمة كما هي.
+    return formatDate(dt, withDay: withDay);
+  }
+
   /// "أبريل 2026" — اسم الشهر باللغة الحالية + السنة بأرقام إنجليزية.
   static String formatMonthYear(DateTime? d) {
     if (d == null) return '';

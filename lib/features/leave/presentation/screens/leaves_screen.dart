@@ -19,6 +19,7 @@ import '../../../../shared/widgets/approval_timeline.dart';
 import '../../../../shared/widgets/shared_widgets.dart';
 import '../../data/models/leave_models.dart';
 import '../providers/leave_providers.dart';
+import 'leave_filter_calendar_picker.dart';
 
 
 
@@ -103,27 +104,19 @@ class _LeavesScreenState extends ConsumerState<LeavesScreen> {
     );
   }
 
+  /// منتقي مخصّص مشابه لـ "تحديد فترة الإجازة" — يعرض إجازات الموظف
+  /// ملوّنة بحسب حالتها (موافق/معلق/مرفوض/مسودة/ملغي) ضمن تقويم احترافي،
+  /// ويتيح اختيار نطاق للتصفية.
   Future<void> _pickDateRange() async {
-    final now = DateTime.now();
-    final picked = await showDateRangePicker(
-      context: context,
-      firstDate: DateTime(now.year - 2),
-      lastDate: DateTime(now.year + 2),
-      initialDateRange: _dateRange,
-      locale: Localizations.localeOf(context),
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: ColorScheme.light(
-              primary: AppColors.primaryMid,
-              onPrimary: Colors.white,
-              surface: context.appColors.bgCard,
-              onSurface: context.appColors.textPrimary,
-            ),
-          ),
-          child: child!,
-        );
-      },
+    final state = ref.read(leavesListProvider);
+    final picked = await Navigator.of(context).push<DateTimeRange>(
+      MaterialPageRoute(
+        fullscreenDialog: true,
+        builder: (_) => LeaveFilterCalendarPicker(
+          initialRange: _dateRange,
+          initialLeaves: state.requests,
+        ),
+      ),
     );
     if (picked != null) {
       setState(() => _dateRange = picked);

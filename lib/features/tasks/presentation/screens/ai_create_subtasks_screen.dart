@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -49,6 +50,9 @@ class _AiCreateSubtasksScreenState
   static const int _maxChars = 500;
 
   final _controller = TextEditingController();
+  /// FocusNode للحقل — مرّر للـ [_TextInput] ويُستخدم في [_insertSemicolon]
+  /// لإعادة التركيز للحقل على الويب فقط بعد الضغط على زر "إضافة ;".
+  final _textFocus = FocusNode();
   bool _isSubmitting = false;
 
   /// Active rate-limit cooldown in seconds. Zero means «no cooldown».
@@ -77,6 +81,7 @@ class _AiCreateSubtasksScreenState
     _controller
       ..removeListener(_onTextChanged)
       ..dispose();
+    _textFocus.dispose();
     _cooldownTimer?.cancel();
     super.dispose();
   }
@@ -212,6 +217,13 @@ class _AiCreateSubtasksScreenState
       selection: TextSelection.collapsed(offset: newOffset),
       composing: TextRange.empty,
     );
+
+    // ✅ ويب فقط: أعِد التركيز للحقل ليكمل المستخدم الكتابة فوراً بدون
+    // الحاجة للضغط على المربع. على الموبايل لا نفعل ذلك لتجنّب فتح
+    // لوحة المفاتيح بشكل غير متوقع بعد ضغطة زر.
+    if (kIsWeb) {
+      _textFocus.requestFocus();
+    }
   }
 
   /// Open a Material date picker. Allow «today» so the user can mark
@@ -394,6 +406,7 @@ class _AiCreateSubtasksScreenState
                               height: 180,
                               child: _TextInput(
                                 controller: _controller,
+                                focusNode: _textFocus,
                                 maxChars: _maxChars,
                                 enabled: !_isSubmitting,
                               ),
@@ -639,11 +652,13 @@ class _HelpBanner extends StatelessWidget {
 
 class _TextInput extends StatelessWidget {
   final TextEditingController controller;
+  final FocusNode focusNode;
   final int maxChars;
   final bool enabled;
 
   const _TextInput({
     required this.controller,
+    required this.focusNode,
     required this.maxChars,
     required this.enabled,
   });
@@ -660,6 +675,7 @@ class _TextInput extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
       child: TextField(
         controller: controller,
+        focusNode: focusNode,
         enabled: enabled,
         maxLines: null,
         expands: true,

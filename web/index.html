@@ -27,89 +27,38 @@
   
   
   
-  <style id="splash-screen-style">
-    html {
-      height: 100%
-    }
-
+  <style>
+    html { height: 100%; }
     body {
       margin: 0;
       min-height: 100%;
-      background-color: #e2e7e9;
-          background-size: 100% 100%;
+      background-color: #0F2952;
     }
-
-    .center {
-      margin: 0;
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      -ms-transform: translate(-50%, -50%);
-      transform: translate(-50%, -50%);
+    /* مؤشر تحميل بسيط حتى يظهر Flutter للمستخدم. لا نستخدم صورة splash
+       لأنها كانت تبقى عالقة على متصفحات الموبايل (Chrome Android) عندما
+       يتأخر تحميل main.dart.js / CanvasKit — وكانت دالة removeSplashFromWeb
+       لا تُستدعى أبداً. Flutter لديه SplashScreen خاص يظهر فور التحميل. */
+    .boot-spinner {
+      position: fixed;
+      top: 50%; left: 50%;
+      width: 48px; height: 48px;
+      margin: -24px 0 0 -24px;
+      border: 4px solid rgba(255,255,255,0.15);
+      border-top-color: #e7b245;
+      border-radius: 50%;
+      animation: boot-spin 0.9s linear infinite;
+      z-index: 0;
     }
-
-    .contain {
-      display:block;
-      width:100%; height:100%;
-      object-fit: contain;
-    }
-
-    .stretch {
-      display:block;
-      width:100%; height:100%;
-    }
-
-    .cover {
-      display:block;
-      width:100%; height:100%;
-      object-fit: cover;
-    }
-
-    .bottom {
-      position: absolute;
-      bottom: 0;
-      left: 50%;
-      -ms-transform: translate(-50%, 0);
-      transform: translate(-50%, 0);
-    }
-
-    .bottomLeft {
-      position: absolute;
-      bottom: 0;
-      left: 0;
-    }
-
-    .bottomRight {
-      position: absolute;
-      bottom: 0;
-      right: 0;
-    }
-
-    @media (prefers-color-scheme: dark) {
-      body {
-        background-color: #161618;
-          }
-    }
+    @keyframes boot-spin { to { transform: rotate(360deg); } }
+    /* أخفِ السبينر فور وصول flutter-view للـ DOM */
+    flutter-view ~ .boot-spinner,
+    body:has(flutter-view) .boot-spinner { display: none; }
   </style>
-  <script id="splash-screen-script">
-    function removeSplashFromWeb() {
-      document.getElementById("splash")?.remove();
-      document.getElementById("splash-branding")?.remove();
-      document.body.style.background = "transparent";
-    }
-  </script>
 </head>
 
 <body>
-  <picture id="splash">
-      <source srcset="splash/img/light-1x.png 1x, splash/img/light-2x.png 2x, splash/img/light-3x.png 3x, splash/img/light-4x.png 4x" media="(prefers-color-scheme: light)">
-      <source srcset="splash/img/dark-1x.png 1x, splash/img/dark-2x.png 2x, splash/img/dark-3x.png 3x, splash/img/dark-4x.png 4x" media="(prefers-color-scheme: dark)">
-      <img class="center" aria-hidden="true" src="splash/img/light-1x.png" alt="">
-  </picture>
-  
-  
-  
-  
+  <div class="boot-spinner" aria-hidden="true"></div>
+
 
   <!-- Firebase Messaging Service Worker -->
   <script>
@@ -135,6 +84,56 @@
   </script>
 
   <script src="flutter_bootstrap.js" async=""></script>
+
+  <!-- 1) Observer: يخفي السبينر فور أن يُركّب Flutter عنصره (يدعم كل
+       المتصفحات بما فيها القديمة التي لا تدعم :has() في CSS).
+       2) Watchdog: إن لم يُحمَّل Flutter خلال 30 ثانية، يعرض رسالة بدل
+       السبينر المعلَّق إلى الأبد على الشبكات البطيئة (4G/3G). -->
+  <script>
+    (function () {
+      var spinner = document.querySelector('.boot-spinner');
+      var loaded = false;
+
+      function markLoaded() {
+        if (loaded) return;
+        loaded = true;
+        if (spinner) spinner.remove();
+      }
+
+      // مراقبة DOM للكشف عن flutter-view (يظهر فور تركيب Flutter للمحتوى).
+      var observer = new MutationObserver(function () {
+        if (document.querySelector('flutter-view, flt-glass-pane')) {
+          markLoaded();
+          observer.disconnect();
+        }
+      });
+      observer.observe(document.body, { childList: true, subtree: true });
+
+      // Watchdog: إن لم يُحمَّل Flutter خلال 30 ثانية، اعرض رسالة الخطأ.
+      setTimeout(function () {
+        if (loaded) return;
+        observer.disconnect();
+        if (spinner) spinner.remove();
+        var msg = document.createElement('div');
+        msg.style.cssText =
+          'position:fixed;inset:0;display:flex;flex-direction:column;' +
+          'align-items:center;justify-content:center;color:#fff;' +
+          'font-family:system-ui,Arial,sans-serif;padding:24px;' +
+          'text-align:center;line-height:1.5;';
+        msg.innerHTML =
+          '<div style="font-size:18px;font-weight:700;margin-bottom:8px;">' +
+          'Loading failed</div>' +
+          '<div style="opacity:.7;font-size:13px;max-width:320px;">' +
+          'The app could not load. Check your internet connection ' +
+          '(turn off VPN if enabled) and reload the page.</div>' +
+          '<button onclick="location.reload(true)" style="margin-top:16px;' +
+          'padding:10px 20px;border:0;border-radius:8px;background:#e7b245;' +
+          'color:#0F2952;font-weight:700;font-size:14px;cursor:pointer;">' +
+          'Reload</button>';
+        document.body.appendChild(msg);
+      }, 30000);
+    })();
+  </script>
 
   <!-- PWA install support -->
   <script>

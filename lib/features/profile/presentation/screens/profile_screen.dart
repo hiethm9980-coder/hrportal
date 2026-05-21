@@ -7,6 +7,7 @@ import 'package:hr_portal/core/constants/app_shadows.dart';
 import 'package:hr_portal/core/errors/exceptions.dart';
 import 'package:hr_portal/core/localization/app_localizations.dart';
 import 'package:hr_portal/core/providers/core_providers.dart';
+import 'package:hr_portal/core/utils/app_funs.dart';
 
 import '../../../auth/presentation/providers/auth_providers.dart';
 import '../../../dashboard/presentation/providers/dashboard_providers.dart';
@@ -233,7 +234,7 @@ class ProfileScreen extends ConsumerWidget {
                         _InfoTile(
                           icon: Icons.cake_outlined,
                           label: 'Date of birth'.tr(context),
-                          value: profile.dateOfBirth!,
+                          value: AppFuns.formatYmdDate(profile.dateOfBirth),
                         ),
                       if (profile.nationality != null)
                         _InfoTile(
@@ -284,7 +285,7 @@ class ProfileScreen extends ConsumerWidget {
                         _InfoTile(
                           icon: Icons.calendar_today_outlined,
                           label: 'Hire date'.tr(context),
-                          value: profile.hireDate!,
+                          value: AppFuns.formatYmdDate(profile.hireDate),
                         ),
                     ],
                   ),
@@ -344,24 +345,28 @@ class ProfileScreen extends ConsumerWidget {
                           _InfoTile(
                             icon: Icons.category_outlined,
                             label: 'Type'.tr(context),
-                            value: profile.contract!.type!,
+                            value: _contractTypeLabel(
+                                context, profile.contract!.type!),
                           ),
                         _InfoTile(
                           icon: Icons.info_outline_rounded,
                           label: 'Status'.tr(context),
-                          value: profile.contract!.status,
+                          value: _contractStatusLabel(
+                              context, profile.contract!.status),
                         ),
                         if (profile.contract!.startDate != null)
                           _InfoTile(
                             icon: Icons.play_arrow_rounded,
                             label: 'From'.tr(context),
-                            value: profile.contract!.startDate!,
+                            value: AppFuns.formatYmdDate(
+                                profile.contract!.startDate),
                           ),
                         if (profile.contract!.endDate != null)
                           _InfoTile(
                             icon: Icons.stop_rounded,
                             label: 'To'.tr(context),
-                            value: profile.contract!.endDate!,
+                            value: AppFuns.formatYmdDate(
+                                profile.contract!.endDate),
                           ),
                       ],
                     ),
@@ -388,6 +393,40 @@ class ProfileScreen extends ConsumerWidget {
       default:
         return status;
     }
+  }
+
+  /// يترجم قيمة `contract.type` الخام من السيرفر (مثل `permanent`) إلى نص عربي.
+  /// لو وصلت قيمة غير مدرجة، تُعرَض كما هي (لا تكسير للواجهة).
+  String _contractTypeLabel(BuildContext context, String type) {
+    const known = {
+      'permanent',
+      'fixed_term',
+      'probation',
+      'internship',
+      'part_time',
+      'temporary',
+    };
+    if (known.contains(type)) {
+      return 'Contract type $type'.tr(context);
+    }
+    return type;
+  }
+
+  /// يترجم قيمة `contract.status` الخام من السيرفر (مثل `active`) إلى نص عربي.
+  String _contractStatusLabel(BuildContext context, String status) {
+    const known = {
+      'active',
+      'draft',
+      'pending',
+      'suspended',
+      'expired',
+      'terminated',
+      'cancelled',
+    };
+    if (known.contains(status)) {
+      return 'Contract status $status'.tr(context);
+    }
+    return status;
   }
 }
 

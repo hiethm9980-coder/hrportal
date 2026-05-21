@@ -53,16 +53,40 @@ class AttendanceRepository {
 
   /// Attendance history.
   ///
-  /// [month] format: `YYYY-MM`.
+  /// Filters (all optional, combined with AND on the backend):
+  /// - [month]: `YYYY-MM`. Used when no [dateFrom]/[dateTo] are passed.
+  /// - [dateFrom] + [dateTo]: `YYYY-MM-DD` — custom range. Both required
+  ///   together; when present they override [month].
+  /// - [statuses]: one or more status codes from the allowed set:
+  ///   `pending` · `present` · `late` · `early_departure` · `late_and_early`
+  ///   · `shortage` · `absent` · `incomplete` · `weekend` · `holiday`
+  ///   · `on_leave`. Sent as a comma-separated list to the backend.
+  ///
+  /// Important note about `summary`: the backend response keeps `summary`
+  /// reflecting the full date period (NOT affected by status filter) — only
+  /// `records` and `pagination.total` are narrowed. The chip counts stay
+  /// stable even after selecting a single-status pill.
   Future<AttendanceHistoryData> getHistory({
     String? month,
+    String? dateFrom,
+    String? dateTo,
+    List<String>? statuses,
     int page = 1,
     int perPage = 31,
   }) async {
     final response = await _client.get<AttendanceHistoryData>(
       ApiConstants.attendanceHistory,
       queryParameters: {
-        if (month != null && month.isNotEmpty) 'month': month,
+        if (dateFrom != null && dateFrom.isNotEmpty) 'date_from': dateFrom,
+        if (dateTo != null && dateTo.isNotEmpty) 'date_to': dateTo,
+        // Only send `month` when no explicit range — backend prefers range.
+        if ((dateFrom == null || dateFrom.isEmpty) &&
+            (dateTo == null || dateTo.isEmpty) &&
+            month != null &&
+            month.isNotEmpty)
+          'month': month,
+        if (statuses != null && statuses.isNotEmpty)
+          'status': statuses.join(','),
         'page': page,
         'per_page': perPage,
       },

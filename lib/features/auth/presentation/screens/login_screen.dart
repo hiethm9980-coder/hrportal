@@ -1,19 +1,76 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:hr_portal/core/constants/app_colors.dart';
 import 'package:hr_portal/core/localization/app_localizations.dart';
+import 'package:hr_portal/core/services/notification_fcm/notification_fcm_service.dart';
+import 'package:hr_portal/core/storage/secure_token_storage.dart';
+import 'package:hr_portal/injection.dart';
 import 'package:hr_portal/shared/widgets/common_widgets.dart';
 
 import '../../../../shared/controllers/global_error_handler.dart';
 import '../providers/auth_providers.dart';
 
-class LoginScreen extends ConsumerWidget {
+class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<LoginScreen> createState() => _LoginScreenState();
+}
+
+class _LoginScreenState extends ConsumerState<LoginScreen> {
+  /// Controller للحقل — مستقل عن LoginFormState لأن FormState تستهلك القيمة
+  /// عبر onChanged، لكن إعادة الملء بعد logout تتطلب controller صريح.
+  final _usernameController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _restoreLastUsername();
+  }
+
+  /// يقرأ آخر اسم مستخدم/بريد نجح في تسجيل دخول سابق ويضعه في الحقل
+  /// كقيمة افتراضية. لا نُملأ كلمة المرور أبداً (أمان).
+  Future<void> _restoreLastUsername() async {
+    try {
+      final saved = await sl<SecureTokenStorage>().getLastUsername();
+      if (!mounted || saved == null || saved.isEmpty) return;
+      // إن كان المستخدم قد بدأ بالكتابة قبل أن يصلنا الـ async (نادر جداً
+      // لكن ممكن على الويب البطيء)، لا نُكتب فوق ما أدخله.
+      if (_usernameController.text.isNotEmpty) return;
+      _usernameController.text = saved;
+      // مزامنة الحالة في الـ provider حتى يستخدمها submit().
+      ref.read(loginFormProvider.notifier).setUsername(saved);
+    } catch (_) {
+      // فشل القراءة من secure storage لا يجب أن يمنع شاشة الدخول.
+    }
+  }
+
+  @override
+  void dispose() {
+    _usernameController.dispose();
+    super.dispose();
+  }
+
+  /// زر تسجيل الدخول → نطلب إذن الإشعارات من المتصفح أولاً (على الويب فقط)
+  /// ثم نُكمل تسجيل الدخول. هذا الترتيب مهم لأن المتصفحات تطلب user-gesture
+  /// صريحاً لإظهار حوار الإذن — استدعاؤه عند تشغيل التطبيق كان يُحجب على
+  /// متصفحات الموبايل. على الموبايل (Android/iOS) الدالة no-op لأن الإذن
+  /// يُطلب وقت تشغيل التطبيق.
+  Future<void> _handleLogin(LoginFormController notifier) async {
+    if (kIsWeb) {
+      // لا ننتظر النتيجة قبل تسجيل الدخول — حوار الإذن مستقل عن العملية،
+      // والمستخدم قد يختار Block ومع ذلك يدخل التطبيق. النتيجة فقط تتحكم
+      // في وصول الإشعارات لاحقاً.
+      await NotificationFCMService().requestWebPermissionAndToken();
+    }
+    await notifier.submit();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final form = ref.watch(loginFormProvider);
     final notifier = ref.read(loginFormProvider.notifier);
 
@@ -136,6 +193,7 @@ class LoginScreen extends ConsumerWidget {
                     ),
                     const SizedBox(height: 6),
                     TextField(
+                      controller: _usernameController,
                       onChanged: notifier.setUsername,
                       enabled: !form.isLoading,
                       textInputAction: TextInputAction.next,
@@ -165,7 +223,7 @@ class LoginScreen extends ConsumerWidget {
                       textInputAction: TextInputAction.done,
                       style: TextStyle(fontFamily: 'Cairo',fontSize: 13),
                       onSubmitted: (_) {
-                        if (form.canSubmit) notifier.submit();
+                        if (form.canSubmit) _handleLogin(notifier);
                       },
                       decoration: InputDecoration(
                         hintText: 'Password'.tr(context),
@@ -188,7 +246,7 @@ class LoginScreen extends ConsumerWidget {
                     PrimaryButton(
                       text: 'Login'.tr(context),
                       loading: form.isLoading,
-                      onTap: form.isLoading ? null : () => notifier.submit(),
+                      onTap: form.isLoading ? null : () => _handleLogin(notifier),
                     ),
 
                     // ── General Error ──

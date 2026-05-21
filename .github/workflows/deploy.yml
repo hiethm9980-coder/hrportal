@@ -25,12 +25,29 @@ jobs:
 
       # PROD: FLAVOR=prod enables AppConfig.isProduction so the app fetches
       # API base_url from Firebase Remote Config at runtime (see lib/core/config/app_config.dart).
+      # PWA strategy: `offline-first` — يخزّن الموارد لاستخدام لاحق لكن يعطي
+      # دائماً الأولوية لتحديث index.html و flutter_bootstrap.js عند توفرها.
+      # FCM_WEB_VAPID_KEY: إن أضفت secret بنفس الاسم في GitHub، سيُستخدم.
       - name: Build web (production — Remote Config base_url)
-        run: flutter build web --release --base-href "/hrportal/" --dart-define=FLAVOR=prod
+        run: |
+          flutter build web \
+            --release \
+            --base-href "/hrportal/" \
+            --pwa-strategy offline-first \
+            --dart-define=FLAVOR=prod \
+            --dart-define=FCM_WEB_VAPID_KEY=${{ secrets.FCM_WEB_VAPID_KEY }}
 
       # مهم جدًا لـ GoRouter على GitHub Pages:
       - name: Add 404.html for SPA routing
         run: cp build/web/index.html build/web/404.html
+
+      # حماية ضد الـ Service Worker العالق: نزرع timestamp في flutter_service_worker.js
+      # كل deploy، فيُجبر المتصفح على تحديث الـ cache فوراً للمستخدمين القدامى.
+      - name: Cache-bust service worker
+        run: |
+          if [ -f build/web/flutter_service_worker.js ]; then
+            sed -i "1i // build: $(date -u +%FT%TZ)-${{ github.sha }}" build/web/flutter_service_worker.js
+          fi
 
       - name: Deploy to gh-pages
         uses: peaceiris/actions-gh-pages@v4

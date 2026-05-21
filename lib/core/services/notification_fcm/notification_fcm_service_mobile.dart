@@ -68,6 +68,11 @@ class NotificationFCMService {
     }
   }
 
+  /// No-op على الموبايل — إذن الإشعار يُطلب داخل [initFCM] على Android/iOS
+  /// لأن النظام يعرض حواراً نظيفاً وقت تشغيل التطبيق. هذه الدالة موجودة فقط
+  /// لتطابق توقيع الويب (حيث الإذن يجب أن يصدر من user-gesture صريح).
+  Future<bool> requestWebPermissionAndToken() async => true;
+
   /// استدعها بعد runApp (PostFrame) باستخدام نفس الـ instance الذي نفذ initFCM()
   Future<void> handleInitialMessageAfterAppReady() async {
     final msg = _initialMessage;

@@ -203,7 +203,7 @@ class AppOutlineButton extends StatelessWidget {
 
 class StatusBadge extends StatelessWidget {
   final String text;
-  final String type; // success, warning, error, info, navy, gold, pending, approved, rejected, completed
+  final String type; // success, warning, error, info, navy, gold, pending, approved, rejected, completed, shortage
   final bool dot;
   final String? icon;
 
@@ -220,6 +220,9 @@ class StatusBadge extends StatelessWidget {
       case 'info':                        return (AppColors.infoSoft, AppColors.infoDark);
       case 'navy':      case 'completed': return (AppColors.primarySoft, AppColors.primaryMid);
       case 'gold':                        return (AppColors.goldSoft, AppColors.goldDark);
+      // أحمر فاتح خاص بحالة `shortage` ليتمايز عن `error` (الغياب) — يطابق
+      // لون chip الـ "نقص" في هيدر شاشة الحضور (0xFFEF5350).
+      case 'shortage':                    return (const Color(0xFFFFEBEE), const Color(0xFFD32F2F));
       default:                            return (const Color(0xFFF3F4F6), const Color(0xFF4B5563));
     }
   }

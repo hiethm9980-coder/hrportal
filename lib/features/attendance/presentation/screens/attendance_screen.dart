@@ -11,58 +11,138 @@ import '../../../../shared/controllers/global_error_handler.dart';
 import '../../../../shared/widgets/shared_widgets.dart';
 import '../../data/models/attendance_models.dart';
 import '../providers/attendance_providers.dart';
+import 'attendance_calendar_picker.dart';
 
-class AttendanceScreen extends ConsumerWidget {
+class AttendanceScreen extends ConsumerStatefulWidget {
   const AttendanceScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    // Listen for check-in/out errors and show dialog/snackbar.
+  ConsumerState<AttendanceScreen> createState() => _AttendanceScreenState();
+}
+
+class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
+  /// مؤشّر الـ chip المختار. 0 = "All" (بلا فلتر حالة)؛ باقي المؤشرات
+  /// تُخريط على [_statusMap] أدناه.
+  int _tab = 0;
+  DateTimeRange? _dateRange;
+
+  /// قائمة الـ chips (بالترتيب). نُحافظ على الفهارس متطابقة بين الأسماء
+  /// وأكواد الحالة والألوان والعدّادات لتسهيل القراءة.
+  ///
+  /// جميع العدّادات تأتي مباشرة من `summary` المرجَع من السيرفر — والـ
+  /// summary يعكس الفترة الكاملة دائماً (لا يتأثر بفلتر الحالة)، فالأرقام
+  /// تبقى ثابتة عند تبديل الـ chips.
+  static const _labels = [
+    'All', 'Present', 'Late', 'Absent', 'Leave', 'Pending', 'Shortage',
+  ];
+  static const _statusMap = <String?>[
+    null, 'present', 'late', 'absent', 'on_leave', 'pending', 'shortage',
+  ];
+  static const _colors = [
+    AppColors.teal,       // All
+    AppColors.success,    // Present
+    AppColors.warning,    // Late
+    AppColors.error,      // Absent
+    AppColors.info,       // Leave (on_leave)
+    AppColors.gold,       // Pending
+    Color(0xFFEF5350),    // Shortage — أحمر فاتح للتمييز عن "غياب"
+  ];
+
+  /// تنسيق تاريخ الـ API: `yyyy-MM-dd` بأرقام إنجليزية (ASCII) دائماً.
+  /// نُجنّب Jiffy/intl هنا لأن locale عربي قد يُخرج أرقاماً عربية-هندية
+  /// لا يقبلها السيرفر.
+  String _apiDate(DateTime d) {
+    final m = d.month.toString().padLeft(2, '0');
+    final day = d.day.toString().padLeft(2, '0');
+    return '${d.year}-$m-$day';
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    Future.microtask(_initDefaultRangeAndLoad);
+  }
+
+  /// الافتراضي: من بداية الشهر الحالي إلى اليوم.
+  Future<void> _initDefaultRangeAndLoad() async {
+    final now = DateTime.now();
+    final startOfMonth = DateTime(now.year, now.month, 1);
+    final today = DateTime(now.year, now.month, now.day);
+    setState(() {
+      _dateRange = DateTimeRange(start: startOfMonth, end: today);
+    });
+    _loadWithFilter();
+  }
+
+  void _loadWithFilter() {
+    final ctrl = ref.read(attendanceHistoryProvider.notifier);
+    final statusCode = _statusMap[_tab];
+    // طلب واحد فقط بكلا الفلترين معاً — تجنّباً لـ double-load.
+    ctrl.applyFilters(
+      dateFrom: _dateRange != null ? _apiDate(_dateRange!.start) : null,
+      dateTo: _dateRange != null ? _apiDate(_dateRange!.end) : null,
+      statuses: statusCode == null ? const [] : [statusCode],
+    );
+  }
+
+  /// منتقي النطاق المخصّص — يفتح تقويم مثل صفحة الإجازات، يعرض حالة كل
+  /// يوم (حضور/تأخير/غياب/...) عبر `table_calendar` مع تحميل lazy للأشهر.
+  Future<void> _pickDateRange() async {
+    // نُمرّر السجلات المُحمَّلة حالياً للمنتقي ليتفادى طلب الشهر الحالي
+    // مرّة ثانية. سجلات الأشهر الأخرى تُحمَّل عند التنقّل إليها.
+    final state = ref.read(attendanceHistoryProvider);
+    final picked = await Navigator.of(context).push<DateTimeRange>(
+      MaterialPageRoute(
+        fullscreenDialog: true,
+        builder: (_) => AttendanceCalendarPicker(
+          initialRange: _dateRange,
+          initialRecords: state.items,
+        ),
+      ),
+    );
+    if (picked != null) {
+      setState(() => _dateRange = picked);
+      _loadWithFilter();
+    }
+  }
+
+
+  @override
+  Widget build(BuildContext context) {
+    // Check-in / Check-out: ابقَ مستمعاً لعرض الأخطاء/النجاحات كما كان.
     ref.listen<CheckActionState>(checkActionProvider, (prev, next) {
       final error = next.error;
       if (error != null) {
         GlobalErrorHandler.show(context, error);
         ref.read(checkActionProvider.notifier).clearError();
       }
-
-      // Success: show a simple snackbar.
       if (next.record != null && (prev?.record?.id != next.record!.id)) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Attendance record updated successfully'.tr(context)),
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12)),
           ),
         );
       }
     });
 
-    final checkAction = ref.watch(checkActionProvider);
-
     final historyState = ref.watch(attendanceHistoryProvider);
-    final historyController = ref.read(attendanceHistoryProvider.notifier);
-    final summary = historyController.summary;
+    final summary = ref.read(attendanceHistoryProvider.notifier).summary;
 
     return Scaffold(
       backgroundColor: context.appColors.bg,
       body: Column(
         children: [
-          // ── Gradient Header ──
+          // ── Gradient Header (status pills + date-range button داخله) ──
           CustomAppBar(
-            title: 'Attendance'.tr(context),
-            subtitle: 'Attendance summary — current month'.tr(context),
-            onRefresh: () => ref.read(attendanceHistoryProvider.notifier).refresh(),
+            title: 'Attendance summary'.tr(context),
+            leading: _buildTotalWorkedBadge(context, summary),
+            onRefresh: () =>
+                ref.read(attendanceHistoryProvider.notifier).refresh(),
+            bottom: _buildFilterRow(context, summary),
           ),
-
-          const SizedBox(height: 8),
-
-          if (summary != null)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: _SummaryCard(summary: summary),
-            ),
-
-          const SizedBox(height: 12),
 
           Expanded(
             child: PaginatedListView<AttendanceRecord>(
@@ -80,62 +160,183 @@ class AttendanceScreen extends ConsumerWidget {
       ),
     );
   }
-}
 
-class _SummaryCard extends StatelessWidget {
-  final AttendanceSummary summary;
-  const _SummaryCard({required this.summary});
-
-  @override
-  Widget build(BuildContext context) {
-    return AppCard(
+  /// يبني شارة "إجمالي ساعات الدوام" التي تظهر في `leading` الهيدر —
+  /// تستخدم `total_worked_minutes` (int دقيق) وتُنسّقها كـ "س د". تُخفى
+  /// تماماً (SizedBox فارغ) قبل وصول summary أو عندما لا يوجد عمل، حتى
+  /// لا تحتل مساحة فارغة في AppBar.
+  Widget _buildTotalWorkedBadge(BuildContext context, AttendanceSummary? s) {
+    if (s == null || s.totalWorkedMinutes <= 0) {
+      return const SizedBox(width: 36);
+    }
+    final formatted =
+        _formatTotalMinutes(context, s.totalWorkedMinutes);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.25)),
+      ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          _Stat(
-              label: 'Present'.tr(context),
-              value: '${summary.presentDays}',
-              color: AppColors.success),
-          _Stat(
-              label: 'Absent'.tr(context),
-              value: '${summary.absentDays}',
-              color: AppColors.error),
-          _Stat(
-              label: 'Late'.tr(context),
-              value: '${summary.lateDays}',
-              color: AppColors.warning),
-          _Stat(
-              label: 'Leave'.tr(context),
-              value: '${summary.leaveDays}',
-              color: AppColors.info),
+          const Icon(Icons.timer_outlined, size: 14, color: Colors.white),
+          const SizedBox(width: 4),
+          Text(
+            formatted,
+            style: const TextStyle(
+              fontFamily: 'Cairo',
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: Colors.white,
+            ),
+          ),
         ],
       ),
     );
   }
-}
 
-class _Stat extends StatelessWidget {
-  final String label;
-  final String value;
-  final Color color;
-  const _Stat({required this.label, required this.value, required this.color});
+  /// تنسيق "X س Y د" من دقائق int (ASCII دائماً).
+  String _formatTotalMinutes(BuildContext context, int totalMinutes) {
+    final h = totalMinutes ~/ 60;
+    final m = totalMinutes % 60;
+    final hLabel = 'h'.tr(context);
+    final mLabel = 'm'.tr(context);
+    if (m == 0) return '‏$h $hLabel';
+    return '‏$h $hLabel $m $mLabel';
+  }
 
-  @override
-  Widget build(BuildContext context) {
+  /// شريط الفلاتر داخل الهيدر: chips للحالة + زر اختيار النطاق الزمني.
+  ///
+  /// كل عدّادات الـ chips تأتي مباشرة من `summary` الذي يعكس كامل الفترة
+  /// الزمنية (مستقلّ عن فلتر الحالة). فلا حساب محلي ولا "--" بعد الآن.
+  Widget _buildFilterRow(BuildContext context, AttendanceSummary? s) {
+    int? countFor(int index) {
+      if (s == null) return null; // أثناء التحميل الأول.
+      switch (index) {
+        case 0: return s.totalDays;
+        case 1: return s.presentDays;
+        case 2: return s.lateDays;
+        case 3: return s.absentDays;
+        case 4: return s.leaveDays;
+        case 5: return s.pendingDays;
+        case 6: return s.shortageDays;
+      }
+      return null;
+    }
+
     return Column(
-      mainAxisSize: MainAxisSize.min,
       children: [
-        Text(value,
-            style: TextStyle(fontFamily: 'Cairo',
-              fontSize: 22,
-              fontWeight: FontWeight.w900,
-              color: color,
-              height: 1.1,
-            )),
-        const SizedBox(height: 4),
-        Text(label,
-            style: TextStyle(fontFamily: 'Cairo',fontSize: 11, color: context.appColors.textMuted)),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          physics: const BouncingScrollPhysics(),
+          child: Row(
+            children: List.generate(_labels.length, (i) {
+              final n = countFor(i);
+              final v = n != null ? '$n' : '...';
+              return Padding(
+                padding: EdgeInsetsDirectional.only(
+                    end: i < _labels.length - 1 ? 6 : 0),
+                child: _filterPill(v, _labels[i].tr(context), _colors[i], i),
+              );
+            }),
+          ),
+        ),
+        const SizedBox(height: 10),
+        _buildDateRangeRow(context),
       ],
+    );
+  }
+
+  Widget _buildDateRangeRow(BuildContext context) {
+    // النطاق الزمني إجباري ومضبوط افتراضياً من initState (شهر مايو حتى
+    // اليوم). الضغط يفتح المنتقي فقط — لا يوجد زر إلغاء لأن المستخدم
+    // لا يجب أن يبقى بلا نطاق محدد.
+    final hasRange = _dateRange != null;
+    final label = hasRange
+        ? '${AppFuns.formatDate(_dateRange!.start, withDay: false)}  →  ${AppFuns.formatDate(_dateRange!.end, withDay: false)}'
+        : 'Filter by date'.tr(context);
+
+    return GestureDetector(
+      onTap: _pickDateRange,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.2),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.5)),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.date_range_rounded, size: 16, color: Colors.white),
+            const SizedBox(width: 8),
+            Flexible(
+              child: Text(
+                label,
+                style: const TextStyle(
+                  fontFamily: 'Cairo',
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _filterPill(String count, String label, Color accentColor, int index) {
+    final selected = _tab == index;
+    return GestureDetector(
+      onTap: () {
+        if (_tab == index) return;
+        setState(() => _tab = index);
+        _loadWithFilter();
+      },
+      child: Container(
+        width: 80,
+        padding: const EdgeInsets.symmetric(vertical: 9),
+        decoration: BoxDecoration(
+          color: selected
+              ? Colors.white.withValues(alpha: 0.25)
+              : Colors.white.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: selected
+                ? Colors.white.withValues(alpha: 0.6)
+                : Colors.white.withValues(alpha: 0.15),
+            width: selected ? 1.5 : 1,
+          ),
+        ),
+        child: Column(
+          children: [
+            Text(
+              count,
+              style: TextStyle(
+                fontFamily: 'Cairo',
+                fontSize: 20,
+                fontWeight: FontWeight.w900,
+                color: accentColor,
+                height: 1.1,
+              ),
+            ),
+            Text(
+              label,
+              style: TextStyle(
+                fontFamily: 'Cairo',
+                fontSize: 10,
+                color: selected ? Colors.white : Colors.white54,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -144,16 +345,23 @@ class _RecordTile extends StatelessWidget {
   final AttendanceRecord record;
   const _RecordTile({required this.record});
 
+  /// خريطة حالة الحضور → نوع `StatusBadge`. الألوان مطابقة لـ chips
+  /// الموجودة في الهيدر (`_colors` في `_AttendanceScreenState`).
   String _statusType(String status) {
     switch (status.toLowerCase()) {
-      case 'present':
-        return 'approved';
-      case 'absent':
-        return 'rejected';
-      case 'late':
-        return 'pending';
-      default:
-        return 'info';
+      case 'present':         return 'success';   // أخضر — نفس chip "حضور"
+      case 'late':            return 'warning';   // برتقالي — نفس chip "تأخير"
+      case 'late_and_early':  return 'warning';   // برتقالي
+      case 'early_departure': return 'warning';   // برتقالي
+      case 'absent':          return 'error';     // أحمر — نفس chip "غياب"
+      case 'on_leave':
+      case 'leave':           return 'info';      // أزرق — نفس chip "إجازة"
+      case 'pending':         return 'gold';      // ذهبي — نفس chip "معلق"
+      case 'shortage':        return 'shortage';  // أحمر فاتح — نفس chip "نقص"
+      case 'holiday':         return 'navy';      // كحلي
+      case 'weekend':         return 'navy';      // كحلي
+      case 'incomplete':      return 'info';
+      default:                return 'info';
     }
   }
 
@@ -167,14 +375,23 @@ class _RecordTile extends StatelessWidget {
         return 'Late';
       case 'leave':
         return 'Leave';
+      case 'pending':
+        return 'Pending';
+      case 'shortage':
+        return 'Shortage';
+      case 'holiday':
+        return 'Holiday';
       default:
         return status;
     }
   }
 
-  String _formatWorkedHours(BuildContext context, double hours) {
-    final h = hours.truncate();
-    final m = ((hours - h) * 60).round();
+  /// \u062A\u0646\u0633\u064A\u0642 "X \u0633\u0627\u0639\u0629 Y \u062F\u0642\u064A\u0642\u0629" \u2014 \u0646\u0623\u062E\u0630 \u0627\u0644\u062F\u0642\u0627\u0626\u0642 \u0627\u0644\u0625\u062C\u0645\u0627\u0644\u064A\u0629 (int \u062F\u0642\u064A\u0642) \u0628\u062F\u0644
+  /// \u0627\u0644\u0633\u0627\u0639\u0627\u062A (double \u062A\u0642\u0631\u064A\u0628\u064A). \u0645\u062B\u0627\u0644: 544 \u062F\u0642\u064A\u0642\u0629 \u2192 "9\u0633 4\u062F" \u0648\u0644\u064A\u0633 "9\u0633 6\u062F"
+  /// (\u0627\u0644\u0630\u064A \u064A\u062D\u062F\u062B \u0644\u0648 \u062D\u0633\u0628\u0646\u0627 \u0645\u0646 `worked_hours = 9.1` \u0627\u0644\u062A\u0642\u0631\u064A\u0628\u064A).
+  String _formatWorkedHours(BuildContext context, int totalMinutes) {
+    final h = totalMinutes ~/ 60;
+    final m = totalMinutes % 60;
     final hLabel = 'h'.tr(context);
     final mLabel = 'm'.tr(context);
     if (m == 0) return '\u200F$h $hLabel';
@@ -356,7 +573,9 @@ class _RecordTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final statusType = record.status == 'present' ? 'success' : 'error';
+    // نوع الـ badge يُشتق من خريطة [_statusType] الموحَّدة (نفس ألوان chips
+    // الهيدر) بدلاً من شرط ثنائي قديم.
+    final statusType = _statusType(record.status);
     final inTime = record.checkInTime != null ? _extractTime(context, record.checkInTime!) : null;
     final outTime = record.checkOutTime != null ? _extractTime(context, record.checkOutTime!) : null;
 
@@ -375,9 +594,9 @@ class _RecordTile extends StatelessWidget {
             // ── Row 1: Worked hours | Date | Status ──
             Row(
               children: [
-                if (record.workedHours > 0)
+                if (record.workedMinutes > 0)
                   Text(
-                    _formatWorkedHours(context, record.workedHours),
+                    _formatWorkedHours(context, record.workedMinutes),
                     style: TextStyle(fontFamily: 'Cairo',
                       fontSize: 12,
                       fontWeight: FontWeight.w700,

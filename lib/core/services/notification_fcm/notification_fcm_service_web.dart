@@ -16,33 +16,21 @@ class NotificationFCMService {
   RemoteMessage? _initialMessage;
   bool _inited = false;
 
+  /// Web FCM initialization — **does NOT request notification permission**.
+  ///
+  /// Permission must be triggered by an explicit user gesture (login button
+  /// or notification bell icon) via [requestWebPermissionAndToken]. Browsers
+  /// (especially on mobile) often suppress the permission prompt entirely
+  /// when fired on page-load — by deferring to a click handler we get a
+  /// reliable user-gesture context. If permission was previously granted,
+  /// the token is fetched silently here so push delivery works immediately.
   Future<void> initFCM() async {
     debugPrint('initFCM(web)');
     if (_inited) return;
     _inited = true;
 
     try {
-      final settings = await FirebaseMessaging.instance.requestPermission(
-        alert: true,
-        badge: true,
-        sound: true,
-        provisional: false,
-      );
-
-      log('web notification permission: ${settings.authorizationStatus}');
-
-      if (kFcmWebVapidKey.isEmpty) {
-        log(
-          'FCM_WEB_VAPID_KEY is missing. Run with '
-          '--dart-define=FCM_WEB_VAPID_KEY=YOUR_PUBLIC_VAPID_KEY',
-        );
-      } else {
-        final token = await FirebaseMessaging.instance.getToken(
-          vapidKey: kFcmWebVapidKey,
-        );
-        debugPrint('web fcmToken: $token');
-      }
-
+      // 1) Listeners (cheap; safe to register before permission).
       FirebaseMessaging.instance.onTokenRefresh.listen((token) {
         debugPrint('web fcmToken refreshed: $token');
       });
@@ -54,8 +42,81 @@ class NotificationFCMService {
       });
 
       FirebaseMessaging.onMessageOpenedApp.listen(_handleOpenSafely);
+
+      // 2) If the user previously granted permission for this origin, fetch
+      // the token silently (no prompt). For a fresh origin (status =
+      // notDetermined), we wait for an explicit user action.
+      final settings =
+          await FirebaseMessaging.instance.getNotificationSettings();
+      if (settings.authorizationStatus == AuthorizationStatus.authorized &&
+          kFcmWebVapidKey.isNotEmpty) {
+        final token =
+            await FirebaseMessaging.instance.getToken(vapidKey: kFcmWebVapidKey);
+        debugPrint('web fcmToken (existing grant): $token');
+      } else {
+        log(
+          'web notifications: permission=${settings.authorizationStatus} — '
+          'waiting for user gesture (login / bell icon) to request.',
+        );
+      }
     } catch (e, s) {
       log('initFCM(web) error: $e', stackTrace: s);
+    }
+  }
+
+  /// Request the browser notification permission **only if it hasn't been
+  /// decided yet**. Should be called from an explicit user gesture (button
+  /// click, icon tap). Safe to call multiple times — it short-circuits when
+  /// the user already granted or blocked permission.
+  ///
+  /// Returns `true` when permission ends up `authorized`, `false` otherwise.
+  /// The browser remembers the decision; we won't keep re-prompting.
+  Future<bool> requestWebPermissionAndToken() async {
+    try {
+      final settings =
+          await FirebaseMessaging.instance.getNotificationSettings();
+      final status = settings.authorizationStatus;
+
+      // Already decided (Allow OR Block) → never re-prompt. If allowed,
+      // ensure we have a current token.
+      if (status == AuthorizationStatus.authorized) {
+        if (kFcmWebVapidKey.isNotEmpty) {
+          final token = await FirebaseMessaging.instance
+              .getToken(vapidKey: kFcmWebVapidKey);
+          debugPrint('web fcmToken (re-check): $token');
+        }
+        return true;
+      }
+      if (status == AuthorizationStatus.denied) {
+        log('web notifications already blocked by user — not re-prompting.');
+        return false;
+      }
+
+      // Status is notDetermined / provisional — safe to request now.
+      final result = await FirebaseMessaging.instance.requestPermission(
+        alert: true,
+        badge: true,
+        sound: true,
+        provisional: false,
+      );
+      log('web notification permission result: ${result.authorizationStatus}');
+
+      final granted =
+          result.authorizationStatus == AuthorizationStatus.authorized;
+      if (granted && kFcmWebVapidKey.isNotEmpty) {
+        final token = await FirebaseMessaging.instance
+            .getToken(vapidKey: kFcmWebVapidKey);
+        debugPrint('web fcmToken (after grant): $token');
+      } else if (kFcmWebVapidKey.isEmpty) {
+        log(
+          'FCM_WEB_VAPID_KEY is missing. Run with '
+          '--dart-define=FCM_WEB_VAPID_KEY=YOUR_PUBLIC_VAPID_KEY',
+        );
+      }
+      return granted;
+    } catch (e, s) {
+      log('requestWebPermissionAndToken error: $e', stackTrace: s);
+      return false;
     }
   }
 

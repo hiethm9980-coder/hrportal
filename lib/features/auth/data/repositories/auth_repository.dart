@@ -97,6 +97,10 @@ class AuthRepository {
       companyId: loginData.employee.company?.id ?? 0,
     );
 
+    // ✅ احفظ اسم المستخدم/البريد ليظهر افتراضياً عند زيارة شاشة الدخول
+    // مرة أخرى (يبقى عبر تسجيل الخروج — لا تُحذف في clearAll).
+    await _sessionManager.storage.saveLastUsername(username);
+
     // Persist manager flag for session restore
     await _sessionManager.storage.saveIsManager(loginData.employee.isManager);
 

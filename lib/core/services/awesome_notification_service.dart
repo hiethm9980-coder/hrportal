@@ -323,6 +323,17 @@ class AwesomeNotificationService {
       // الجهاز. التحويل تم يدويًا أعلاه بحسب لغة التطبيق.
       actionButtons: actionButtons,
     );
+
+    // ✅ زيادة عدّاد البادج على أيقونة التطبيق (Launcher Badge). يظهر على
+    // أجهزة Android التي يدعم launcher-ها الـ badges (Samsung/Xiaomi/Oppo/
+    // Pixel-with-launcher-support) وعلى iOS عبر APNs. يُصفَّر عند ضغط أيقونة
+    // الجرس في الـ Dashboard أو فتح شاشة الإشعارات. لا نمنع عرض الإشعار لو
+    // فشل تحديث البادج (نادر).
+    try {
+      await AwesomeNotifications().incrementGlobalBadgeCounter();
+    } catch (e) {
+      debugPrint('⚠️ incrementGlobalBadgeCounter failed: $e');
+    }
   }
 
   static Future<void> handleInitialActionIfAny() async {
@@ -469,6 +480,8 @@ class AwesomeNotificationController {
     ReceivedAction action,
   ) async {
     debugPrint('❌ [DISMISSED] id=${action.id}');
-    await AwesomeNotifications().setGlobalBadgeCounter(0);
+    // لا نُصفّر البادج هنا — حذف إشعار واحد من شريط النظام لا يعني أن
+    // المستخدم رأى كل الإشعارات. التصفير يحدث فقط عند ضغط أيقونة الجرس
+    // في الـ Dashboard أو فتح شاشة الإشعارات.
   }
 }

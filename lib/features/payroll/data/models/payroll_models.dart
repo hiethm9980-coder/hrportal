@@ -54,6 +54,16 @@ class PayslipLine extends Equatable {
 /// Employee payslip for a specific pay period.
 ///
 /// Contract: §10.7 Payslip
+///
+/// الحقول الجديدة لحالة الدفع (مضافة من السيرفر منذ آخر تحديث):
+/// - [runStatus]: حالة الـ run الأب (`posted` / `partially_paid` / `paid`).
+/// - [paidAmount]: المبلغ المستلم فعلياً.
+/// - [remainingAmount]: المتبقي = `totalNet - paidAmount`.
+/// - [isFullyPaid]: `true` إذا اكتمل الدفع.
+/// - [paymentProgressPct]: نسبة 0..100 (للـ progress bar).
+/// - [paymentStatement]: ملاحظة الدفع من HR (إن وُجدت).
+///
+/// كل الحقول الجديدة لها قيم افتراضية فلا يقع crash على ردود قديمة.
 class Payslip extends Equatable {
   // ── Non-nullable ──
   final int id;
@@ -72,6 +82,14 @@ class Payslip extends Equatable {
   final String? paymentMethod;
   final String? paidAt;          // Y-m-d H:i:s
 
+  // ── Payment status (new) ──
+  final String? runStatus;        // posted | partially_paid | paid
+  final double paidAmount;
+  final double remainingAmount;
+  final bool isFullyPaid;
+  final int paymentProgressPct;   // 0..100
+  final String? paymentStatement;
+
   const Payslip({
     required this.id,
     required this.status,
@@ -86,9 +104,19 @@ class Payslip extends Equatable {
     this.lines,
     this.paymentMethod,
     this.paidAt,
+    this.runStatus,
+    this.paidAmount = 0,
+    this.remainingAmount = 0,
+    this.isFullyPaid = false,
+    this.paymentProgressPct = 0,
+    this.paymentStatement,
   });
 
   factory Payslip.fromJson(Map<String, dynamic> json) {
+    // Helpers — يتعاملون مع غياب الحقل (نسخ قديمة من السيرفر).
+    double d(String key) => (json[key] as num?)?.toDouble() ?? 0;
+    int i(String key) => (json[key] as num?)?.toInt() ?? 0;
+
     return Payslip(
       id: json['id'] as int,
       status: json['status'] as String,
@@ -107,6 +135,12 @@ class Payslip extends Equatable {
           : null,
       paymentMethod: json['payment_method'] as String?,
       paidAt: json['paid_at'] as String?,
+      runStatus: json['run_status'] as String?,
+      paidAmount: d('paid_amount'),
+      remainingAmount: d('remaining_amount'),
+      isFullyPaid: json['is_fully_paid'] as bool? ?? false,
+      paymentProgressPct: i('payment_progress_pct'),
+      paymentStatement: json['payment_statement'] as String?,
     );
   }
 
@@ -124,6 +158,12 @@ class Payslip extends Equatable {
         'lines': lines?.map((l) => l.toJson()).toList(),
         'payment_method': paymentMethod,
         'paid_at': paidAt,
+        'run_status': runStatus,
+        'paid_amount': paidAmount,
+        'remaining_amount': remainingAmount,
+        'is_fully_paid': isFullyPaid,
+        'payment_progress_pct': paymentProgressPct,
+        'payment_statement': paymentStatement,
       };
 
   @override

@@ -43,4 +43,11 @@ class StorageKeys {
   /// If absent the user has not set a default yet and the currency field in
   /// "New request" will be empty.
   static const String defaultCurrencyId = 'default_currency_id';
+
+  /// Last successfully-used login identifier (email or username).
+  ///
+  /// Saved after a successful login so the field is pre-filled on the next
+  /// visit to the Login screen — the user only retypes the password. NEVER
+  /// store the password here. Persists across logout intentionally.
+  static const String lastUsername = 'last_username';
 }
