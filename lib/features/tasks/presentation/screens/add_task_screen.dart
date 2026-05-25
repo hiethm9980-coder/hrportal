@@ -15,6 +15,7 @@ import '../../data/models/project_team_models.dart';
 import '../../data/models/task_status_model.dart';
 import '../providers/project_team_provider.dart';
 import '../providers/task_statuses_provider.dart';
+import '../widgets/task_progress_palette.dart';
 
 /// Which flavor of task are we creating?
 ///
@@ -120,10 +121,51 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
   final _serverErrors = <String, String>{};
 
   // Status / priority / due / progress local state.
-  String? _statusCode; // null → server default (TODO)
+  // `_statusCode` لم يعد قابلاً للاختيار من المستخدم — يُشتق تلقائياً من
+  // `_progress` عبر [_deriveStatusCode]. القيمة الابتدائية تطابق
+  // `_progress = 0` → TODO.
+  String? _statusCode = 'TODO';
   String _priorityCode = 'MEDIUM';
   DateTime _dueDate = DateTime.now();
   int _progress = 0;
+
+  /// خريطة "نسبة الإنجاز → كود الحالة + التسمية + الأيقونة":
+  /// - `0`         → TODO         (للتنفيذ)
+  /// - `1..69`     → IN_PROGRESS  (قيد التنفيذ)
+  /// - `70..99`    → REVIEW       (قيد المراجعة)
+  /// - `100`       → DONE         (مكتملة)
+  ///
+  /// تستخدم نفس قواعد ألوان [TaskProgressPalette.forPercent] فالنسبة
+  /// واللون والاسم متناسقون.
+  ({String code, String labelKey, IconData icon}) _deriveStatusFromProgress(
+      int p) {
+    if (p >= 100) {
+      return (
+        code: 'DONE',
+        labelKey: 'Status: Completed',
+        icon: Icons.check_circle_rounded,
+      );
+    }
+    if (p >= 70) {
+      return (
+        code: 'REVIEW',
+        labelKey: 'Status: Review',
+        icon: Icons.fact_check_outlined,
+      );
+    }
+    if (p >= 1) {
+      return (
+        code: 'IN_PROGRESS',
+        labelKey: 'Status: In progress',
+        icon: Icons.timelapse_rounded,
+      );
+    }
+    return (
+      code: 'TODO',
+      labelKey: 'Status: To do',
+      icon: Icons.radio_button_unchecked_rounded,
+    );
+  }
 
   // Members + assignee selection.
   final Set<int> _memberIds = {};
@@ -337,9 +379,9 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
     final statusesAsync = ref.watch(taskStatusesProvider);
     final allStatuses = statusesAsync.asData?.value ?? const <TaskStatus>[];
 
-    // Pre-select the first status (typically "TODO / للتنفيذ") on first load
-    // so the dropdown never renders in a blank "Set status" state.
-    _ensureDefaultStatus(allStatuses);
+    // `_statusCode` يُهيَّأ ابتدائياً بـ 'TODO' ويُحدَّث تلقائياً من
+    // `_progress` عبر `_deriveStatusFromProgress`. لذا لم نعد نحتاج
+    // `_ensureDefaultStatus(...)`.
 
     return Scaffold(
       backgroundColor: colors.bg,
@@ -621,53 +663,52 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
     setState(() => _serverErrors.remove(field));
   }
 
+  /// شارة الحالة (عرض-فقط) — تُشتق من [_progress] عبر
+  /// [_deriveStatusFromProgress] فلا يستطيع المستخدم تغييرها يدوياً. تظل
+  /// تأخذ نفس مساحة الـ Dropdown القديم لـتوازن الـ Row مع `_priorityDropdown`.
+  ///
+  /// نمرّر قائمة [statuses] للحفاظ على نفس التوقيع، ونحاول استخراج
+  /// التسمية القادمة من السيرفر (إن وُجدت بكود مطابق) فالنص يظهر بنفس
+  /// تنسيق التطبيق بدلاً من نص hardcoded.
   Widget _statusDropdown(
       AppColorsExtension colors, List<TaskStatus> statuses) {
+    final derived = _deriveStatusFromProgress(_progress);
+    final color = TaskProgressPalette.forPercent(_progress);
+    // إن أرسل السيرفر تسمية لنفس الكود، نستخدمها (تحترم locale)؛ وإلا
+    // نستخدم النص الإفتراضي المعرّب من i18n.
+    final serverLabel = statuses
+        .cast<TaskStatus?>()
+        .firstWhere((s) => s?.code == derived.code, orElse: () => null)
+        ?.label;
+    final label = serverLabel ?? derived.labelKey.tr(context);
+
     return Container(
       height: 46,
       padding: const EdgeInsets.symmetric(horizontal: 12),
-      decoration: _boxDecoration(colors),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<String?>(
-          isExpanded: true,
-          value: _statusCode,
-          hint: Text(
-            'Set status'.tr(context),
-            style: TextStyle(
-              fontFamily: 'Cairo',
-              fontSize: 13,
-              color: colors.textMuted,
+      decoration: _boxDecoration(colors).copyWith(
+        color: color.withValues(alpha: 0.08),
+      ),
+      child: Row(
+        children: [
+          Icon(derived.icon, size: 18, color: color),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(
+                fontFamily: 'Cairo',
+                fontSize: 13,
+                fontWeight: FontWeight.w800,
+                color: color,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
-          items: [
-            for (final s in statuses)
-              DropdownMenuItem<String?>(
-                value: s.code,
-                child: Row(
-                  children: [
-                    Container(
-                      width: 10,
-                      height: 10,
-                      decoration: BoxDecoration(
-                        color: _parseHex(s.color),
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      s.label,
-                      style: const TextStyle(
-                        fontFamily: 'Cairo',
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-          ],
-          onChanged: (v) => setState(() => _statusCode = v),
-        ),
+          // قفل بصري ليفهم المستخدم أن الحقل غير قابل للتعديل (وأن
+          // مصدره نسبة الإنجاز أدناه).
+          Icon(Icons.lock_outline, size: 14, color: colors.textMuted),
+        ],
       ),
     );
   }
@@ -832,12 +873,15 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
   }
 
   Widget _progressSlider() {
+    // لون الـ slider يتبع نسبة الإنجاز (نفس قواعد TaskProgressPalette)
+    // فيكون متناسقاً مع شارة الحالة المشتقة.
+    final activeColor = TaskProgressPalette.forPercent(_progress);
     return SliderTheme(
       data: SliderTheme.of(context).copyWith(
         trackHeight: 6,
-        activeTrackColor: AppColors.primaryMid,
-        thumbColor: AppColors.primaryMid,
-        overlayColor: AppColors.primaryMid.withValues(alpha: 0.20),
+        activeTrackColor: activeColor,
+        thumbColor: activeColor,
+        overlayColor: activeColor.withValues(alpha: 0.20),
       ),
       child: Slider(
         value: _progress.toDouble(),
@@ -845,7 +889,12 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
         max: 100,
         divisions: 100,
         label: '$_progress%',
-        onChanged: (v) => setState(() => _progress = v.round()),
+        // عند تغيير النسبة → نشتق الحالة تلقائياً ونحدّث `_statusCode`
+        // بحيث يُرسَل للسيرفر مع باقي الحقول.
+        onChanged: (v) => setState(() {
+          _progress = v.round();
+          _statusCode = _deriveStatusFromProgress(_progress).code;
+        }),
       ),
     );
   }
@@ -1199,19 +1248,6 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
       }
       // Locked assignee — server forces creator; show self even if not in team list.
       if (myId != null) setState(() => _assigneeId = myId);
-    });
-  }
-
-  /// Pre-select the first status (server-ordered, usually "TODO / للتنفيذ")
-  /// the very first time the list resolves — so the dropdown never renders
-  /// as an empty "Set status" placeholder.
-  void _ensureDefaultStatus(List<TaskStatus> statuses) {
-    if (_statusCode != null) return;
-    if (statuses.isEmpty) return;
-    final first = statuses.first.code;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      setState(() => _statusCode = first);
     });
   }
 

@@ -35,8 +35,21 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
   static const _labels = [
     'All', 'Present', 'Late', 'Absent', 'Leave', 'Pending', 'Shortage',
   ];
-  static const _statusMap = <String?>[
-    null, 'present', 'late', 'absent', 'on_leave', 'pending', 'shortage',
+  /// أكواد الحالة المُرسَلة لـ /api/v1/attendance/history لكل chip.
+  /// قائمة فارغة = "All" (بلا فلتر). قوائم متعدّدة العناصر تُرسَل للـ API
+  /// مفصولة بفواصل ويُطابقها الـ Backend عبر whereIn.
+  ///
+  /// قاعدة `late_and_early`: نُظهره في chip "تأخير" **و** chip "نقص" معاً
+  /// لأن السجل يحوي الخاصيتين سلوكياً (دخل متأخر + خرج مبكر = نقص ساعات).
+  /// التطبيق نفسه يعرضه على شكل badge بنص "تأخير ونقص" (راجع `_statusLabel`).
+  static const _statusMap = <List<String>>[
+    <String>[],                              // All — بلا فلتر
+    <String>['present'],                     // Present
+    <String>['late', 'late_and_early'],      // Late — يشمل المركّب
+    <String>['absent'],                      // Absent
+    <String>['on_leave'],                    // Leave
+    <String>['pending'],                     // Pending
+    <String>['shortage', 'late_and_early'],  // Shortage — يشمل المركّب
   ];
   static const _colors = [
     AppColors.teal,       // All
@@ -76,12 +89,12 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
 
   void _loadWithFilter() {
     final ctrl = ref.read(attendanceHistoryProvider.notifier);
-    final statusCode = _statusMap[_tab];
     // طلب واحد فقط بكلا الفلترين معاً — تجنّباً لـ double-load.
+    // statuses قد تحوي أكثر من كود (مثلاً chip تأخير = late + late_and_early).
     ctrl.applyFilters(
       dateFrom: _dateRange != null ? _apiDate(_dateRange!.start) : null,
       dateTo: _dateRange != null ? _apiDate(_dateRange!.end) : null,
-      statuses: statusCode == null ? const [] : [statusCode],
+      statuses: _statusMap[_tab],
     );
   }
 
@@ -373,7 +386,11 @@ class _RecordTile extends StatelessWidget {
         return 'Absent';
       case 'late':
         return 'Late';
+      case 'late_and_early':
+        // نص خاص بالحالة المركّبة — يظهر في الـ badge بشكل واضح للمستخدم.
+        return 'Late and shortage';
       case 'leave':
+      case 'on_leave':
         return 'Leave';
       case 'pending':
         return 'Pending';
