@@ -61,12 +61,22 @@ class SessionManager {
     _authStateController.add(false);
   }
 
-  /// Called by the Dio interceptor when a 401 TOKEN_EXPIRED is received.
+  /// Called whenever a **401 Unauthorized** is received from any endpoint,
+  /// on any screen (see [ApiClient]). Clears the session and notifies the UI
+  /// to navigate to login.
   ///
-  /// Clears storage and notifies the UI to navigate to login.
+  /// **Idempotent:** if several in-flight requests all return 401 at once,
+  /// the side effects (clear storage / flip auth state / show the dialog)
+  /// run only once, so the user gets a single clean redirect — not a stack
+  /// of dialogs. The guard flips synchronously *before* the first `await`,
+  /// so concurrent callers short-circuit immediately.
+  ///
+  /// `clearAll()` intentionally keeps `lastUsername` so the login screen
+  /// pre-fills it on the next visit.
   Future<void> onTokenExpired() async {
-    await _storage.clearAll();
+    if (!_isAuthenticated) return; // already logged out — avoid duplicates
     _isAuthenticated = false;
+    await _storage.clearAll();
     _authStateController.add(false);
     onSessionExpired?.call('Your session has expired. Please sign in again.');
   }

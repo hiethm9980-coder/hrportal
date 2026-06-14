@@ -312,32 +312,43 @@ class _AdvancedFilterSheetState extends State<_AdvancedFilterSheet> {
                   runSpacing: 8,
                   children: _priorities.map((p) {
                     final selected = _priority == p.code;
-                    return GestureDetector(
-                      onTap: () => setState(() {
-                        _priority = selected ? null : p.code;
-                      }),
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 160),
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 8),
-                        decoration: BoxDecoration(
+                    // AnimatedContainer للون + Material/InkWell للـ ripple.
+                    return AnimatedContainer(
+                      duration: const Duration(milliseconds: 160),
+                      decoration: BoxDecoration(
+                        color: selected
+                            ? p.color
+                            : p.color.withOpacity(0.08),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
                           color: selected
                               ? p.color
-                              : p.color.withOpacity(0.08),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: selected
-                                ? p.color
-                                : p.color.withOpacity(0.3),
-                          ),
+                              : p.color.withOpacity(0.3),
                         ),
-                        child: Text(
-                          p.labelKey.tr(context),
-                          style: TextStyle(
-                            fontFamily: 'Cairo',
-                            fontSize: 12,
-                            fontWeight: FontWeight.w800,
-                            color: selected ? Colors.white : p.color,
+                      ),
+                      child: Material(
+                        color: Colors.transparent,
+                        borderRadius: BorderRadius.circular(12),
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(12),
+                          splashColor: selected
+                              ? Colors.white24
+                              : p.color.withOpacity(0.2),
+                          onTap: () => setState(() {
+                            _priority = selected ? null : p.code;
+                          }),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 8),
+                            child: Text(
+                              p.labelKey.tr(context),
+                              style: TextStyle(
+                                fontFamily: 'Cairo',
+                                fontSize: 12,
+                                fontWeight: FontWeight.w800,
+                                color: selected ? Colors.white : p.color,
+                              ),
+                            ),
                           ),
                         ),
                       ),
@@ -579,31 +590,40 @@ class _ScopeChipSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 160),
-        curve: Curves.easeOut,
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 11),
-        decoration: BoxDecoration(
-          color: selected ? AppColors.primaryMid.withOpacity(0.12) : colors.gray50,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: selected ? AppColors.primaryMid : colors.gray200,
-            width: selected ? 2 : 1,
-          ),
+    // AnimatedContainer للون/حد التحديد + Material/InkWell للـ ripple.
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 160),
+      curve: Curves.easeOut,
+      decoration: BoxDecoration(
+        color:
+            selected ? AppColors.primaryMid.withOpacity(0.12) : colors.gray50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: selected ? AppColors.primaryMid : colors.gray200,
+          width: selected ? 2 : 1,
         ),
-        child: Text(
-          label,
-          maxLines: 2,
-          textAlign: TextAlign.center,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(
-            fontFamily: 'Cairo',
-            fontSize: 12,
-            fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
-            color: selected ? AppColors.primaryMid : colors.textPrimary,
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(12),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: onTap,
+          child: Padding(
+            padding:
+                const EdgeInsets.symmetric(horizontal: 10, vertical: 11),
+            child: Text(
+              label,
+              maxLines: 2,
+              textAlign: TextAlign.center,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontFamily: 'Cairo',
+                fontSize: 12,
+                fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
+                color: selected ? AppColors.primaryMid : colors.textPrimary,
+              ),
+            ),
           ),
         ),
       ),
@@ -748,10 +768,14 @@ class _DateField extends StatelessWidget {
               ),
             ),
             if (value != null)
-              GestureDetector(
-                onTap: onClear,
-                child: Icon(Icons.clear_rounded,
-                    size: 16, color: colors.textMuted),
+              Material(
+                color: Colors.transparent,
+                child: InkResponse(
+                  onTap: onClear,
+                  radius: 16,
+                  child: Icon(Icons.clear_rounded,
+                      size: 16, color: colors.textMuted),
+                ),
               ),
           ],
         ),

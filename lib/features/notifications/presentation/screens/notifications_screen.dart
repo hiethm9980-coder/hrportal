@@ -11,6 +11,7 @@ import 'package:hr_portal/core/utils/app_funs.dart';
 import 'package:hr_portal/shared/widgets/shared_widgets.dart';
 import 'package:hr_portal/shared/widgets/common_widgets.dart';
 import '../providers/notifications_providers.dart';
+import 'notification_detail_screen.dart';
 
 class NotificationsScreen extends ConsumerStatefulWidget {
   const NotificationsScreen({super.key});
@@ -239,6 +240,23 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
 
             if (url.isNotEmpty && url.startsWith('http')) {
               await AppFuns.openUrl(url);
+              return;
+            }
+
+            // لا route ولا url — لا وجهة للتنقل، فنفتح صفحة "تفاصيل
+            // الإشعار" الكاملة (العنوان عريض + الجسم كله + الصورة إن
+            // وُجدت، مع تمرير عمودي).
+            if (context.mounted) {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => NotificationDetailScreen(
+                    title: titleText,
+                    body: bodyText,
+                    date: dateText,
+                    img: n.img,
+                  ),
+                ),
+              );
             }
           }
 
@@ -473,16 +491,17 @@ class _HeaderIconButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 36,
-        height: 36,
-        decoration: BoxDecoration(
-          color: Colors.white24,
-          borderRadius: BorderRadius.circular(10),
+    return Material(
+      color: Colors.white24,
+      borderRadius: BorderRadius.circular(10),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(10),
+        onTap: onTap,
+        child: SizedBox(
+          width: 36,
+          height: 36,
+          child: Icon(icon, color: Colors.white, size: 20),
         ),
-        child: Icon(icon, color: Colors.white, size: 20),
       ),
     );
   }
@@ -583,21 +602,32 @@ class _NotificationTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: isRead ? context.appColors.bgCard : AppColors.primaryMid.withOpacity(0.06),
+    // Material + InkWell بدل GestureDetector — ripple عند الضغط على الإشعار.
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: isRead ? AppShadows.sm : AppShadows.card,
+      ),
+      child: Material(
+        color: isRead
+            ? context.appColors.bgCard
+            : AppColors.primaryMid.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(16),
+        child: InkWell(
           borderRadius: BorderRadius.circular(16),
-          boxShadow: isRead ? AppShadows.sm : AppShadows.card,
-          border: isRead
-              ? null
-              : Border.all(
-                  color: AppColors.primaryMid.withOpacity(0.15), width: 1),
-        ),
-        child: Row(
+          onTap: onTap,
+          child: Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              border: isRead
+                  ? null
+                  : Border.all(
+                      color: AppColors.primaryMid.withValues(alpha: 0.15),
+                      width: 1),
+            ),
+            child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (img != null && img!.trim().isNotEmpty)
@@ -661,24 +691,27 @@ class _NotificationTile extends StatelessWidget {
                 ],
               ),
             ),
-            if (showActionIcon)
-              Padding(
-                padding: const EdgeInsetsDirectional.only(top: 8),
-                child: GestureDetector(
-                  onTap: onActionTap,
-                  child: Container(
-                    width: 28,
-                    height: 28,
-                    decoration: BoxDecoration(
-                      color: AppColors.primaryMid.withOpacity(0.1),
+                if (showActionIcon)
+                  Padding(
+                    padding: const EdgeInsetsDirectional.only(top: 8),
+                    child: Material(
+                      color: AppColors.primaryMid.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(8),
+                        onTap: onActionTap,
+                        child: const SizedBox(
+                          width: 28,
+                          height: 28,
+                          child: Icon(Icons.chevron_right_rounded,
+                              size: 18, color: AppColors.primaryMid),
+                        ),
+                      ),
                     ),
-                    child: const Icon(Icons.chevron_right_rounded,
-                        size: 18, color: AppColors.primaryMid),
                   ),
-                ),
-              ),
-          ],
+              ],
+            ),
+          ),
         ),
       ),
     );

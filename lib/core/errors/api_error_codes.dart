@@ -38,8 +38,15 @@ class ApiErrorCodes {
 
   /// Whether this code should force a logout (clear token + redirect).
   ///
-  /// The backend uses these codes to indicate the token is no longer valid.
+  /// The backend uses these codes to indicate the session is no longer
+  /// usable. `AUTH_REQUIRED` is included: it means the request reached a
+  /// protected endpoint without a valid identity, so the user must sign in
+  /// again. (The primary logout trigger is the HTTP 401 status itself — see
+  /// `ApiClient`; this list is the fallback for reauth codes returned with a
+  /// non-401 status.)
   static bool requiresLogout(String code) {
-    return code == tokenExpired || code == tokenInvalid;
+    return code == authRequired ||
+        code == tokenExpired ||
+        code == tokenInvalid;
   }
 }

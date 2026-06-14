@@ -25,7 +25,7 @@ class AppConfig {
   static String get flavor => isProduction ? 'prod' : 'dev';
 
   /// Local dev server URL (fixed; used whenever not in production mode).
-  static const String _devBaseUrl = 'http://172.16.0.66:8000';
+  static const String _devBaseUrl = 'http://172.16.0.33:8000';
   // static const String _devBaseUrl = 'https://account.alzajeltravel.com';
 
   /// True only with `--dart-define=FLAVOR=prod`.

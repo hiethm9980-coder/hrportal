@@ -573,50 +573,58 @@ class _Chip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        width: 104,
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-        decoration: BoxDecoration(
+    // AnimatedContainer للون التحديد + Material/InkWell للـ ripple.
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 180),
+      width: 104,
+      decoration: BoxDecoration(
+        color: selected
+            ? Colors.white.withOpacity(0.14)
+            : Colors.white.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
           color: selected
-              ? Colors.white.withOpacity(0.14)
-              : Colors.white.withOpacity(0.05),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: selected
-                ? Colors.white.withOpacity(0.55)
-                : Colors.white.withOpacity(0.10),
-            width: selected ? 1.5 : 1,
-          ),
+              ? Colors.white.withOpacity(0.55)
+              : Colors.white.withOpacity(0.10),
+          width: selected ? 1.5 : 1,
         ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              '$count',
-              style: TextStyle(
-                fontFamily: 'Cairo',
-                fontSize: 22,
-                fontWeight: FontWeight.w900,
-                color: color,
-                height: 1.1,
-              ),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(14),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(14),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  '$count',
+                  style: TextStyle(
+                    fontFamily: 'Cairo',
+                    fontSize: 22,
+                    fontWeight: FontWeight.w900,
+                    color: color,
+                    height: 1.1,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontFamily: 'Cairo',
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 2),
-            Text(
-              label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                fontFamily: 'Cairo',
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-                color: Colors.white,
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -1004,21 +1012,23 @@ class _SearchField extends StatelessWidget {
               prefixIconConstraints:
                   const BoxConstraints(minWidth: 34, minHeight: 34),
               suffixIcon: hasText
-                  ? GestureDetector(
-                      onTap: onClear,
-                      behavior: HitTestBehavior.opaque,
-                      child: Container(
-                        margin: const EdgeInsets.only(right: 4, left: 4),
-                        width: 22,
-                        height: 22,
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.18),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.close_rounded,
-                          size: 14,
-                          color: Colors.white,
+                  ? Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      child: Material(
+                        color: Colors.white.withOpacity(0.18),
+                        shape: const CircleBorder(),
+                        child: InkWell(
+                          customBorder: const CircleBorder(),
+                          onTap: onClear,
+                          child: const SizedBox(
+                            width: 22,
+                            height: 22,
+                            child: Icon(
+                              Icons.close_rounded,
+                              size: 14,
+                              color: Colors.white,
+                            ),
+                          ),
                         ),
                       ),
                     )
@@ -1046,18 +1056,24 @@ class _IconBtn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        curve: Curves.easeOut,
-        width: 36,
-        height: 36,
-        decoration: BoxDecoration(
-          color: active ? AppColors.gold : Colors.white24,
+    // AnimatedContainer للون التفعيل + Material/InkWell للـ ripple.
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 180),
+      curve: Curves.easeOut,
+      width: 36,
+      height: 36,
+      decoration: BoxDecoration(
+        color: active ? AppColors.gold : Colors.white24,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(10),
+        child: InkWell(
           borderRadius: BorderRadius.circular(10),
+          onTap: onTap,
+          child: Icon(icon, color: Colors.white, size: 18),
         ),
-        child: Icon(icon, color: Colors.white, size: 18),
       ),
     );
   }

@@ -443,37 +443,50 @@ class _StatusRow extends StatelessWidget {
             s.code,
             fallbackHex: s.color,
           );
-          return GestureDetector(
-            onTap: tap == null ? null : () => tap(s),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 160),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: isActive ? color : color.withOpacity(0.10),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: isActive ? color : color.withOpacity(0.25),
-                  width: 1,
-                ),
+          // AnimatedContainer يحمل اللون المتحرّك، و Material شفاف فوقه
+          // يرسم الـ ripple عند الضغط على chip الحالة.
+          return AnimatedContainer(
+            duration: const Duration(milliseconds: 160),
+            decoration: BoxDecoration(
+              color: isActive ? color : color.withOpacity(0.10),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: isActive ? color : color.withOpacity(0.25),
+                width: 1,
               ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (isActive) ...[
-                    const Icon(Icons.check_rounded,
-                        size: 14, color: Colors.white),
-                    const SizedBox(width: 3),
-                  ],
-                  Text(
-                    s.label,
-                    style: TextStyle(
-                      fontFamily: 'Cairo',
-                      fontSize: 11,
-                      fontWeight: FontWeight.w800,
-                      color: isActive ? Colors.white : color,
-                    ),
+            ),
+            child: Material(
+              color: Colors.transparent,
+              borderRadius: BorderRadius.circular(20),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(20),
+                splashColor: isActive
+                    ? Colors.white24
+                    : color.withOpacity(0.2),
+                onTap: tap == null ? null : () => tap(s),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 12, vertical: 6),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (isActive) ...[
+                        const Icon(Icons.check_rounded,
+                            size: 14, color: Colors.white),
+                        const SizedBox(width: 3),
+                      ],
+                      Text(
+                        s.label,
+                        style: TextStyle(
+                          fontFamily: 'Cairo',
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                          color: isActive ? Colors.white : color,
+                        ),
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
             ),
           );
@@ -574,21 +587,24 @@ class _OpenIconBox extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: Container(
-        width: 30,
-        height: 30,
-        decoration: BoxDecoration(
-          color: colors.gray50,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: colors.gray200, width: 0.8),
-        ),
-        child: Icon(
-          Icons.open_in_new_rounded,
-          size: 14,
-          color: AppColors.primaryMid,
+    return Material(
+      color: colors.gray50,
+      borderRadius: BorderRadius.circular(8),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(8),
+        onTap: onTap,
+        child: Container(
+          width: 30,
+          height: 30,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: colors.gray200, width: 0.8),
+          ),
+          child: Icon(
+            Icons.open_in_new_rounded,
+            size: 14,
+            color: AppColors.primaryMid,
+          ),
         ),
       ),
     );

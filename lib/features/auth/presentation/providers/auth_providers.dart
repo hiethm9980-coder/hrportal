@@ -93,13 +93,17 @@ class AuthNotifier extends StateNotifier<AuthState> {
   late final StreamSubscription<bool> _authSub;
 
   AuthNotifier(this._ref) : super(const AuthState()) {
-    // Keep AuthState in sync when SessionManager triggers auto-logout
-    // (e.g., TOKEN_EXPIRED/TOKEN_INVALID in AuthInterceptor).
+    // Keep AuthState in sync when SessionManager triggers auto-logout on a
+    // 401 (any endpoint, any screen). Route through [onLogout] so that all
+    // user-specific providers are invalidated too — otherwise the next user
+    // to sign in on this device could briefly see the previous user's cached
+    // data. [onLogout] also sets status → unauthenticated, which drives the
+    // GoRouter redirect to /login (same path as a voluntary logout).
     _authSub = _ref.read(sessionManagerProvider).authStateStream.listen((
       isAuthenticated,
     ) {
       if (!isAuthenticated && state.isAuthenticated) {
-        state = const AuthState(status: AuthStatus.unauthenticated);
+        onLogout();
       }
     });
   }

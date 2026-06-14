@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 
 import '../constants/api_constants.dart';
+import '../errors/api_error_codes.dart';
 import '../errors/exception_mapper.dart';
 import '../errors/exceptions.dart';
 import '../storage/secure_token_storage.dart';
@@ -177,6 +178,27 @@ class ApiClient {
   }) async {
     try {
       final response = await request();
+
+      // ✅ Force logout on ANY HTTP 401 — on every endpoint, from any screen,
+      // regardless of the response body shape or error code.
+      //
+      // Because `validateStatus` always returns true, Dio does NOT throw on
+      // 401, so `AuthInterceptor.onError` never runs for it. We therefore
+      // key the redirect off the HTTP status code itself. This deliberately
+      // covers BOTH:
+      //   • app-envelope 401s (AUTH_REQUIRED / TOKEN_EXPIRED / TOKEN_INVALID
+      //     / any unknown code), and
+      //   • non-JSON 401s coming from a proxy / gateway / WAF (HTML or empty
+      //     body) — which previously slipped through as a generic error and
+      //     left the user stranded on the page.
+      //
+      // SessionManager clears the session (keeping `lastUsername`) and flips
+      // the auth state, which drives the GoRouter redirect to /login.
+      if (response.statusCode == 401) {
+        await _forceReauth();
+        throw _unauthorizedException(response);
+      }
+
       final json = response.data;
 
       if (json is! Map<String, dynamic>) {
@@ -191,16 +213,10 @@ class ApiClient {
       if (baseResponse.isError) {
         final code = baseResponse.code;
 
-        // ✅ IMPORTANT:
-        // Because validateStatus always returns true, Dio will NOT throw on 401/403,
-        // so AuthInterceptor.onError may never run.
-        // Therefore, handle forced logout here based on API error codes.
+        // Belt-and-suspenders: honor reauth codes even if the server returned
+        // them with a non-401 status (the 401 path above is the primary one).
         if (code != null && _requiresReauth(code)) {
-          try {
-            await sessionManager.onTokenExpired();
-          } catch (_) {
-            // Do not let logout errors hide the original API error.
-          }
+          await _forceReauth();
         }
 
         if (code != null) {
@@ -216,7 +232,9 @@ class ApiClient {
 
         // Fallback if server marked error without a code.
         throw ServerException(
-          message: baseResponse.message ?? 'Unknown server error.',
+          message: baseResponse.message.isEmpty
+              ? 'Unknown server error.'
+              : baseResponse.message,
         );
       }
 
@@ -224,6 +242,11 @@ class ApiClient {
     } on ApiException {
       rethrow;
     } on DioException catch (e) {
+      // A 401 should never surface as a DioException (validateStatus=true),
+      // but if a custom adapter ever does, still force the redirect.
+      if (e.response?.statusCode == 401) {
+        await _forceReauth();
+      }
       throw _mapDioException(e);
     } catch (e) {
       // On Web, low-level socket errors are surfaced differently.
@@ -267,15 +290,41 @@ class ApiClient {
     }
   }
 
-  /// API error codes that must force logout / re-auth.
-  bool _requiresReauth(String code) {
-    switch (code) {
-      case 'TOKEN_EXPIRED':
-      case 'TOKEN_INVALID':
-      case 'UNAUTHENTICATED':
-        return true;
-      default:
-        return false;
+  /// Clears the session and notifies the UI (→ GoRouter redirect to /login).
+  /// Never lets a logout error mask the original API error.
+  Future<void> _forceReauth() async {
+    try {
+      await sessionManager.onTokenExpired();
+    } catch (_) {
+      // Swallow — logout must never hide the original failure.
     }
   }
+
+  /// Builds a typed 401 exception from the response body when it carries the
+  /// app error envelope; otherwise a generic "session expired" auth error so
+  /// non-JSON 401s (proxy/gateway) still produce a clean, typed failure.
+  ApiException _unauthorizedException(Response response) {
+    final data = response.data;
+    if (data is Map<String, dynamic> && data['code'] is String) {
+      return ExceptionMapper.fromResponse(
+        code: data['code'] as String,
+        message: (data['message'] as String?) ??
+            'Your session has expired. Please sign in again.',
+        traceId: data['trace_id'] as String?,
+        details: data['details'] is Map
+            ? Map<String, dynamic>.from(data['details'] as Map)
+            : null,
+        copyText: data['copy_text'] as String?,
+        statusCode: 401,
+      );
+    }
+    return const AuthRequiredException(
+      message: 'Your session has expired. Please sign in again.',
+    );
+  }
+
+  /// API error codes that must force logout / re-auth (single source of truth
+  /// in [ApiErrorCodes.requiresLogout]). Used as a fallback for reauth codes
+  /// arriving with a non-401 status; the HTTP-401 path is the primary trigger.
+  bool _requiresReauth(String code) => ApiErrorCodes.requiresLogout(code);
 }

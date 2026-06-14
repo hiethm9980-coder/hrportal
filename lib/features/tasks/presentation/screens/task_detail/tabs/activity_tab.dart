@@ -285,16 +285,18 @@ class _IconBtn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 36,
-        height: 36,
-        decoration: BoxDecoration(
-          color: Colors.white24,
-          borderRadius: BorderRadius.circular(10),
+    // Material/InkWell بدل GestureDetector — ripple عند الضغط على زر الهيدر.
+    return Material(
+      color: Colors.white24,
+      borderRadius: BorderRadius.circular(10),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(10),
+        onTap: onTap,
+        child: SizedBox(
+          width: 36,
+          height: 36,
+          child: Icon(icon, color: Colors.white, size: 18),
         ),
-        child: Icon(icon, color: Colors.white, size: 18),
       ),
     );
   }

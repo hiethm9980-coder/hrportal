@@ -271,12 +271,15 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
         ? '${AppFuns.formatDate(_dateRange!.start, withDay: false)}  →  ${AppFuns.formatDate(_dateRange!.end, withDay: false)}'
         : 'Filter by date'.tr(context);
 
-    return GestureDetector(
-      onTap: _pickDateRange,
-      child: Container(
+    return Material(
+      color: Colors.white.withValues(alpha: 0.2),
+      borderRadius: BorderRadius.circular(10),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(10),
+        onTap: _pickDateRange,
+        child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.2),
           borderRadius: BorderRadius.circular(10),
           border: Border.all(color: Colors.white.withValues(alpha: 0.5)),
         ),
@@ -300,54 +303,59 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
             ),
           ],
         ),
+        ),
       ),
     );
   }
 
   Widget _filterPill(String count, String label, Color accentColor, int index) {
     final selected = _tab == index;
-    return GestureDetector(
-      onTap: () {
-        if (_tab == index) return;
-        setState(() => _tab = index);
-        _loadWithFilter();
-      },
-      child: Container(
-        width: 80,
-        padding: const EdgeInsets.symmetric(vertical: 9),
-        decoration: BoxDecoration(
-          color: selected
-              ? Colors.white.withValues(alpha: 0.25)
-              : Colors.white.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-            color: selected
-                ? Colors.white.withValues(alpha: 0.6)
-                : Colors.white.withValues(alpha: 0.15),
-            width: selected ? 1.5 : 1,
+    return Material(
+      color: selected
+          ? Colors.white.withValues(alpha: 0.25)
+          : Colors.white.withValues(alpha: 0.08),
+      borderRadius: BorderRadius.circular(10),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(10),
+        onTap: () {
+          if (_tab == index) return;
+          setState(() => _tab = index);
+          _loadWithFilter();
+        },
+        child: Container(
+          width: 80,
+          padding: const EdgeInsets.symmetric(vertical: 9),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: selected
+                  ? Colors.white.withValues(alpha: 0.6)
+                  : Colors.white.withValues(alpha: 0.15),
+              width: selected ? 1.5 : 1,
+            ),
           ),
-        ),
-        child: Column(
-          children: [
-            Text(
-              count,
-              style: TextStyle(
-                fontFamily: 'Cairo',
-                fontSize: 20,
-                fontWeight: FontWeight.w900,
-                color: accentColor,
-                height: 1.1,
+          child: Column(
+            children: [
+              Text(
+                count,
+                style: TextStyle(
+                  fontFamily: 'Cairo',
+                  fontSize: 20,
+                  fontWeight: FontWeight.w900,
+                  color: accentColor,
+                  height: 1.1,
+                ),
               ),
-            ),
-            Text(
-              label,
-              style: TextStyle(
-                fontFamily: 'Cairo',
-                fontSize: 10,
-                color: selected ? Colors.white : Colors.white54,
+              Text(
+                label,
+                style: TextStyle(
+                  fontFamily: 'Cairo',
+                  fontSize: 10,
+                  color: selected ? Colors.white : Colors.white54,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -483,6 +491,24 @@ class _RecordTile extends StatelessWidget {
               label: 'Status'.tr(context),
               value: _statusLabel(record.status).tr(context),
             ),
+            // طلب الإجازة المغطي لليوم (إن وُجد) — اسم النوع + حالته
+            // الفعلية + رقم الطلب حتى يستطيع الموظف الرجوع له في شاشة
+            // الإجازات.
+            if (record.onLeave != null)
+              _AttendanceDetailRow(
+                icon: '🏖',
+                label: 'Leave status'.tr(context),
+                value: [
+                  record.onLeave!.leaveType?.localizedName(
+                        Localizations.localeOf(context).languageCode ==
+                            'ar',
+                      ) ??
+                      'Leave'.tr(context),
+                  _leaveStatusInfo(context, record.onLeave!.status).label,
+                  if (record.onLeave!.requestNumber != null)
+                    record.onLeave!.requestNumber!,
+                ].join(' — '),
+              ),
             if (record.checkInTime != null)
               _AttendanceDetailRow(
                 icon: '▶',
@@ -588,6 +614,106 @@ class _RecordTile extends StatelessWidget {
     }
   }
 
+  /// تسمية + لون **حالة طلب الإجازة** (وليس نوعها):
+  /// - approved → أخضر مع ✓ (الغياب مبرَّر)
+  /// - pending → ذهبي (بانتظار القرار)
+  /// - rejected / cancelled → رمادي باهت (معلومة فقط — ليس أحمر حتى لا
+  ///   تُقرأ كخطأ، بتوصية الباك اند)
+  /// - draft → رمادي باهت
+  static ({String label, Color color}) _leaveStatusInfo(
+      BuildContext context, String status) {
+    switch (status.toLowerCase()) {
+      case 'approved':
+        return (
+          label: '${'Approved'.tr(context)} ✓',
+          color: AppColors.success,
+        );
+      case 'pending':
+        return (label: 'Pending'.tr(context), color: AppColors.gold);
+      case 'rejected':
+        return (
+          label: 'Rejected'.tr(context),
+          color: context.appColors.textMuted,
+        );
+      case 'cancelled':
+        return (
+          label: 'Cancelled'.tr(context),
+          color: context.appColors.textMuted,
+        );
+      case 'draft':
+        return (
+          label: 'Draft'.tr(context),
+          color: context.appColors.textMuted,
+        );
+      default:
+        return (label: status, color: context.appColors.textMuted);
+    }
+  }
+
+  /// سطر "حالة الإجازة" — يُعرض عندما يغطي اليومَ طلبُ إجازة بأي حالة
+  /// (`on_leave != null`). مستقل عن شارة حالة الحضور: غياب + إجازة معتمدة
+  /// = غياب مبرَّر، حضور + إجازة = حضر رغم إجازته، وقد يكون الطلب معلقاً
+  /// أو مرفوضاً — نعرض حالته الفعلية من `on_leave.status`.
+  ///
+  /// **البانر كاملاً (الخلفية + الحد + الأيقونة + النص) بلون حالة الطلب**
+  /// — أخضر للموافَق، ذهبي للمعلق، رمادي للمرفوض/الملغي/المسودة — فيُقرأ
+  /// وضع الطلب بنظرة واحدة بدون قراءة النص.
+  Widget _buildLeaveRow(BuildContext context, AttendanceOnLeave leave) {
+    final isAr = Localizations.localeOf(context).languageCode == 'ar';
+    final typeName =
+        leave.leaveType?.localizedName(isAr) ?? 'Leave'.tr(context);
+    final statusInfo = _leaveStatusInfo(context, leave.status);
+    final color = statusInfo.color;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(10),
+        border: BorderDirectional(
+          start: BorderSide(color: color, width: 3),
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.beach_access_rounded, size: 14, color: color),
+          const SizedBox(width: 6),
+          Flexible(
+            child: Text(
+              typeName,
+              style: TextStyle(
+                fontFamily: 'Cairo',
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                color: color,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          Text(
+            ' — ',
+            style: TextStyle(
+              fontFamily: 'Cairo',
+              fontSize: 11,
+              color: color,
+            ),
+          ),
+          Text(
+            statusInfo.label,
+            style: TextStyle(
+              fontFamily: 'Cairo',
+              fontSize: 11,
+              fontWeight: FontWeight.w800,
+              color: color,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     // نوع الـ badge يُشتق من خريطة [_statusType] الموحَّدة (نفس ألوان chips
@@ -596,17 +722,22 @@ class _RecordTile extends StatelessWidget {
     final inTime = record.checkInTime != null ? _extractTime(context, record.checkInTime!) : null;
     final outTime = record.checkOutTime != null ? _extractTime(context, record.checkOutTime!) : null;
 
-    return GestureDetector(
-      onTap: () => _showDetailSheet(context),
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: context.appColors.bgCard,
+    // Material + InkWell بدل GestureDetector — ripple عند الضغط على الكرت.
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: AppShadows.card,
+      ),
+      child: Material(
+        color: context.appColors.bgCard,
+        borderRadius: BorderRadius.circular(16),
+        child: InkWell(
           borderRadius: BorderRadius.circular(16),
-          boxShadow: AppShadows.card,
-        ),
-        child: Column(
+          onTap: () => _showDetailSheet(context),
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Column(
           children: [
             // ── Row 1: Worked hours | Date | Status ──
             Row(
@@ -703,7 +834,14 @@ class _RecordTile extends StatelessWidget {
                 ],
               ),
             ],
-          ],
+                // ── Row 3: حالة الإجازة (فقط عند وجود طلب يغطي اليوم) ──
+                if (record.onLeave != null) ...[
+                  const SizedBox(height: 10),
+                  _buildLeaveRow(context, record.onLeave!),
+                ],
+              ],
+            ),
+          ),
         ),
       ),
     );

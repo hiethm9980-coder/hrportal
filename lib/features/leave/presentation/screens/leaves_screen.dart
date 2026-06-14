@@ -162,16 +162,17 @@ class _LeavesScreenState extends ConsumerState<LeavesScreen> {
           CustomAppBar(
             title: 'Leaves'.tr(context),
             onRefresh: _loadWithFilter,
-            leading: GestureDetector(
-              onTap: () => context.go('/leaves/create'),
-              child: Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  color: Colors.white24,
-                  borderRadius: BorderRadius.circular(10),
+            leading: Material(
+              color: Colors.white24,
+              borderRadius: BorderRadius.circular(10),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(10),
+                onTap: () => context.go('/leaves/create'),
+                child: const SizedBox(
+                  width: 36,
+                  height: 36,
+                  child: Icon(Icons.add, color: Colors.white, size: 20),
                 ),
-                child: const Icon(Icons.add, color: Colors.white, size: 20),
               ),
             ),
             bottom: _buildFilterRow(context, state),
@@ -227,14 +228,17 @@ class _LeavesScreenState extends ConsumerState<LeavesScreen> {
         ? '${AppFuns.formatDate(_dateRange!.start, withDay: false)}  →  ${AppFuns.formatDate(_dateRange!.end, withDay: false)}'
         : 'Filter by date'.tr(context);
 
-    return GestureDetector(
-      onTap: _pickDateRange,
-      child: Container(
+    return Material(
+      color: hasRange
+          ? Colors.white.withValues(alpha: 0.2)
+          : Colors.white.withValues(alpha: 0.08),
+      borderRadius: BorderRadius.circular(10),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(10),
+        onTap: _pickDateRange,
+        child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: hasRange
-              ? Colors.white.withValues(alpha: 0.2)
-              : Colors.white.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
             color: hasRange
@@ -266,19 +270,21 @@ class _LeavesScreenState extends ConsumerState<LeavesScreen> {
             ),
             if (hasRange) ...[
               const SizedBox(width: 8),
-              GestureDetector(
-                onTap: _clearDateRange,
-                child: Container(
-                  padding: const EdgeInsets.all(2),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.25),
-                    shape: BoxShape.circle,
+              Material(
+                color: Colors.white.withValues(alpha: 0.25),
+                shape: const CircleBorder(),
+                child: InkWell(
+                  customBorder: const CircleBorder(),
+                  onTap: _clearDateRange,
+                  child: const Padding(
+                    padding: EdgeInsets.all(2),
+                    child: Icon(Icons.close, size: 14, color: Colors.white),
                   ),
-                  child: const Icon(Icons.close, size: 14, color: Colors.white),
                 ),
               ),
             ],
           ],
+        ),
         ),
       ),
     );
@@ -286,19 +292,22 @@ class _LeavesScreenState extends ConsumerState<LeavesScreen> {
 
   Widget _filterPill(String count, String label, Color accentColor, int index) {
     final selected = _tab == index;
-    return GestureDetector(
-      onTap: () {
-        if (_tab == index) return;
-        setState(() => _tab = index);
-        _loadWithFilter();
-      },
+    return Material(
+      color: selected
+          ? Colors.white.withValues(alpha: 0.25)
+          : Colors.white.withValues(alpha: 0.08),
+      borderRadius: BorderRadius.circular(10),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(10),
+        onTap: () {
+          if (_tab == index) return;
+          setState(() => _tab = index);
+          _loadWithFilter();
+        },
       child: Container(
         width: 80,
         padding: const EdgeInsets.symmetric(vertical: 9),
         decoration: BoxDecoration(
-          color: selected
-              ? Colors.white.withValues(alpha: 0.25)
-              : Colors.white.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
             color: selected
@@ -329,6 +338,7 @@ class _LeavesScreenState extends ConsumerState<LeavesScreen> {
             ),
           ],
         ),
+      ),
       ),
     );
   }
@@ -532,18 +542,23 @@ class _LeaveRequestCardState extends ConsumerState<_LeaveRequestCard> {
         ? '${days.toInt()} ${'d'.tr(context)}'
         : '${days.toStringAsFixed(1)} ${'d'.tr(context)}';
 
+    // Material + InkWell بدل GestureDetector — ripple عند الضغط على الكرت.
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: GestureDetector(
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: context.appColors.bgCard,
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: AppShadows.card,
+        ),
+        child: Material(
+          color: context.appColors.bgCard,
+          borderRadius: BorderRadius.circular(16),
+          child: InkWell(
             borderRadius: BorderRadius.circular(16),
-            boxShadow: AppShadows.card,
-          ),
-          child: Column(
+            onTap: onTap,
+            child: Padding(
+              padding: const EdgeInsets.all(14),
+              child: Column(
             children: [
               // Row 1: Status | Leave type | Days
               Stack(
@@ -686,7 +701,9 @@ class _LeaveRequestCardState extends ConsumerState<_LeaveRequestCard> {
                   ),
                 );
               }),
-            ],
+                ],
+              ),
+            ),
           ),
         ),
       ),
@@ -710,21 +727,22 @@ class _LeaveRequestCardState extends ConsumerState<_LeaveRequestCard> {
       );
     }
     final showOpen = kIsWeb ? false : _exists;
-    return GestureDetector(
-      onTap: _onDownloadOrOpen,
-      child: Container(
-        width: 32,
-        height: 32,
-        decoration: BoxDecoration(
-          color: showOpen
-              ? AppColors.success.withValues(alpha: 0.12)
-              : AppColors.primaryMid.withValues(alpha: 0.12),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Icon(
-          showOpen ? Icons.folder_open_rounded : Icons.download_rounded,
-          size: 18,
-          color: showOpen ? AppColors.success : AppColors.primaryMid,
+    return Material(
+      color: showOpen
+          ? AppColors.success.withValues(alpha: 0.12)
+          : AppColors.primaryMid.withValues(alpha: 0.12),
+      borderRadius: BorderRadius.circular(8),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(8),
+        onTap: _onDownloadOrOpen,
+        child: SizedBox(
+          width: 32,
+          height: 32,
+          child: Icon(
+            showOpen ? Icons.folder_open_rounded : Icons.download_rounded,
+            size: 18,
+            color: showOpen ? AppColors.success : AppColors.primaryMid,
+          ),
         ),
       ),
     );

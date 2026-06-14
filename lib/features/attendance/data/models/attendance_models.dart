@@ -4,6 +4,122 @@ import 'package:equatable/equatable.dart';
 
 import '../../../../core/network/pagination.dart';
 
+/// نوع الإجازة المرفق بحقل [AttendanceOnLeave.leaveType].
+///
+/// `color` يأتي من السيرفر كنص hex (مثل `#10b981`) — يُستخدم مباشرة لتلوين
+/// سطر الإجازة في الواجهة فتتطابق الألوان مع إعدادات HR.
+class LeaveTypeInfo extends Equatable {
+  final int id;
+  final String? code;     // "ANNUAL"
+  final String? name;     // "إجازة سنوية"
+  final String? nameEn;   // "Annual Leave"
+  final String? color;    // "#10b981"
+  final bool isPaid;
+
+  const LeaveTypeInfo({
+    required this.id,
+    this.code,
+    this.name,
+    this.nameEn,
+    this.color,
+    this.isPaid = false,
+  });
+
+  factory LeaveTypeInfo.fromJson(Map<String, dynamic> json) {
+    return LeaveTypeInfo(
+      id: json['id'] as int,
+      code: json['code'] as String?,
+      name: json['name'] as String?,
+      nameEn: json['name_en'] as String?,
+      color: json['color'] as String?,
+      isPaid: json['is_paid'] as bool? ?? false,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'code': code,
+        'name': name,
+        'name_en': nameEn,
+        'color': color,
+        'is_paid': isPaid,
+      };
+
+  /// الاسم المناسب للغة: عربي → `name`، غير ذلك → `name_en` (مع fallback
+  /// متبادل لو أحدهما غائب).
+  String? localizedName(bool isAr) =>
+      isAr ? (name ?? nameEn) : (nameEn ?? name);
+
+  @override
+  List<Object?> get props => [id];
+}
+
+/// طلب الإجازة الذي يغطي يوم حضور معيّن (حقل `on_leave`).
+///
+/// مستقل تماماً عن حالة الحضور — قد يكون الموظف غائباً ولديه إجازة معتمدة
+/// (غياب مبرَّر) أو حاضراً رغم إجازته. السيرفر يُرفق الطلب **بأي حالة**
+/// (`approved` / `pending` / `rejected` / `cancelled` / `draft`)، وعند
+/// تداخل أكثر من طلب على نفس اليوم يصل الأهم فقط بالأولوية:
+/// approved → pending → draft → rejected → cancelled.
+class AttendanceOnLeave extends Equatable {
+  final int id;
+  final String? requestNumber;  // "LR-26-00031"
+  final String status;          // approved|pending|rejected|cancelled|draft
+  final String? startDate;      // "2026-06-10"
+  final String? endDate;        // "2026-06-11"
+  final String? startPeriod;    // full_day | first_half | second_half
+  final String? endPeriod;
+  final double totalDays;       // 2.0
+  final String? reason;
+  final LeaveTypeInfo? leaveType;
+
+  const AttendanceOnLeave({
+    required this.id,
+    this.requestNumber,
+    this.status = 'approved',
+    this.startDate,
+    this.endDate,
+    this.startPeriod,
+    this.endPeriod,
+    this.totalDays = 0,
+    this.reason,
+    this.leaveType,
+  });
+
+  factory AttendanceOnLeave.fromJson(Map<String, dynamic> json) {
+    return AttendanceOnLeave(
+      id: json['id'] as int,
+      requestNumber: json['request_number'] as String?,
+      status: json['status'] as String? ?? 'approved',
+      startDate: json['start_date'] as String?,
+      endDate: json['end_date'] as String?,
+      startPeriod: json['start_period'] as String?,
+      endPeriod: json['end_period'] as String?,
+      totalDays: (json['total_days'] as num?)?.toDouble() ?? 0,
+      reason: json['reason'] as String?,
+      leaveType: json['leave_type'] != null
+          ? LeaveTypeInfo.fromJson(json['leave_type'] as Map<String, dynamic>)
+          : null,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'request_number': requestNumber,
+        'status': status,
+        'start_date': startDate,
+        'end_date': endDate,
+        'start_period': startPeriod,
+        'end_period': endPeriod,
+        'total_days': totalDays,
+        'reason': reason,
+        'leave_type': leaveType?.toJson(),
+      };
+
+  @override
+  List<Object?> get props => [id];
+}
+
 /// Single attendance record.
 ///
 /// Contract: §10.2 AttendanceRecord
@@ -30,6 +146,11 @@ class AttendanceRecord extends Equatable {
   final String? scheduledEnd;     // H:i:s
   final String? notes;
 
+  /// الإجازة المعتمدة المغطية لهذا اليوم — `null` إن لا توجد. مستقلة عن
+  /// [status]: تُعرض كسطر ثانٍ في الكرت ("حالة الإجازة") بدون المساس
+  /// بشارة حالة الحضور.
+  final AttendanceOnLeave? onLeave;
+
   const AttendanceRecord({
     required this.id,
     required this.date,
@@ -49,6 +170,7 @@ class AttendanceRecord extends Equatable {
     this.scheduledStart,
     this.scheduledEnd,
     this.notes,
+    this.onLeave,
   });
 
   factory AttendanceRecord.fromJson(Map<String, dynamic> json) {
@@ -71,6 +193,10 @@ class AttendanceRecord extends Equatable {
       scheduledStart: json['scheduled_start'] as String?,
       scheduledEnd: json['scheduled_end'] as String?,
       notes: json['notes'] as String?,
+      onLeave: json['on_leave'] != null
+          ? AttendanceOnLeave.fromJson(
+              json['on_leave'] as Map<String, dynamic>)
+          : null,
     );
   }
 
@@ -93,6 +219,7 @@ class AttendanceRecord extends Equatable {
         'scheduled_start': scheduledStart,
         'scheduled_end': scheduledEnd,
         'notes': notes,
+        'on_leave': onLeave?.toJson(),
       };
 
   @override

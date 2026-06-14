@@ -415,6 +415,36 @@ class _AttendanceCalendarPickerState
               ],
             ),
           ),
+          // مفتاح نقطة الزاوية — حالات طلب الإجازة المغطي لليوم.
+          Padding(
+            padding: const EdgeInsets.only(bottom: 4),
+            child: Wrap(
+              spacing: 12,
+              runSpacing: 4,
+              alignment: WrapAlignment.center,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                Text(
+                  '${'Corner dot'.tr(context)}:',
+                  style: TextStyle(
+                    fontFamily: 'Cairo',
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    color: context.appColors.textMuted,
+                  ),
+                ),
+                _LegendDot(
+                    color: AppColors.success,
+                    label: 'Approved leave'.tr(context)),
+                _LegendDot(
+                    color: AppColors.gold,
+                    label: 'Pending leave'.tr(context)),
+                _LegendDot(
+                    color: context.appColors.textMuted,
+                    label: 'Rejected/cancelled leave'.tr(context)),
+              ],
+            ),
+          ),
           SizedBox(height: MediaQuery.of(context).padding.bottom + 4),
         ],
       ),
@@ -714,8 +744,22 @@ class _AttendanceCalendarPickerState
     );
   }
 
+  /// لون **حالة طلب الإجازة** المغطي لليوم — نفس ألوان بانر الإجازة في
+  /// كرت سجل الحضور: أخضر = موافق، ذهبي = معلق، رمادي = مرفوض/ملغي/مسودة.
+  Color _leaveStatusColor(BuildContext context, String status) {
+    switch (status.toLowerCase()) {
+      case 'approved':
+        return AppColors.success;
+      case 'pending':
+        return AppColors.gold;
+      default: // rejected / cancelled / draft
+        return context.appColors.textMuted;
+    }
+  }
+
   /// الخلية الموحّدة: تعرض رقم اليوم مع لون/تسمية مأخوذة من سجل الحضور
-  /// لذلك اليوم (إن وُجد).
+  /// لذلك اليوم (إن وُجد)، ونقطة زاوية صغيرة بلون حالة طلب الإجازة عندما
+  /// يغطي اليومَ طلبُ إجازة (`on_leave != null`).
   Widget _buildDayCell(
     BuildContext context,
     DateTime day, {
@@ -726,6 +770,7 @@ class _AttendanceCalendarPickerState
     final rec = _recordFor(day);
     final color = rec != null ? _colorForStatus(rec.status) : null;
     final label = rec != null ? _shortLabel(context, rec.status) : null;
+    final leave = rec?.onLeave;
 
     // ── لون الخلفية + لون النص ──
     final Color bgColor;
@@ -749,27 +794,54 @@ class _AttendanceCalendarPickerState
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Container(
-          width: 36,
-          height: 36,
-          decoration: BoxDecoration(
-            color: bgColor,
-            shape: BoxShape.circle,
-            border: color != null && !isSelected
-                ? Border.all(color: color.withValues(alpha: 0.6), width: 1)
-                : null,
-          ),
-          alignment: Alignment.center,
-          child: Text(
-            '${day.day}',
-            style: TextStyle(
-              fontFamily: 'Cairo',
-              fontSize: 13,
-              fontWeight:
-                  isSelected || isToday ? FontWeight.w700 : FontWeight.w500,
-              color: textColor,
+        Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: bgColor,
+                shape: BoxShape.circle,
+                border: color != null && !isSelected
+                    ? Border.all(
+                        color: color.withValues(alpha: 0.6), width: 1)
+                    : null,
+              ),
+              alignment: Alignment.center,
+              child: Text(
+                '${day.day}',
+                style: TextStyle(
+                  fontFamily: 'Cairo',
+                  fontSize: 13,
+                  fontWeight: isSelected || isToday
+                      ? FontWeight.w700
+                      : FontWeight.w500,
+                  color: textColor,
+                ),
+              ),
             ),
-          ),
+            // ── نقطة الزاوية: مؤشر طلب إجازة يغطي اليوم ──
+            // لونها = حالة الطلب (أخضر/ذهبي/رمادي)، وحولها حد بلون خلفية
+            // الشاشة ليفصلها بصرياً عن دائرة اليوم مهما كان لونها.
+            if (leave != null)
+              PositionedDirectional(
+                top: -2,
+                start: -2,
+                child: Container(
+                  width: 11,
+                  height: 11,
+                  decoration: BoxDecoration(
+                    color: _leaveStatusColor(context, leave.status),
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: Theme.of(context).scaffoldBackgroundColor,
+                      width: 1.5,
+                    ),
+                  ),
+                ),
+              ),
+          ],
         ),
         // نص الحالة يظهر دائماً (حتى لو اليوم محدد) — لون النص يبقى لون
         // الحالة لتفادي تعارض بصري مع دائرة التحديد الكحلية.

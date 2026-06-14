@@ -21,44 +21,64 @@ class PrimaryButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: loading ? null : onTap,
-      child: AnimatedOpacity(
-        duration: const Duration(milliseconds: 150),
-        opacity: loading ? 0.75 : 1.0,
-        child: Container(
-          width: fullWidth ? double.infinity : null,
-          padding: EdgeInsets.symmetric(
-            vertical: small ? 10 : 14,
-            horizontal: small ? 16 : 20,
-          ),
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [AppColors.primaryLight, AppColors.primaryDeep],
-            ),
-            borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
-            boxShadow: AppShadows.navy,
-          ),
-          child: loading
-            ? const Center(child: SizedBox(width: 20, height: 20,
-                child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)))
-            : Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                mainAxisSize: fullWidth ? MainAxisSize.max : MainAxisSize.min,
-                children: [
-                  if (icon != null) ...[
-                    Text(icon!, style: TextStyle(fontSize: small ? 14 : 16)),
-                    const SizedBox(width: 6),
-                  ],
-                  Text(text, style: TextStyle(fontFamily: 'Cairo',
-                    fontSize: small ? 13 : 14,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.white,
-                  )),
-                ],
+    // التدرّج اللوني لا يوضع على Material.color — نرسمه عبر Ink decoration
+    // فترتسم موجة الـ ripple فوقه. الموجة بيضاء شفافة لأن الافتراضية
+    // الداكنة لا تُرى على الخلفية الكحلية. الظل يبقى على Container خارجي.
+    return AnimatedOpacity(
+      duration: const Duration(milliseconds: 150),
+      opacity: loading ? 0.75 : 1.0,
+      child: Container(
+        width: fullWidth ? double.infinity : null,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+          boxShadow: AppShadows.navy,
+        ),
+        child: Material(
+          color: Colors.transparent,
+          borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+          child: Ink(
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [AppColors.primaryLight, AppColors.primaryDeep],
               ),
+              borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+            ),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+              splashColor: Colors.white24,
+              highlightColor: Colors.white10,
+              onTap: loading ? null : onTap,
+              child: Padding(
+                padding: EdgeInsets.symmetric(
+                  vertical: small ? 10 : 14,
+                  horizontal: small ? 16 : 20,
+                ),
+                child: loading
+                    ? const Center(child: SizedBox(width: 20, height: 20,
+                        child: CircularProgressIndicator(
+                            color: Colors.white, strokeWidth: 2)))
+                    : Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        mainAxisSize:
+                            fullWidth ? MainAxisSize.max : MainAxisSize.min,
+                        children: [
+                          if (icon != null) ...[
+                            Text(icon!,
+                                style: TextStyle(fontSize: small ? 14 : 16)),
+                            const SizedBox(width: 6),
+                          ],
+                          Text(text, style: TextStyle(fontFamily: 'Cairo',
+                            fontSize: small ? 13 : 14,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                          )),
+                        ],
+                      ),
+              ),
+            ),
+          ),
         ),
       ),
     );
@@ -79,33 +99,50 @@ class GoldButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: fullWidth ? double.infinity : null,
-        padding: EdgeInsets.symmetric(
-          vertical: small ? 10 : 13,
-          horizontal: small ? 16 : 20,
-        ),
-        decoration: BoxDecoration(
-          gradient: AppColors.goldGradient,
-          borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
-          boxShadow: AppShadows.gold,
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          mainAxisSize: fullWidth ? MainAxisSize.max : MainAxisSize.min,
-          children: [
-            if (icon != null) ...[
-              Text(icon!, style: TextStyle(fontSize: small ? 14 : 16)),
-              const SizedBox(width: 6),
-            ],
-            Text(text, style: TextStyle(fontFamily: 'Cairo',
-              fontSize: small ? 13 : 14,
-              fontWeight: FontWeight.w700,
-              color: AppColors.primaryDeep,
-            )),
-          ],
+    // نفس نمط PrimaryButton: التدرّج عبر Ink ليرتسم الـ ripple فوقه.
+    // الموجة هنا كحلية شفافة لتظهر على الخلفية الذهبية الفاتحة.
+    return Container(
+      width: fullWidth ? double.infinity : null,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+        boxShadow: AppShadows.gold,
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+        child: Ink(
+          decoration: BoxDecoration(
+            gradient: AppColors.goldGradient,
+            borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+          ),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+            splashColor: AppColors.primaryDeep.withValues(alpha: 0.15),
+            highlightColor: AppColors.primaryDeep.withValues(alpha: 0.06),
+            onTap: onTap,
+            child: Padding(
+              padding: EdgeInsets.symmetric(
+                vertical: small ? 10 : 13,
+                horizontal: small ? 16 : 20,
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize:
+                    fullWidth ? MainAxisSize.max : MainAxisSize.min,
+                children: [
+                  if (icon != null) ...[
+                    Text(icon!, style: TextStyle(fontSize: small ? 14 : 16)),
+                    const SizedBox(width: 6),
+                  ],
+                  Text(text, style: TextStyle(fontFamily: 'Cairo',
+                    fontSize: small ? 13 : 14,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.primaryDeep,
+                  )),
+                ],
+              ),
+            ),
+          ),
         ),
       ),
     );
@@ -126,33 +163,49 @@ class TealButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: fullWidth ? double.infinity : null,
-        padding: EdgeInsets.symmetric(
-          vertical: small ? 10 : 13,
-          horizontal: small ? 16 : 20,
-        ),
-        decoration: BoxDecoration(
-          gradient: AppColors.tealGradient,
-          borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
-          boxShadow: AppShadows.teal,
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          mainAxisSize: fullWidth ? MainAxisSize.max : MainAxisSize.min,
-          children: [
-            if (icon != null) ...[
-              Text(icon!, style: TextStyle(fontSize: small ? 14 : 16)),
-              const SizedBox(width: 6),
-            ],
-            Text(text, style: TextStyle(fontFamily: 'Cairo',
-              fontSize: small ? 13 : 14,
-              fontWeight: FontWeight.w700,
-              color: Colors.white,
-            )),
-          ],
+    // نفس نمط PrimaryButton: التدرّج عبر Ink + موجة بيضاء فوق التركواز.
+    return Container(
+      width: fullWidth ? double.infinity : null,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+        boxShadow: AppShadows.teal,
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+        child: Ink(
+          decoration: BoxDecoration(
+            gradient: AppColors.tealGradient,
+            borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+          ),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+            splashColor: Colors.white24,
+            highlightColor: Colors.white10,
+            onTap: onTap,
+            child: Padding(
+              padding: EdgeInsets.symmetric(
+                vertical: small ? 10 : 13,
+                horizontal: small ? 16 : 20,
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize:
+                    fullWidth ? MainAxisSize.max : MainAxisSize.min,
+                children: [
+                  if (icon != null) ...[
+                    Text(icon!, style: TextStyle(fontSize: small ? 14 : 16)),
+                    const SizedBox(width: 6),
+                  ],
+                  Text(text, style: TextStyle(fontFamily: 'Cairo',
+                    fontSize: small ? 13 : 14,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                  )),
+                ],
+              ),
+            ),
+          ),
         ),
       ),
     );
@@ -174,25 +227,32 @@ class AppOutlineButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = color ?? AppColors.primaryMid;
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: fullWidth ? double.infinity : null,
-        padding: EdgeInsets.symmetric(
-          vertical: small ? 9 : 12,
-          horizontal: small ? 16 : 20,
-        ),
-        decoration: BoxDecoration(
-          color: Colors.transparent,
-          borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
-          border: Border.all(color: c, width: 1.5),
-        ),
-        child: Center(
-          child: Text(text, style: TextStyle(fontFamily: 'Cairo',
-            fontSize: small ? 13 : 14,
-            fontWeight: FontWeight.w600,
-            color: c,
-          )),
+    // خلفية شفافة — الموجة بلون الزر نفسه (شفافة) لتبقى ضمن هويته.
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+        splashColor: c.withValues(alpha: 0.15),
+        highlightColor: c.withValues(alpha: 0.06),
+        onTap: onTap,
+        child: Container(
+          width: fullWidth ? double.infinity : null,
+          padding: EdgeInsets.symmetric(
+            vertical: small ? 9 : 12,
+            horizontal: small ? 16 : 20,
+          ),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+            border: Border.all(color: c, width: 1.5),
+          ),
+          child: Center(
+            child: Text(text, style: TextStyle(fontFamily: 'Cairo',
+              fontSize: small ? 13 : 14,
+              fontWeight: FontWeight.w600,
+              color: c,
+            )),
+          ),
         ),
       ),
     );
@@ -272,17 +332,26 @@ class AppCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        margin: EdgeInsets.only(bottom: marginBottom ?? 0),
-        padding: customPadding ?? EdgeInsets.all(padding ?? AppSpacing.cardPad),
-        decoration: BoxDecoration(
-          color: context.appColors.bgCard,
+    // الظل على الـ Container الخارجي، واللون على Material حتى يرتسم
+    // الـ ripple فوقه ويُقصّ على نفس الحواف — تأثير لمسي عند كل ضغطة.
+    return Container(
+      margin: EdgeInsets.only(bottom: marginBottom ?? 0),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: AppShadows.card,
+      ),
+      child: Material(
+        color: context.appColors.bgCard,
+        borderRadius: BorderRadius.circular(18),
+        child: InkWell(
           borderRadius: BorderRadius.circular(18),
-          boxShadow: AppShadows.card,
+          onTap: onTap, // null → لا ripple (بطاقة عرض فقط)
+          child: Padding(
+            padding:
+                customPadding ?? EdgeInsets.all(padding ?? AppSpacing.cardPad),
+            child: child,
+          ),
         ),
-        child: child,
       ),
     );
   }
@@ -392,24 +461,29 @@ class CustomAppBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // ── Start side (right in RTL, left in LTR) ──
+    // زر مربّع موحَّد للهيدر مع ripple — يُستخدم للرجوع والتحديث.
+    Widget headerButton({required IconData icon, required VoidCallback onTap,
+        double iconSize = 20}) {
+      return Material(
+        color: Colors.white24,
+        borderRadius: BorderRadius.circular(10),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(10),
+          onTap: onTap,
+          child: SizedBox(
+            width: 36, height: 36,
+            child: Icon(icon, color: Colors.white, size: iconSize),
+          ),
+        ),
+      );
+    }
+
     Widget startWidget;
     if (leading != null) {
       startWidget = leading!;
     } else if (onBack != null) {
-      startWidget = GestureDetector(
-        onTap: onBack,
-        child: Container(
-          width: 36, height: 36,
-          decoration: BoxDecoration(
-            color: Colors.white24,
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: const Icon(
-            Icons.arrow_back_ios,
-            color: Colors.white, size: 18,
-          ),
-        ),
-      );
+      startWidget =
+          headerButton(icon: Icons.arrow_back_ios, onTap: onBack!, iconSize: 18);
     } else {
       startWidget = const SizedBox(width: 36);
     }
@@ -418,17 +492,7 @@ class CustomAppBar extends StatelessWidget {
     final endWidgets = <Widget>[];
     if (onRefresh != null) {
       endWidgets.add(
-        GestureDetector(
-          onTap: onRefresh,
-          child: Container(
-            width: 36, height: 36,
-            decoration: BoxDecoration(
-              color: Colors.white24,
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: const Icon(Icons.refresh_rounded, color: Colors.white, size: 20),
-          ),
-        ),
+        headerButton(icon: Icons.refresh_rounded, onTap: onRefresh!),
       );
     }
     if (trailing != null) {

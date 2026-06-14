@@ -558,32 +558,33 @@ class _IconBtn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 36,
-        height: 36,
-        decoration: BoxDecoration(
-          color: tint != null
-              ? tint!.withValues(alpha: 0.20)
-              : Colors.white24,
-          borderRadius: BorderRadius.circular(10),
+    // Material/InkWell بدل GestureDetector — ripple عند الضغط على زر الهيدر.
+    return Material(
+      color: tint != null ? tint!.withValues(alpha: 0.20) : Colors.white24,
+      borderRadius: BorderRadius.circular(10),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(10),
+        onTap: onTap,
+        child: SizedBox(
+          width: 36,
+          height: 36,
+          child: Center(
+            child: loading
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
+                : Icon(
+                    icon,
+                    color: Colors.white,
+                    size: 18,
+                  ),
+          ),
         ),
-        alignment: Alignment.center,
-        child: loading
-            ? const SizedBox(
-                width: 16,
-                height: 16,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: Colors.white,
-                ),
-              )
-            : Icon(
-                icon,
-                color: tint != null ? Colors.white : Colors.white,
-                size: 18,
-              ),
       ),
     );
   }
@@ -796,49 +797,60 @@ class _FieldCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
+    // الظل على Container خارجي، واللون على Material داخلي حتى ترتسم موجة
+    // قلم التعديل على سطح البطاقة فتظهر (لا تختفي خلف خلفية معتمة).
     return Container(
-      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: colors.bgCard,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: colors.gray100),
         boxShadow: AppShadows.card,
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+      child: Material(
+        color: colors.bgCard,
+        borderRadius: BorderRadius.circular(12),
+        clipBehavior: Clip.antiAlias,
+        child: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: colors.gray100),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: Text(
-                  label,
-                  style: TextStyle(
-                    fontFamily: 'Cairo',
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    color: colors.textMuted,
-                    letterSpacing: 0.2,
-                  ),
-                ),
-              ),
-              if (editable)
-                InkWell(
-                  onTap: onEdit,
-                  borderRadius: BorderRadius.circular(8),
-                  child: Padding(
-                    padding: const EdgeInsets.all(4),
-                    child: Icon(
-                      Icons.edit_rounded,
-                      size: 16,
-                      color: AppColors.primaryMid,
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      label,
+                      style: TextStyle(
+                        fontFamily: 'Cairo',
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: colors.textMuted,
+                        letterSpacing: 0.2,
+                      ),
                     ),
                   ),
-                ),
+                  if (editable)
+                    InkWell(
+                      onTap: onEdit,
+                      borderRadius: BorderRadius.circular(8),
+                      child: Padding(
+                        padding: const EdgeInsets.all(4),
+                        child: Icon(
+                          Icons.edit_rounded,
+                          size: 16,
+                          color: AppColors.primaryMid,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              child,
             ],
           ),
-          const SizedBox(height: 6),
-          child,
-        ],
+        ),
       ),
     );
   }
@@ -1170,15 +1182,17 @@ class _CountTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
+    // اللون على Material (وليس داخل Container معتم) حتى ترتسم موجة الـ
+    // ripple على سطح البطاقة وتظهر. clipBehavior يقصّها على الحواف.
     return Material(
-      color: Colors.transparent,
+      color: colors.bgCard,
+      borderRadius: BorderRadius.circular(12),
+      clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
         child: Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: colors.bgCard,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: colors.gray100),
           ),
@@ -1241,7 +1255,7 @@ class _CountTile extends StatelessWidget {
                 ),
               ),
               Icon(
-                Icons.arrow_back_ios_new_rounded,
+                Icons.arrow_forward_ios,
                 size: 12,
                 color: colors.textDisabled,
               ),

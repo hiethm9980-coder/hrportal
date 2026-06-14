@@ -182,16 +182,17 @@ class _RequestsScreenState extends ConsumerState<RequestsScreen> {
           CustomAppBar(
             title: 'Requests'.tr(context),
             onRefresh: _loadWithFilter,
-            leading: GestureDetector(
-              onTap: () => context.go('/requests/create'),
-              child: Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  color: Colors.white24,
-                  borderRadius: BorderRadius.circular(10),
+            leading: Material(
+              color: Colors.white24,
+              borderRadius: BorderRadius.circular(10),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(10),
+                onTap: () => context.go('/requests/create'),
+                child: const SizedBox(
+                  width: 36,
+                  height: 36,
+                  child: Icon(Icons.add, color: Colors.white, size: 20),
                 ),
-                child: const Icon(Icons.add, color: Colors.white, size: 20),
               ),
             ),
             bottom: _buildFilterRow(context, state),
@@ -249,59 +250,65 @@ class _RequestsScreenState extends ConsumerState<RequestsScreen> {
         ? '${AppFuns.formatDate(_dateRange!.start, withDay: false)}  →  ${AppFuns.formatDate(_dateRange!.end, withDay: false)}'
         : 'Filter by date'.tr(context);
 
-    return GestureDetector(
-      onTap: _pickDateRange,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: hasRange
-              ? Colors.white.withValues(alpha: 0.2)
-              : Colors.white.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-            color: hasRange
-                ? Colors.white.withValues(alpha: 0.5)
-                : Colors.white.withValues(alpha: 0.15),
+    // Material + InkWell — ripple مقصوص على حواف زر التاريخ.
+    return Material(
+      color: hasRange
+          ? Colors.white.withValues(alpha: 0.2)
+          : Colors.white.withValues(alpha: 0.08),
+      borderRadius: BorderRadius.circular(10),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(10),
+        onTap: _pickDateRange,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: hasRange
+                  ? Colors.white.withValues(alpha: 0.5)
+                  : Colors.white.withValues(alpha: 0.15),
+            ),
           ),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.date_range_rounded,
-              size: 16,
-              color: hasRange ? Colors.white : Colors.white54,
-            ),
-            const SizedBox(width: 8),
-            Flexible(
-              child: Text(
-                label,
-                style: TextStyle(
-                  fontFamily: 'Cairo',
-                  fontSize: 12,
-                  fontWeight: hasRange ? FontWeight.w700 : FontWeight.w500,
-                  color: hasRange ? Colors.white : Colors.white54,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.date_range_rounded,
+                size: 16,
+                color: hasRange ? Colors.white : Colors.white54,
               ),
-            ),
-            if (hasRange) ...[
               const SizedBox(width: 8),
-              GestureDetector(
-                onTap: _clearDateRange,
-                child: Container(
-                  padding: const EdgeInsets.all(2),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.25),
-                    shape: BoxShape.circle,
+              Flexible(
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    fontFamily: 'Cairo',
+                    fontSize: 12,
+                    fontWeight: hasRange ? FontWeight.w700 : FontWeight.w500,
+                    color: hasRange ? Colors.white : Colors.white54,
                   ),
-                  child: const Icon(Icons.close,
-                      size: 14, color: Colors.white),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
+              if (hasRange) ...[
+                const SizedBox(width: 8),
+                Material(
+                  color: Colors.white.withValues(alpha: 0.25),
+                  shape: const CircleBorder(),
+                  child: InkWell(
+                    customBorder: const CircleBorder(),
+                    onTap: _clearDateRange,
+                    child: const Padding(
+                      padding: EdgeInsets.all(2),
+                      child:
+                          Icon(Icons.close, size: 14, color: Colors.white),
+                    ),
+                  ),
+                ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );
@@ -310,48 +317,53 @@ class _RequestsScreenState extends ConsumerState<RequestsScreen> {
   Widget _filterPill(
       String count, String label, Color accentColor, int index) {
     final selected = _tab == index;
-    return GestureDetector(
-      onTap: () {
-        if (_tab == index) return;
-        setState(() => _tab = index);
-        _loadWithFilter();
-      },
-      child: Container(
-        width: 80,
-        padding: const EdgeInsets.symmetric(vertical: 9),
-        decoration: BoxDecoration(
-          color: selected
-              ? Colors.white.withValues(alpha: 0.25)
-              : Colors.white.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-            color: selected
-                ? Colors.white.withValues(alpha: 0.6)
-                : Colors.white.withValues(alpha: 0.15),
-            width: selected ? 1.5 : 1,
+    // Material + InkWell — ripple مقصوص على حواف الـ chip.
+    return Material(
+      color: selected
+          ? Colors.white.withValues(alpha: 0.25)
+          : Colors.white.withValues(alpha: 0.08),
+      borderRadius: BorderRadius.circular(10),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(10),
+        onTap: () {
+          if (_tab == index) return;
+          setState(() => _tab = index);
+          _loadWithFilter();
+        },
+        child: Container(
+          width: 80,
+          padding: const EdgeInsets.symmetric(vertical: 9),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: selected
+                  ? Colors.white.withValues(alpha: 0.6)
+                  : Colors.white.withValues(alpha: 0.15),
+              width: selected ? 1.5 : 1,
+            ),
           ),
-        ),
-        child: Column(
-          children: [
-            Text(
-              count,
-              style: TextStyle(
-                fontFamily: 'Cairo',
-                fontSize: 20,
-                fontWeight: FontWeight.w900,
-                color: accentColor,
-                height: 1.1,
+          child: Column(
+            children: [
+              Text(
+                count,
+                style: TextStyle(
+                  fontFamily: 'Cairo',
+                  fontSize: 20,
+                  fontWeight: FontWeight.w900,
+                  color: accentColor,
+                  height: 1.1,
+                ),
               ),
-            ),
-            Text(
-              label,
-              style: TextStyle(
-                fontFamily: 'Cairo',
-                fontSize: 10,
-                color: selected ? Colors.white : Colors.white54,
+              Text(
+                label,
+                style: TextStyle(
+                  fontFamily: 'Cairo',
+                  fontSize: 10,
+                  color: selected ? Colors.white : Colors.white54,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -542,21 +554,26 @@ class _RequestCardState extends ConsumerState<_RequestCard> {
         r.requestType?.name ?? r.requestTypeLabel ?? 'Request'.tr(context);
     final subject = r.subject ?? '';
 
+    // Material + InkWell بدل GestureDetector — ripple عند الضغط على الكرت.
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: GestureDetector(
-        onTap: widget.onTap,
-        child: Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: context.appColors.bgCard,
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: AppShadows.card,
+        ),
+        child: Material(
+          color: context.appColors.bgCard,
+          borderRadius: BorderRadius.circular(16),
+          child: InkWell(
             borderRadius: BorderRadius.circular(16),
-            boxShadow: AppShadows.card,
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Row 1: Type | Status
+            onTap: widget.onTap,
+            child: Padding(
+              padding: const EdgeInsets.all(14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Row 1: Type | Status
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -683,7 +700,9 @@ class _RequestCardState extends ConsumerState<_RequestCard> {
                   ),
                 ),
               ),
-            ],
+                ],
+              ),
+            ),
           ),
         ),
       ),
@@ -707,21 +726,22 @@ class _RequestCardState extends ConsumerState<_RequestCard> {
       );
     }
     final showOpen = kIsWeb ? false : _exists;
-    return GestureDetector(
-      onTap: _onDownloadOrOpen,
-      child: Container(
-        width: 32,
-        height: 32,
-        decoration: BoxDecoration(
-          color: showOpen
-              ? AppColors.success.withValues(alpha: 0.12)
-              : AppColors.primaryMid.withValues(alpha: 0.12),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Icon(
-          showOpen ? Icons.folder_open_rounded : Icons.download_rounded,
-          size: 18,
-          color: showOpen ? AppColors.success : AppColors.primaryMid,
+    return Material(
+      color: showOpen
+          ? AppColors.success.withValues(alpha: 0.12)
+          : AppColors.primaryMid.withValues(alpha: 0.12),
+      borderRadius: BorderRadius.circular(8),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(8),
+        onTap: _onDownloadOrOpen,
+        child: SizedBox(
+          width: 32,
+          height: 32,
+          child: Icon(
+            showOpen ? Icons.folder_open_rounded : Icons.download_rounded,
+            size: 18,
+            color: showOpen ? AppColors.success : AppColors.primaryMid,
+          ),
         ),
       ),
     );
@@ -880,13 +900,17 @@ class _RequestDetailSheetState extends ConsumerState<_RequestDetailSheet> {
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                GestureDetector(
-                  onTap: () => Navigator.pop(context),
-                  child: Padding(
-                    padding:
-                        const EdgeInsetsDirectional.only(end: 10, top: 2),
-                    child: Icon(Icons.close,
-                        size: 22, color: context.appColors.textMuted),
+                Material(
+                  color: Colors.transparent,
+                  child: InkResponse(
+                    onTap: () => Navigator.pop(context),
+                    radius: 22,
+                    child: Padding(
+                      padding:
+                          const EdgeInsetsDirectional.only(end: 10, top: 2),
+                      child: Icon(Icons.close,
+                          size: 22, color: context.appColors.textMuted),
+                    ),
                   ),
                 ),
                 Expanded(
@@ -1847,16 +1871,17 @@ class _CreateRequestScreenState extends ConsumerState<CreateRequestScreen> {
                   ),
                 ),
                 if (hasFile)
-                  GestureDetector(
-                    onTap: () => notifier.clearAttachment(),
-                    child: Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: BoxDecoration(
-                        color: AppColors.error.withValues(alpha: 0.12),
-                        shape: BoxShape.circle,
+                  Material(
+                    color: AppColors.error.withValues(alpha: 0.12),
+                    shape: const CircleBorder(),
+                    child: InkWell(
+                      customBorder: const CircleBorder(),
+                      onTap: () => notifier.clearAttachment(),
+                      child: const Padding(
+                        padding: EdgeInsets.all(4),
+                        child: Icon(Icons.close,
+                            size: 16, color: AppColors.error),
                       ),
-                      child: const Icon(Icons.close,
-                          size: 16, color: AppColors.error),
                     ),
                   ),
               ],

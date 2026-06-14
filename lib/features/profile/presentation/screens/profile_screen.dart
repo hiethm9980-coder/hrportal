@@ -69,18 +69,20 @@ class ProfileScreen extends ConsumerWidget {
                     // ── Top row: back + title ──
                     Row(
                       children: [
-                        GestureDetector(
-                          onTap: () => Navigator.of(context).pop(),
-                          child: Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: Colors.white12,
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: const Icon(
-                              Icons.arrow_back_rounded,
-                              color: Colors.white,
-                              size: 20,
+                        Material(
+                          color: Colors.white24,
+                          borderRadius: BorderRadius.circular(10),
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(10),
+                            onTap: () => Navigator.of(context).pop(),
+                            child: const SizedBox(
+                              width: 36,
+                              height: 36,
+                              child: Icon(
+                                Icons.arrow_back_ios_new_rounded,
+                                color: Colors.white,
+                                size: 18,
+                              ),
                             ),
                           ),
                         ),
@@ -629,127 +631,132 @@ class _ChangePasswordSectionState
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: context.appColors.bgCard,
         borderRadius: BorderRadius.circular(16),
         boxShadow: AppShadows.card,
       ),
-      clipBehavior: Clip.antiAlias,
-      child: Theme(
-        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-        child: ExpansionTile(
-          tilePadding: const EdgeInsets.symmetric(horizontal: 16),
-          childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-          leading: Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: AppColors.warning.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(10),
+      child: Material(
+        // اللون على Material (وليس Container) حتى يظهر تموّج ExpansionTile
+        // فوقه؛ الظل يبقى على Container الخارجي.
+        color: context.appColors.bgCard,
+        borderRadius: BorderRadius.circular(16),
+        clipBehavior: Clip.antiAlias,
+        child: Theme(
+          data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+          child: ExpansionTile(
+            tilePadding: const EdgeInsets.symmetric(horizontal: 16),
+            childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            leading: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppColors.warning.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(Icons.lock_outline_rounded,
+                  size: 18, color: AppColors.warning),
             ),
-            child: const Icon(Icons.lock_outline_rounded,
-                size: 18, color: AppColors.warning),
-          ),
-          title: Text(
-            'Change password'.tr(context),
-            style: TextStyle(fontFamily: 'Cairo',
-              fontSize: 14,
-              fontWeight: FontWeight.w700,
-              color: context.appColors.textPrimary,
-            ),
-          ),
-          children: [
-            Form(
-              key: _formKey,
-              child: Column(
-                children: [
-                  const SizedBox(height: 8),
-                  // Current password
-                  _PasswordField(
-                    controller: _currentCtrl,
-                    label: 'Current password'.tr(context),
-                    obscure: _obscureCurrent,
-                    onToggle: () =>
-                        setState(() => _obscureCurrent = !_obscureCurrent),
-                    validator: (v) {
-                      if (v == null || v.trim().isEmpty) {
-                        return 'This field is required'.tr(context);
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 12),
-                  // New password
-                  _PasswordField(
-                    controller: _newCtrl,
-                    label: 'New password'.tr(context),
-                    obscure: _obscureNew,
-                    onToggle: () =>
-                        setState(() => _obscureNew = !_obscureNew),
-                    validator: (v) {
-                      if (v == null || v.trim().isEmpty) {
-                        return 'This field is required'.tr(context);
-                      }
-                      if (v.trim().length < 8) {
-                        return 'Password must be at least 8 characters'
-                            .tr(context);
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 12),
-                  // Confirm password
-                  _PasswordField(
-                    controller: _confirmCtrl,
-                    label: 'Confirm password'.tr(context),
-                    obscure: _obscureConfirm,
-                    onToggle: () =>
-                        setState(() => _obscureConfirm = !_obscureConfirm),
-                    validator: (v) {
-                      if (v == null || v.trim().isEmpty) {
-                        return 'This field is required'.tr(context);
-                      }
-                      if (v.trim() != _newCtrl.text.trim()) {
-                        return 'Passwords do not match'.tr(context);
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  // Submit button
-                  SizedBox(
-                    width: double.infinity,
-                    height: 44,
-                    child: ElevatedButton(
-                      onPressed: _loading ? null : _submit,
-                      style: ElevatedButton.styleFrom(
-                        padding: EdgeInsets.zero,
-                        backgroundColor: AppColors.primaryMid,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: _loading
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
-                            )
-                          : Text(
-                              'Change password'.tr(context),
-                              style: TextStyle(fontFamily: 'Cairo',
-                                fontSize: 14,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                    ),
-                  ),
-                ],
+            title: Text(
+              'Change password'.tr(context),
+              style: TextStyle(fontFamily: 'Cairo',
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color: context.appColors.textPrimary,
               ),
             ),
-          ],
+            children: [
+              Form(
+                key: _formKey,
+                child: Column(
+                  children: [
+                    const SizedBox(height: 8),
+                    // Current password
+                    _PasswordField(
+                      controller: _currentCtrl,
+                      label: 'Current password'.tr(context),
+                      obscure: _obscureCurrent,
+                      onToggle: () =>
+                          setState(() => _obscureCurrent = !_obscureCurrent),
+                      validator: (v) {
+                        if (v == null || v.trim().isEmpty) {
+                          return 'This field is required'.tr(context);
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    // New password
+                    _PasswordField(
+                      controller: _newCtrl,
+                      label: 'New password'.tr(context),
+                      obscure: _obscureNew,
+                      onToggle: () =>
+                          setState(() => _obscureNew = !_obscureNew),
+                      validator: (v) {
+                        if (v == null || v.trim().isEmpty) {
+                          return 'This field is required'.tr(context);
+                        }
+                        if (v.trim().length < 8) {
+                          return 'Password must be at least 8 characters'
+                              .tr(context);
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    // Confirm password
+                    _PasswordField(
+                      controller: _confirmCtrl,
+                      label: 'Confirm password'.tr(context),
+                      obscure: _obscureConfirm,
+                      onToggle: () =>
+                          setState(() => _obscureConfirm = !_obscureConfirm),
+                      validator: (v) {
+                        if (v == null || v.trim().isEmpty) {
+                          return 'This field is required'.tr(context);
+                        }
+                        if (v.trim() != _newCtrl.text.trim()) {
+                          return 'Passwords do not match'.tr(context);
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    // Submit button
+                    SizedBox(
+                      width: double.infinity,
+                      height: 44,
+                      child: ElevatedButton(
+                        onPressed: _loading ? null : _submit,
+                        style: ElevatedButton.styleFrom(
+                          padding: EdgeInsets.zero,
+                          backgroundColor: AppColors.primaryMid,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: _loading
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : Text(
+                                'Change password'.tr(context),
+                                style: TextStyle(fontFamily: 'Cairo',
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

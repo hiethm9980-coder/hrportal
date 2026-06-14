@@ -216,16 +216,18 @@ class _HeaderIconButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 38,
-        height: 38,
-        decoration: BoxDecoration(
-          color: Colors.white12,
-          borderRadius: BorderRadius.circular(11),
+    return Material(
+      color: Colors.white12,
+      borderRadius: BorderRadius.circular(11),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(11),
+        onTap: onTap,
+        child: SizedBox(
+          width: 38,
+          height: 38,
+          child:
+              Center(child: Text(icon, style: const TextStyle(fontSize: 18))),
         ),
-        child: Center(child: Text(icon, style: const TextStyle(fontSize: 18))),
       ),
     );
   }
@@ -372,51 +374,63 @@ class _QuickActionsGrid extends ConsumerWidget {
           spacing: spacing,
           runSpacing: spacing,
           children: actions
-              .map((a) => GestureDetector(
-                    // Push (not go) so Android/iOS system Back returns to the
-                    // dashboard instead of exiting the app.
-                    onTap: () => context.push(a['route'] as String),
-                    child: SizedBox(
-                      width: itemWidth,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            vertical: 12, horizontal: 6),
-                        decoration: BoxDecoration(
-                          color: context.appColors.bgCard,
+              .map((a) => SizedBox(
+                    width: itemWidth,
+                    // الظل خارجياً، واللون على Material ليرتسم الـ ripple
+                    // فوقه عند الضغط على بطاقة الإجراء.
+                    child: Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: AppShadows.sm,
+                      ),
+                      child: Material(
+                        color: context.appColors.bgCard,
+                        borderRadius: BorderRadius.circular(16),
+                        child: InkWell(
                           borderRadius: BorderRadius.circular(16),
-                          border:
-                              Border.all(color: context.appColors.gray100),
-                          boxShadow: AppShadows.sm,
-                        ),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Container(
-                              width: 44,
-                              height: 44,
-                              decoration: BoxDecoration(
-                                color:
-                                    (a['color'] as Color).withOpacity(0.12),
-                                borderRadius: BorderRadius.circular(14),
-                              ),
-                              child: Center(
-                                child: Text(a['icon'] as String,
-                                    style: const TextStyle(fontSize: 20)),
-                              ),
+                          // Push (not go) so Android/iOS system Back returns
+                          // to the dashboard instead of exiting the app.
+                          onTap: () => context.push(a['route'] as String),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                vertical: 12, horizontal: 6),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                  color: context.appColors.gray100),
                             ),
-                            const SizedBox(height: 6),
-                            Text(
-                              (a['label'] as String).tr(context),
-                              style: TextStyle(fontFamily: 'Cairo',
-                                fontSize: 10,
-                                fontWeight: FontWeight.w700,
-                                color: context.appColors.textSecondary,
-                              ),
-                              textAlign: TextAlign.center,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  width: 44,
+                                  height: 44,
+                                  decoration: BoxDecoration(
+                                    color: (a['color'] as Color)
+                                        .withValues(alpha: 0.12),
+                                    borderRadius: BorderRadius.circular(14),
+                                  ),
+                                  child: Center(
+                                    child: Text(a['icon'] as String,
+                                        style:
+                                            const TextStyle(fontSize: 20)),
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  (a['label'] as String).tr(context),
+                                  style: TextStyle(fontFamily: 'Cairo',
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w700,
+                                    color: context.appColors.textSecondary,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
                             ),
-                          ],
+                          ),
                         ),
                       ),
                     ),

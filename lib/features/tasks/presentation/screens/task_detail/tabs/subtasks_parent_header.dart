@@ -391,21 +391,23 @@ class _SearchField extends StatelessWidget {
               prefixIconConstraints:
                   const BoxConstraints(minWidth: 34, minHeight: 34),
               suffixIcon: hasText
-                  ? GestureDetector(
-                      onTap: onClear,
-                      behavior: HitTestBehavior.opaque,
-                      child: Container(
-                        margin: const EdgeInsets.only(right: 4, left: 4),
-                        width: 22,
-                        height: 22,
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.18),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.close_rounded,
-                          size: 14,
-                          color: Colors.white,
+                  ? Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      child: Material(
+                        color: Colors.white.withOpacity(0.18),
+                        shape: const CircleBorder(),
+                        child: InkWell(
+                          customBorder: const CircleBorder(),
+                          onTap: onClear,
+                          child: const SizedBox(
+                            width: 22,
+                            height: 22,
+                            child: Icon(
+                              Icons.close_rounded,
+                              size: 14,
+                              color: Colors.white,
+                            ),
+                          ),
                         ),
                       ),
                     )
@@ -508,7 +510,15 @@ class _ParentStatusDropdown extends StatelessWidget {
         : Colors.white;
     final label = current?.label ?? 'Set status'.tr(context);
 
-    return PopupMenuButton<TaskStatus>(
+    // نلفّ الـ PopupMenuButton بـ Material شفاف مقصوص بحواف 12 — وإلا فإن
+    // موجة الـ InkWell الداخلية لزر القائمة ترتسم على أقرب Material (جسم
+    // الـ Scaffold تحت الهيدر المتدرّج) فلا تُرى. الآن ترتسم فوق الهيدر
+    // ومقصوصة على نفس حواف الحاوية.
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(12),
+      clipBehavior: Clip.antiAlias,
+      child: PopupMenuButton<TaskStatus>(
       enabled: allStatuses.isNotEmpty,
       onSelected: onChanged,
       position: PopupMenuPosition.under,
@@ -586,6 +596,7 @@ class _ParentStatusDropdown extends StatelessWidget {
                 color: Colors.white.withOpacity(0.9)),
           ],
         ),
+      ),
       ),
     );
   }
@@ -867,36 +878,43 @@ class _FilterButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 44,
-        height: 44,
-        decoration: BoxDecoration(
-          color: active ? AppColors.gold : Colors.white.withOpacity(0.14),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: active ? AppColors.gold : Colors.white.withOpacity(0.18),
-          ),
+    return Container(
+      decoration: BoxDecoration(
+        color: active ? AppColors.gold : Colors.white.withOpacity(0.14),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: active ? AppColors.gold : Colors.white.withOpacity(0.18),
         ),
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            const Icon(Icons.tune_rounded, color: Colors.white, size: 20),
-            if (active)
-              Positioned(
-                right: 6,
-                top: 6,
-                child: Container(
-                  width: 8,
-                  height: 8,
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
-                    shape: BoxShape.circle,
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(12),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: onTap,
+          child: SizedBox(
+            width: 44,
+            height: 44,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                const Icon(Icons.tune_rounded, color: Colors.white, size: 20),
+                if (active)
+                  Positioned(
+                    right: 6,
+                    top: 6,
+                    child: Container(
+                      width: 8,
+                      height: 8,
+                      decoration: const BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
                   ),
-                ),
-              ),
-          ],
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -917,18 +935,24 @@ class _IconBtn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        curve: Curves.easeOut,
-        width: 36,
-        height: 36,
-        decoration: BoxDecoration(
-          color: active ? AppColors.gold : Colors.white24,
+    // AnimatedContainer للون التفعيل + Material/InkWell للـ ripple.
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 180),
+      curve: Curves.easeOut,
+      width: 36,
+      height: 36,
+      decoration: BoxDecoration(
+        color: active ? AppColors.gold : Colors.white24,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(10),
+        child: InkWell(
           borderRadius: BorderRadius.circular(10),
+          onTap: onTap,
+          child: Icon(icon, color: Colors.white, size: 18),
         ),
-        child: Icon(icon, color: Colors.white, size: 18),
       ),
     );
   }

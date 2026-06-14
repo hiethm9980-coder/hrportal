@@ -86,25 +86,32 @@ class _Chip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        width: 92,
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-        decoration: BoxDecoration(
+    // AnimatedContainer يحمل لون/حد التحديد المتحرّك، و Material شفاف
+    // فوقه يرسم الـ ripple عند الضغط على الـ chip.
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 180),
+      width: 92,
+      decoration: BoxDecoration(
+        color: selected
+            ? Colors.white.withOpacity(0.14)
+            : Colors.white.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
           color: selected
-              ? Colors.white.withOpacity(0.14)
-              : Colors.white.withOpacity(0.05),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: selected
-                ? Colors.white.withOpacity(0.55)
-                : Colors.white.withOpacity(0.10),
-            width: selected ? 1.5 : 1,
-          ),
+              ? Colors.white.withOpacity(0.55)
+              : Colors.white.withOpacity(0.10),
+          width: selected ? 1.5 : 1,
         ),
-        child: Column(
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(14),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(14),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(
@@ -130,6 +137,8 @@ class _Chip extends StatelessWidget {
               ),
             ),
           ],
+            ),
+          ),
         ),
       ),
     );

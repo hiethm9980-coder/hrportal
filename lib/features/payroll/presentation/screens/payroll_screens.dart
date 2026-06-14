@@ -317,17 +317,22 @@ class _PayslipTile extends StatelessWidget {
         payslip.totalDeductions.toStringAsFixed(2));
     final currencyLabel = payslip.currency ?? '';
 
-    return GestureDetector(
-      onTap: () => _showDetailSheet(context),
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: context.appColors.bgCard,
+    // Material + InkWell بدل GestureDetector — ripple عند الضغط على الكرت.
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: AppShadows.card,
+      ),
+      child: Material(
+        color: context.appColors.bgCard,
+        borderRadius: BorderRadius.circular(16),
+        child: InkWell(
           borderRadius: BorderRadius.circular(16),
-          boxShadow: AppShadows.card,
-        ),
-        child: Column(
+          onTap: () => _showDetailSheet(context),
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Column(
           children: [
             // ── Row 1: Net pay (center, big) ──
             Text(
@@ -414,6 +419,8 @@ class _PayslipTile extends StatelessWidget {
               ],
             ),
           ],
+            ),
+          ),
         ),
       ),
     );

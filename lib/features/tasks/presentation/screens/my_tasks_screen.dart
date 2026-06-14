@@ -566,23 +566,25 @@ class _Header extends StatelessWidget {
                               prefixIconConstraints: const BoxConstraints(
                                   minWidth: 34, minHeight: 34),
                               suffixIcon: hasText
-                                  ? GestureDetector(
-                                      onTap: onClearSearch,
-                                      behavior: HitTestBehavior.opaque,
-                                      child: Container(
-                                        margin: const EdgeInsets.only(
-                                            right: 4, left: 4),
-                                        width: 22,
-                                        height: 22,
-                                        decoration: BoxDecoration(
-                                          color:
-                                              Colors.white.withOpacity(0.18),
-                                          shape: BoxShape.circle,
-                                        ),
-                                        child: const Icon(
-                                          Icons.close_rounded,
-                                          size: 14,
-                                          color: Colors.white,
+                                  ? Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 4),
+                                      child: Material(
+                                        color:
+                                            Colors.white.withOpacity(0.18),
+                                        shape: const CircleBorder(),
+                                        child: InkWell(
+                                          customBorder: const CircleBorder(),
+                                          onTap: onClearSearch,
+                                          child: const SizedBox(
+                                            width: 22,
+                                            height: 22,
+                                            child: Icon(
+                                              Icons.close_rounded,
+                                              size: 14,
+                                              color: Colors.white,
+                                            ),
+                                          ),
                                         ),
                                       ),
                                     )
@@ -615,85 +617,100 @@ class _Header extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: GestureDetector(
-                  onTap: onProjectTap,
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 180),
-                    curve: Curves.easeOut,
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 11),
-                    decoration: BoxDecoration(
+                // AnimatedContainer للون التفعيل + Material/InkWell للـ ripple.
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 180),
+                  curve: Curves.easeOut,
+                  decoration: BoxDecoration(
+                    color: projectActive
+                        ? AppColors.gold
+                        : Colors.white.withOpacity(0.10),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
                       color: projectActive
                           ? AppColors.gold
-                          : Colors.white.withOpacity(0.10),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: projectActive
-                            ? AppColors.gold
-                            : Colors.white.withOpacity(0.18),
-                      ),
+                          : Colors.white.withOpacity(0.18),
                     ),
-                    child: Row(
-                      children: [
-                        Icon(Icons.folder_copy_outlined,
-                            color: Colors.white, size: 18),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            selectedProjectName,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontFamily: 'Cairo',
-                              color: Colors.white,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w800,
+                  ),
+                  child: Material(
+                    color: Colors.transparent,
+                    borderRadius: BorderRadius.circular(12),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(12),
+                      onTap: onProjectTap,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 11),
+                        child: Row(
+                          children: [
+                            Icon(Icons.folder_copy_outlined,
+                                color: Colors.white, size: 18),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                selectedProjectName,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontFamily: 'Cairo',
+                                  color: Colors.white,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
                             ),
-                          ),
+                            Icon(Icons.arrow_drop_down_rounded,
+                                color: Colors.white.withOpacity(0.9)),
+                          ],
                         ),
-                        Icon(Icons.arrow_drop_down_rounded,
-                            color: Colors.white.withOpacity(0.9)),
-                      ],
+                      ),
                     ),
                   ),
                 ),
               ),
               const SizedBox(width: 8),
-              GestureDetector(
-                onTap: onFilterTap,
-                child: Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
+              Container(
+                decoration: BoxDecoration(
+                  color: filtersActive
+                      ? AppColors.gold
+                      : Colors.white.withOpacity(0.14),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
                     color: filtersActive
                         ? AppColors.gold
-                        : Colors.white.withOpacity(0.14),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: filtersActive
-                          ? AppColors.gold
-                          : Colors.white.withOpacity(0.18),
-                    ),
+                        : Colors.white.withOpacity(0.18),
                   ),
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      const Icon(Icons.tune_rounded,
-                          color: Colors.white, size: 20),
-                      if (filtersActive)
-                        Positioned(
-                          right: 6,
-                          top: 6,
-                          child: Container(
-                            width: 8,
-                            height: 8,
-                            decoration: const BoxDecoration(
-                              color: Colors.white,
-                              shape: BoxShape.circle,
+                ),
+                child: Material(
+                  color: Colors.transparent,
+                  borderRadius: BorderRadius.circular(12),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(12),
+                    onTap: onFilterTap,
+                    child: SizedBox(
+                      width: 44,
+                      height: 44,
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          const Icon(Icons.tune_rounded,
+                              color: Colors.white, size: 20),
+                          if (filtersActive)
+                            Positioned(
+                              right: 6,
+                              top: 6,
+                              child: Container(
+                                width: 8,
+                                height: 8,
+                                decoration: const BoxDecoration(
+                                  color: Colors.white,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
                             ),
-                          ),
-                        ),
-                    ],
+                        ],
+                      ),
+                    ),
                   ),
                 ),
               ),
@@ -717,18 +734,25 @@ class _IconBtn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        curve: Curves.easeOut,
-        width: 36,
-        height: 36,
-        decoration: BoxDecoration(
-          color: active ? AppColors.gold : Colors.white24,
+    // AnimatedContainer يحمل لون التفعيل المتحرّك، و Material شفاف فوقه
+    // يرسم الـ ripple عند الضغط.
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 180),
+      curve: Curves.easeOut,
+      width: 36,
+      height: 36,
+      decoration: BoxDecoration(
+        color: active ? AppColors.gold : Colors.white24,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(10),
+        child: InkWell(
           borderRadius: BorderRadius.circular(10),
+          onTap: onTap,
+          child: Icon(icon, color: Colors.white, size: 18),
         ),
-        child: Icon(icon, color: Colors.white, size: 18),
       ),
     );
   }

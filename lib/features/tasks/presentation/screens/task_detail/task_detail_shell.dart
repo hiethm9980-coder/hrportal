@@ -265,45 +265,49 @@ class _NavItem extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.appColors;
     return Expanded(
-      child: GestureDetector(
-        onTap: onTap,
-        behavior: HitTestBehavior.opaque,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 4),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              AnimatedScale(
-                scale: active ? 1.2 : 1.0,
-                duration: const Duration(milliseconds: 200),
-                child: Text(
-                  icon,
-                  style: const TextStyle(fontSize: 22),
-                ),
-              ),
-              const SizedBox(height: 3),
-              Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontFamily: 'Cairo',
-                  fontSize: 9,
-                  fontWeight: active ? FontWeight.w800 : FontWeight.w500,
-                  color: active ? AppColors.primaryMid : colors.gray400,
-                ),
-              ),
-              if (active)
-                Container(
-                  margin: const EdgeInsets.only(top: 3),
-                  width: 18,
-                  height: 3,
-                  decoration: BoxDecoration(
-                    color: AppColors.primaryMid,
-                    borderRadius: BorderRadius.circular(99),
+      // Material شفاف + InkWell بحواف 12 — ripple عند الضغط على التبويب.
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(12),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                AnimatedScale(
+                  scale: active ? 1.2 : 1.0,
+                  duration: const Duration(milliseconds: 200),
+                  child: Text(
+                    icon,
+                    style: const TextStyle(fontSize: 22),
                   ),
                 ),
-            ],
+                const SizedBox(height: 3),
+                Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontFamily: 'Cairo',
+                    fontSize: 9,
+                    fontWeight: active ? FontWeight.w800 : FontWeight.w500,
+                    color: active ? AppColors.primaryMid : colors.gray400,
+                  ),
+                ),
+                if (active)
+                  Container(
+                    margin: const EdgeInsets.only(top: 3),
+                    width: 18,
+                    height: 3,
+                    decoration: BoxDecoration(
+                      color: AppColors.primaryMid,
+                      borderRadius: BorderRadius.circular(99),
+                    ),
+                  ),
+              ],
+            ),
           ),
         ),
       ),

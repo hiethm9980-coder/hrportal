@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
@@ -360,30 +361,86 @@ class _AiCreateSubtasksScreenState
       canPop: !_isSubmitting,
       child: Scaffold(
         backgroundColor: colors.bg,
-        appBar: AppBar(
-          backgroundColor: AppColors.primary,
-          foregroundColor: Colors.white,
-          elevation: 0,
-          title: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.auto_awesome_rounded, size: 20),
-              const SizedBox(width: 8),
-              Flexible(
-                child: Text(
-                  'Create with AI'.tr(context),
-                  style: const TextStyle(
-                    fontFamily: 'Cairo',
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
+        // هيدر متدرّج: زر الرجوع المربّع على جهة البداية (يمين في RTL،
+        // يسار في LTR)، والعنوان + الأيقونة في منتصف الهيدر. نضع موازِناً
+        // بعرض الزر (36) + الفجوة (10) على الجهة المقابلة حتى يتمركز
+        // العنوان تماماً وسط كامل عرض الهيدر.
+        // Stack على مستوى الـ body: العمود (هيدر + محتوى) كطبقة سفلى، ثم
+        // الـ overlay كطبقة عليا تغطّي كامل الشاشة وتتمركز فيها كلها.
+        body: Stack(children: [
+          Column(
+          children: [
+            Container(
+              decoration: const BoxDecoration(gradient: AppColors.navyGradient),
+              padding: EdgeInsets.only(
+                top: MediaQuery.of(context).padding.top + 10,
+                bottom: 14,
+                left: 14,
+                right: 14,
               ),
-            ],
-          ),
-        ),
-        body: SafeArea(
-          child: Stack(
-            children: [
+              child: Row(
+                children: [
+                  Material(
+                    color: Colors.white24,
+                    borderRadius: BorderRadius.circular(10),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(10),
+                      onTap: _isSubmitting
+                          ? null
+                          : () => Navigator.of(context).pop(),
+                      child: const SizedBox(
+                        width: 36,
+                        height: 36,
+                        child: Icon(
+                          Icons.arrow_back_ios_new_rounded,
+                          color: Colors.white,
+                          size: 18,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.auto_awesome_rounded,
+                            color: Colors.white, size: 20),
+                        const SizedBox(width: 8),
+                        Flexible(
+                          child: Text(
+                            'Create with AI'.tr(context),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontFamily: 'Cairo',
+                              fontSize: 17,
+                              fontWeight: FontWeight.w900,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  // موازِن بعرض زر الرجوع + الفجوة ليبقى العنوان متمركزاً
+                  // وسط كامل الهيدر (لا منزاحاً لجهة الزر).
+                   SizedBox(
+                    width: 46,
+                    // child: IconButton(onPressed: () {
+                    //   setState(() {
+                    //     _isSubmitting = !_isSubmitting;
+                    //   });
+                    // }, icon: Icon(Icons.severe_cold, color: Colors.white,)),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: SafeArea(
+                top: false,
+                child: Stack(
+                  children: [
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
                 child: Column(
@@ -514,11 +571,18 @@ class _AiCreateSubtasksScreenState
                   ],
                 ),
               ),
-              if (_isSubmitting)
-                const Positioned.fill(child: _SubmittingOverlay()),
-            ],
-          ),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ),
+        // ── AI loading overlay — sibling of the body Column so it covers
+        // the FULL screen (header included) and centers within it, not
+        // just within the content area. ──
+        if (_isSubmitting)
+          const Positioned.fill(child: _SubmittingOverlay()),
+        ]),
       ),
     );
   }
@@ -1282,36 +1346,272 @@ class _PreviewBlock extends StatelessWidget {
   }
 }
 
-class _SubmittingOverlay extends StatelessWidget {
+/// AI-themed loading overlay shown while the bulk-create request is in
+/// flight. A pulsing/glowing gold sparkle inside a rotating gold "comet"
+/// ring, with cycling status messages that mimic the assistant thinking.
+///
+/// Pure Flutter (no animation packages): two [AnimationController]s (ring
+/// rotation + sparkle pulse) and a [Timer] cycling the message index. All
+/// disposed when the overlay is removed (i.e. when `_isSubmitting` flips
+/// to false and this widget leaves the tree).
+class _SubmittingOverlay extends StatefulWidget {
   const _SubmittingOverlay();
 
   @override
+  State<_SubmittingOverlay> createState() => _SubmittingOverlayState();
+}
+
+class _SubmittingOverlayState extends State<_SubmittingOverlay>
+    with TickerProviderStateMixin {
+  late final AnimationController _ringCtrl;
+  late final AnimationController _pulseCtrl;
+  Timer? _msgTimer;
+  int _msgIndex = 0;
+
+  // Translation keys (the key IS the English text). Index 1 reuses the
+  // pre-existing key; 0 and 2 are added to the i18n files.
+  static const _messages = <String>[
+    'Analyzing your request...',
+    'Generating subtasks...',
+    'Writing the details...',
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _ringCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    )..repeat();
+    // مؤقّت خطّي مستمر (0→1) — كل نجمة تشتقّ تكبيرها وشفافيتها من موجة
+    // جيبية بطور (phase) مختلف فتتلألأ بتفاوت: واحدة تكبر/تسطع بينما الأخرى
+    // تصغر/تخفت. أبطأ قليلاً (3200ms) لإحساس أهدأ وأرقى.
+    _pulseCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 3200),
+    )..repeat();
+    _msgTimer = Timer.periodic(const Duration(milliseconds: 1600), (_) {
+      if (!mounted) return;
+      setState(() => _msgIndex = (_msgIndex + 1) % _messages.length);
+    });
+  }
+
+  @override
+  void dispose() {
+    _msgTimer?.cancel();
+    _ringCtrl.dispose();
+    _pulseCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    // كل الأبعاد مشتقّة من أصغر بُعد للشاشة (responsive) مع حدود دنيا/قصوى
+    // حتى يبدو متناسقاً على الهواتف الصغيرة والأجهزة اللوحية معاً.
+    final shortest = MediaQuery.sizeOf(context).shortestSide;
+    final ringSize = (shortest * 0.42).clamp(140.0, 220.0);
+    final glowSize = ringSize * 0.70; // دائرة التوهّج (أكبر من قبل)
+    final iconSize = ringSize * 0.46; // أيقونة السباركل (أكبر من قبل)
+    final stroke = (ringSize * 0.045).clamp(4.0, 8.0);
+    final gap = ringSize * 0.18;
+    final fontSize = (shortest * 0.042).clamp(14.0, 20.0);
+
     return Container(
-      color: Colors.black.withValues(alpha: 0.55),
+      color: Colors.black.withValues(alpha: 0.7),
       child: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const CircularProgressIndicator(
-              color: Colors.white,
-              strokeWidth: 3,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Generating subtasks...'.tr(context),
-              style: const TextStyle(
-                fontFamily: 'Cairo',
-                color: Colors.white,
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
+        child: Padding(
+          // هامش جانبي حتى لا يلامس النص الطويل حواف الشاشة.
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // ── Rotating gold ring + pulsing/glowing sparkle ──
+              SizedBox(
+                width: ringSize,
+                height: ringSize,
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    // Spinning comet-tail ring.
+                    AnimatedBuilder(
+                      animation: _ringCtrl,
+                      builder: (_, _) => Transform.rotate(
+                        angle: _ringCtrl.value * 2 * math.pi,
+                        child: CustomPaint(
+                          size: Size(ringSize, ringSize),
+                          painter: _GoldRingPainter(stroke: stroke),
+                        ),
+                      ),
+                    ),
+                    // ثلاث نجمات مستقلّة تتلألأ بتفاوت + توهّج ذهبي ينبض.
+                    // كل نجمة تشتقّ تكبيرها من موجة جيبية بطور مختلف، فلا
+                    // تكبر كلها معاً: واحدة تكبر بينما الأخرى تصغر.
+                    AnimatedBuilder(
+                      animation: _pulseCtrl,
+                      builder: (_, _) {
+                        // موجة جيبية ناعمة 0..1 حسب الطور [phase].
+                        double wave(double phase) =>
+                            (math.sin((_pulseCtrl.value + phase) *
+                                        2 *
+                                        math.pi) +
+                                    1) /
+                                2;
+                        final glowT = wave(0.0);
+                        // نجمة: تكبير + شفافية متلألئة مشتقّان من نفس موجتها،
+                        // فالنجمة تسطع وهي تكبر وتخفت وهي تصغر.
+                        Widget star(double size, double phase, double minScale,
+                            double maxScale) {
+                          final w = wave(phase);
+                          return Opacity(
+                            opacity: 0.45 + w * 0.55, // 0.45 → 1.0
+                            child: Transform.scale(
+                              scale: minScale + w * (maxScale - minScale),
+                              child: CustomPaint(
+                                size: Size.square(size),
+                                painter: const _SparklePainter(
+                                    color: AppColors.goldLight),
+                              ),
+                            ),
+                          );
+                        }
+
+                        return Container(
+                          width: glowSize,
+                          height: glowSize,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppColors.gold
+                                    .withValues(alpha: 0.16 + glowT * 0.40),
+                                blurRadius: glowSize * (0.16 + glowT * 0.32),
+                                spreadRadius: glowSize * (0.02 + glowT * 0.10),
+                              ),
+                            ],
+                          ),
+                          child: Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              // النجمة الكبرى — المركز (الطور 0).
+                              Align(
+                                alignment: Alignment.center,
+                                child: star(iconSize * 0.66, 0.0, 0.80, 1.18),
+                              ),
+                              // نجمة صغيرة أعلى-جهة النهاية (طور 0.5 = معاكس).
+                              Align(
+                                alignment: const Alignment(0.5, -0.52),
+                                child: star(iconSize * 0.34, 0.5, 0.55, 1.15),
+                              ),
+                              // نجمة صغيرة أسفل-جهة النهاية (طور 0.82).
+                              Align(
+                                alignment: const Alignment(0.58, 0.55),
+                                child: star(iconSize * 0.28, 0.82, 0.55, 1.08),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
+              SizedBox(height: gap),
+              // ── Cycling status message ──
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 350),
+                transitionBuilder: (child, anim) => FadeTransition(
+                  opacity: anim,
+                  child: SlideTransition(
+                    position: Tween<Offset>(
+                      begin: const Offset(0, 0.15),
+                      end: Offset.zero,
+                    ).animate(anim),
+                    child: child,
+                  ),
+                ),
+                child: Text(
+                  _messages[_msgIndex].tr(context),
+                  key: ValueKey<int>(_msgIndex),
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontFamily: 'Cairo',
+                    color: Colors.white,
+                    fontSize: fontSize,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
+}
+
+/// Paints a gold "comet-tail" ring: a stroked circle whose colour sweeps
+/// from transparent to [AppColors.goldLight], so when rotated it reads as
+/// a glowing arc chasing its tail.
+class _GoldRingPainter extends CustomPainter {
+  final double stroke;
+  const _GoldRingPainter({required this.stroke});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = Offset.zero & size;
+    final paint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = stroke
+      ..strokeCap = StrokeCap.round
+      ..shader = const SweepGradient(
+        colors: [
+          Color(0x00E3AC35), // transparent goldLight
+          Color(0xFFE3AC35), // solid goldLight
+        ],
+        stops: [0.0, 1.0],
+      ).createShader(rect);
+    // Inset by half the stroke so the ring isn't clipped at the edges.
+    canvas.drawArc(
+      rect.deflate(stroke / 2),
+      0,
+      2 * math.pi,
+      false,
+      paint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_GoldRingPainter oldDelegate) =>
+      oldDelegate.stroke != stroke;
+}
+
+/// Paints a single 4-point sparkle/twinkle (concave-edged star) filling the
+/// given size. Used (multiple instances, independently scaled) to build the
+/// AI sparkle cluster so each star twinkles out of sync.
+class _SparklePainter extends CustomPainter {
+  final Color color;
+  const _SparklePainter({required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final cx = size.width / 2;
+    final cy = size.height / 2;
+    final r = size.shortestSide / 2;
+    // Quadratic curves whose control point is the centre pinch the four
+    // edges inward → the classic 4-point sparkle shape.
+    final path = Path()
+      ..moveTo(cx, cy - r) // top tip
+      ..quadraticBezierTo(cx, cy, cx + r, cy) // → right tip
+      ..quadraticBezierTo(cx, cy, cx, cy + r) // → bottom tip
+      ..quadraticBezierTo(cx, cy, cx - r, cy) // → left tip
+      ..quadraticBezierTo(cx, cy, cx, cy - r) // → back to top
+      ..close();
+    canvas.drawPath(path, Paint()..color = color);
+  }
+
+  @override
+  bool shouldRepaint(_SparklePainter oldDelegate) =>
+      oldDelegate.color != color;
 }
 
 // ═══════════════════════════════════════════════════════════════════
